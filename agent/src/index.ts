@@ -31,6 +31,7 @@ import { RedisClient } from "@elizaos/adapter-redis";
 import { zgPlugin } from "@elizaos/plugin-0g";
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import createGoatPlugin from "@elizaos/plugin-goat";
+import { chromaPlugin } from "@elizaos/plugin-chroma";
 // import { intifacePlugin } from "@elizaos/plugin-intiface";
 import { DirectClient } from "@elizaos/client-direct";
 import { aptosPlugin } from "@elizaos/plugin-aptos";
@@ -521,6 +522,7 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
+            chromaPlugin,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,
