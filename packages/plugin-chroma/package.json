@@ -11,14 +11,16 @@
     "lint": "eslint --fix  --cache ."
   },
   "dependencies": {
-    "@elizaos/core": "workspace:*"
+    "@elizaos/core": "workspace:*",
+    "@libp2p/bootstrap": "^11.0.16",
+    "@waku/message-hash": "^0.1.16",
+    "@waku/sdk": "^0.0.29",
+    "bs58": "^6.0.0",
+    "protobufjs": "^7.4.0",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.0",
-    "@types/node": "^18.15.11",
-    "jest": "^29.5.0",
-    "ts-jest": "^29.1.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.0.4"
+    "tsup": "8.3.5",
+    "@types/node": "^20.0.0"
   }
 }

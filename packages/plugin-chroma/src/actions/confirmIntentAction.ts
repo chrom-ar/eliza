@@ -1,5 +1,6 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback } from '@elizaos/core';
 import { SwapIntent } from '../lib/types';
+import { sendIntent } from '../lib/waku/send';
 
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
@@ -46,7 +47,7 @@ export const confirmIntentAction: Action = {
 
     await intentManager.removeMemory(intentMemory.id);
 
-    const confirmedIntent = {
+    const confirmedIntent: SwapIntent = {
       ...intent,
       status: 'confirmed'
     };
@@ -65,6 +66,8 @@ export const confirmIntentAction: Action = {
     });
 
     console.log('Broadcasting intent', confirmedIntent);
+
+    await sendIntent(confirmedIntent);
 
     callback({
       text: 'Broadcasting your swap intent...'
