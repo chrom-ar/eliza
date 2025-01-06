@@ -15,11 +15,13 @@ import { elizaLogger } from '@elizaos/core';
 
 export const ChatMessage = new protobuf.Type('ChatMessage')
   .add(new protobuf.Field('timestamp', 1, 'uint64'))
-  .add(new protobuf.Field('body', 2, 'bytes'));
+  .add(new protobuf.Field('body', 2, 'bytes'))
+  .add(new protobuf.Field('roomId', 3, 'bytes'));
 
 export interface WakuMessageEvent {
   timestamp: number;
   body: any;
+  roomId: string;
 }
 
 export class WakuBase extends EventEmitter {
@@ -72,7 +74,6 @@ export class WakuBase extends EventEmitter {
     let actualTopic = this.wakuConfig.WAKU_CONTENT_TOPIC.replace('PLACEHOLDER', this.wakuConfig.WAKU_TOPIC);
     // Optionally append random if you want ephemeral uniqueness
     if (actualTopic.includes('random-hex')) {
-      // For example, if user wants 'PLACEHOLDER-random-hex', we do:
       actualTopic = actualTopic.replace('random-hex', randomHexString(16));
     }
 
@@ -98,11 +99,15 @@ export class WakuBase extends EventEmitter {
         const msgDecoded = ChatMessage.decode(wakuMsg.payload);
         // @ts-ignore
         const text = bytesToUtf8(msgDecoded.body);
+
         const event: WakuMessageEvent = {
           // @ts-ignore
           timestamp: Number(msgDecoded.timestamp),
-          body: text
+          body: text,
+          // @ts-ignore
+          roomId: msgDecoded.roomId
         };
+
         this.emit('message', event);
       } catch (err) {
         elizaLogger.error('[WakuBase] Error decoding message payload:', err);
@@ -127,7 +132,7 @@ export class WakuBase extends EventEmitter {
     elizaLogger.success(`[WakuBase] Subscribed to topic: ${this.subscribedTopic}`);
   }
 
-  async sendMessage(body: string, topic: string): Promise<void> {
+  async sendMessage(body: string, topic: string, roomId: string): Promise<void> {
     if (!topic) {
       elizaLogger.warn('[WakuBase] sendMessage => not configured (missing env).');
       return;
@@ -139,9 +144,11 @@ export class WakuBase extends EventEmitter {
     }
 
     elizaLogger.info(`[WakuBase] Sending message to topic ${actualTopic} => ${body}`);
+
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
-      body: utf8ToBytes(body)
+      body: utf8ToBytes(body),
+      roomId
     });
 
     try {
