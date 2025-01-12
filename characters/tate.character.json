@@ -1,7 +1,9 @@
 {
     "name": "tate",
-    "clients": [],
-    "modelProvider": "anthropic",
+    "clients": [
+        "waku"
+    ],
+    "modelProvider": "ollama",
     "settings": {
         "secrets": {},
         "voice": {

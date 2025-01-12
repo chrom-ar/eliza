@@ -7,7 +7,7 @@ import { LensAgentClient } from "@elizaos/client-lens";
 import { SlackClientInterface } from "@elizaos/client-slack";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
-import { WakuClientInterface } from "@elizaos/client-waku";
+import { NostrClientInterface } from "@elizaos/client-nostr";
 import {
     AgentRuntime,
     CacheManager,
@@ -429,10 +429,10 @@ export async function initializeClients(
         }
     }
 
-    if (clientTypes.includes(Clients.WAKU)) {
-        const wakuClient = await WakuClientInterface.start(runtime);
-        if (wakuClient) {
-            clients.waku = wakuClient;
+    if (clientTypes.includes(Clients.NOSTR)) {
+        const nostrClient = await NostrClientInterface.start(runtime);
+        if (nostrClient) {
+            clients.nostr = nostrClient;
         }
     }
 

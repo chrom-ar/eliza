@@ -626,6 +626,7 @@ export enum Clients {
     AUTO = "auto",
     SLACK = "slack",
     WAKU = "waku",
+    NOSTR = "nostr",
 }
 
 export interface IAgentConfig {
