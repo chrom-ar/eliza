@@ -37,12 +37,15 @@ export const parseTransferAction: Action = {
     {
       "amount": "1",
       "token": "ETH",
+      "fromAddress": "0x...",
+      "fromChain": "ethereum",
       "recipientAddress": "0x...",
       "recipientChain": "ethereum"
     }
     \`\`\`
 
     - If the user mentions a deadline, add it to the JSON object as a timestamp in seconds.
+    - If the user mentions a sender address, add it to the JSON object as a sender address. If no, assume the following: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.
     - If no recipient address is provided, leave it as null.
     - If no recipient chain is specified, infer it from the token type.
     `

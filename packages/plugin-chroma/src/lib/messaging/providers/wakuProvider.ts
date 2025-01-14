@@ -9,100 +9,104 @@ import {
   Protocols,
   LightNode
 } from '@waku/sdk';
+import { Message, MessageCallback, MessageProvider, MessageProviderConfig } from '../types';
 
-interface ChatMessage {
-  timestamp: number;
-  body: Uint8Array;
-  roomId: string;
-}
-
-export class WakuSubscriptionManager {
-  private static _instance: WakuSubscriptionManager;
-  private _node: LightNode | null = null;
+export class WakuMessageProvider implements MessageProvider {
+  private node: LightNode | null = null;
   private subscriptionMap: Map<string, {
     unsubscribe?: () => void;
     expiration: number;
   }> = new Map();
-
   private timer: NodeJS.Timeout | null = null;
+  private config: MessageProviderConfig;
 
-  // Simplified ChatMessage
   private ChatMessageProto = new protobuf.Type('ChatMessage')
     .add(new protobuf.Field('timestamp', 1, 'uint64'))
     .add(new protobuf.Field('body', 2, 'bytes'))
     .add(new protobuf.Field('roomId', 3, 'string'));
 
-  private constructor() {
-    // Singleton
+  constructor(config: MessageProviderConfig) {
+    this.config = config;
   }
 
-  public static getInstance(): WakuSubscriptionManager {
-    if (!WakuSubscriptionManager._instance) {
-      WakuSubscriptionManager._instance = new WakuSubscriptionManager();
-    }
-    return WakuSubscriptionManager._instance;
-  }
-
-  /**
-   * Returns the Waku node, creating if necessary.
-   */
-  public async getNode(): Promise<LightNode> {
-    if (!this._node) {
-      this._node = await createLightNode({ defaultBootstrap: true });
-      await this._node.start();
+  async connect(): Promise<void> {
+    if (!this.node) {
+      this.node = await createLightNode({ defaultBootstrap: true });
+      await this.node.start();
 
       // Wait for Filter & LightPush support
       for (let i = 0; i < 20; i++) {
         try {
-          await waitForRemotePeer(this._node, [Protocols.Filter, Protocols.LightPush], 5000);
-          if (this._node.isConnected()) break;
+          await waitForRemotePeer(this.node, [Protocols.Filter, Protocols.LightPush], 5000);
+          if (this.node.isConnected()) break;
         } catch (err) {
           console.log('Error waiting for remote peer', i, err);
           await this.sleep(1000);
         }
       }
       console.log('Waku node connected.');
-
-      // Start the subscription cleanup timer
       this.startSubscriptionCleaner();
     }
-    return this._node;
   }
 
-  /**
-   * Publishes an intent to the "general" topic.
-   * For example, /chroma/0.1/intents/proto
-   */
-  public async publishGeneralIntent(body: object, roomId: string) {
-    const node = await this.getNode();
+  async disconnect(): Promise<void> {
+    if (this.node) {
+      await this.node.stop();
+      this.node = null;
+    }
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  async publishToGeneral(message: Message): Promise<void> {
+    if (!this.node) throw new Error('Not connected');
+
     const generalTopic = this.buildGeneralTopic();
-    // Build a ChatMessage
     const protoMsg = this.ChatMessageProto.create({
-      timestamp: Date.now(),
-      roomId,
-      body: utf8ToBytes(JSON.stringify(body))
+      timestamp: message.timestamp,
+      roomId: message.roomId,
+      body: utf8ToBytes(JSON.stringify(message.body))
     });
 
     try {
-      await node.lightPush.send(
+      await this.node.lightPush.send(
         createEncoder({ contentTopic: generalTopic }),
         { payload: this.ChatMessageProto.encode(protoMsg).finish() }
       );
       console.log(`Message published on general topic: ${generalTopic}`);
     } catch (err) {
-      console.error('Error publishing general intent:', err);
+      console.error('Error publishing general message:', err);
       throw err;
     }
   }
 
-  /**
-   * Subscribes to a topic derived from roomId, triggers `callback` on new messages.
-   */
-  public async subscribeRoom(
-    roomId: string,
-    callback: (jsonBody: any) => void,
-    expirationSeconds = 600
-  ) {
+  async publishToRoom(message: Message): Promise<void> {
+    if (!this.node) throw new Error('Not connected');
+
+    const contentTopic = this.buildRoomTopic(message.roomId);
+    const protoMsg = this.ChatMessageProto.create({
+      timestamp: message.timestamp,
+      roomId: message.roomId,
+      body: utf8ToBytes(JSON.stringify(message.body))
+    });
+
+    try {
+      await this.node.lightPush.send(
+        createEncoder({ contentTopic }),
+        { payload: this.ChatMessageProto.encode(protoMsg).finish() }
+      );
+      console.log(`Message published on room topic: ${contentTopic}`);
+    } catch (err) {
+      console.error('Error publishing to room:', err);
+      throw err;
+    }
+  }
+
+  async subscribeToRoom(roomId: string, callback: MessageCallback, expirationSeconds = 600): Promise<void> {
+    if (!this.node) throw new Error('Not connected');
+
     // If already subscribed, just renew expiration
     if (this.subscriptionMap.has(roomId)) {
       const entry = this.subscriptionMap.get(roomId);
@@ -112,11 +116,10 @@ export class WakuSubscriptionManager {
       return;
     }
 
-    const node = await this.getNode();
     const contentTopic = this.buildRoomTopic(roomId);
 
     // @ts-ignore
-    const { error, subscription } = await node.filter.createSubscription({
+    const { error, subscription } = await this.node.filter.createSubscription({
       forceUseAllPeers: true,
       maxAttempts: 10,
       contentTopics: [contentTopic]
@@ -130,7 +133,7 @@ export class WakuSubscriptionManager {
     await subscription.subscribe([createDecoder(contentTopic)], async (wakuMessage) => {
       try {
         // @ts-ignore
-        const decoded = this.ChatMessageProto.decode(wakuMessage.payload) as ChatMessage;
+        const decoded = this.ChatMessageProto.decode(wakuMessage.payload) as Message;
         // Renew expiration
         const subEntry = this.subscriptionMap.get(roomId);
         if (subEntry) {
@@ -146,7 +149,12 @@ export class WakuSubscriptionManager {
           console.error('Invalid JSON in ChatMessage body:', err);
           return;
         }
-        callback(jsonBody);
+
+        await callback({
+          timestamp: decoded.timestamp,
+          roomId: decoded.roomId,
+          body: jsonBody
+        });
       } catch (err) {
         console.error('Error decoding Waku message:', err);
       }
@@ -161,62 +169,42 @@ export class WakuSubscriptionManager {
     console.log(`Subscribed to roomId=${roomId} on topic=${contentTopic}`);
   }
 
-  /**
-   * Publish to the room-based topic after the "first" message was published to the general topic.
-   */
-  public async publishToRoom(roomId: string, body: object) {
-    const node = await this.getNode();
-    const contentTopic = this.buildRoomTopic(roomId);
-
-    const protoMsg = this.ChatMessageProto.create({
-      timestamp: Date.now(),
-      roomId,
-      body: utf8ToBytes(JSON.stringify(body))
-    });
-
-    try {
-      await node.lightPush.send(
-        createEncoder({ contentTopic }),
-        { payload: this.ChatMessageProto.encode(protoMsg).finish() }
-      );
-      console.log(`Message published on room topic: ${contentTopic}`);
-    } catch (err) {
-      console.error('Error publishing to room:', err);
-      throw err;
+  async unsubscribeFromRoom(roomId: string): Promise<void> {
+    const entry = this.subscriptionMap.get(roomId);
+    if (entry) {
+      try {
+        entry.unsubscribe?.();
+      } catch (err) {
+        console.error(`Error unsubscribing from roomId=${roomId}:`, err);
+      }
+      this.subscriptionMap.delete(roomId);
     }
   }
 
-  // ------------- Helpers --------------
-
   private buildGeneralTopic(): string {
     const defaultTopic = '/chroma/0.1/PLACEHOLDER/proto';
-    // This should be done using the runtime, but for now we'll just use the env variable
-    const base = process.env.WAKU_CONTENT_TOPIC || defaultTopic;
-    const generalName = process.env.WAKU_TOPIC || 'intents';
-    // e.g. /chroma/0.1/intents/proto
+    const base = this.config.wakuContentTopic || defaultTopic;
+    const generalName = this.config.wakuTopic || 'intents';
     return base.replace('PLACEHOLDER', generalName);
   }
 
   private buildRoomTopic(roomId: string): string {
-    // e.g. /chroma/0.1/<roomId>/proto
     const defaultTopic = '/chroma/0.1/PLACEHOLDER/proto';
-    const base = process.env.WAKU_CONTENT_TOPIC || defaultTopic;
+    const base = this.config.wakuContentTopic || defaultTopic;
     return base.replace('PLACEHOLDER', roomId);
   }
 
   private startSubscriptionCleaner() {
     if (this.timer) return;
+
     this.timer = setInterval(() => {
       const now = Date.now();
       for (const [roomId, entry] of this.subscriptionMap.entries()) {
         if (entry.expiration < now) {
           console.log(`Subscription for roomId=${roomId} expired. Unsubscribing...`);
-          try {
-            entry.unsubscribe?.();
-          } catch (err) {
-            console.error(`Error unsubscribing from roomId=${roomId}:`, err);
-          }
-          this.subscriptionMap.delete(roomId);
+          this.unsubscribeFromRoom(roomId).catch(err => {
+            console.error(`Error cleaning up subscription for roomId=${roomId}:`, err);
+          });
         }
       }
     }, 30_000);

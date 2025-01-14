@@ -17,7 +17,8 @@
     "@waku/sdk": "0.0.29-2fe9875.0",
     "bs58": "^6.0.0",
     "protobufjs": "^7.4.0",
-    "tweetnacl": "^1.0.3"
+    "tweetnacl": "^1.0.3",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "tsup": "8.3.5",

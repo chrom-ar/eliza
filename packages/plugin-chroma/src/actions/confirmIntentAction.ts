@@ -1,6 +1,6 @@
-import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { SwapIntent } from '../lib/types';
-import { WakuSubscriptionManager } from '../lib/waku/manager';
+import { MessageProviderFactory } from '../lib/messaging/providerFactory';
 
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
@@ -52,7 +52,6 @@ export const confirmIntentAction: Action = {
     };
 
     // Check if we have already published to the general topic once
-    // It is an aweful way to do this, but it's a quick way to get the job done and test it
     const wasFirstPublished = Boolean(intentMemory.content?.publishedFirstWaku);
 
     // 5. Create new memory that indicates we have published (or not)
@@ -68,22 +67,23 @@ export const confirmIntentAction: Action = {
       }
     });
 
-    // 6. Waku manager
-    const subscriptionMgr = WakuSubscriptionManager.getInstance();
-    const defaultExpiration = 600;
+    // 6. Get the message provider
+    const provider = await MessageProviderFactory.getProvider();
     const configuredExpiration =
-      parseInt(runtime.getSetting('WAKU_ROOM_SUBSCRIPTION_EXPIRATION') || '') ||
-      defaultExpiration;
+      parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
+      600;
 
     // -- If we haven't posted to the general topic yet, do that first
     if (!wasFirstPublished) {
       console.log('Publishing to the general topic');
       // Publish the *first* message to the "general" topic
-      await subscriptionMgr.publishGeneralIntent(confirmedIntent, message.roomId);
+      await provider.publishToGeneral({
+        timestamp: Date.now(),
+        roomId: message.roomId,
+        body: confirmedIntent
+      });
 
       // Mark memory as "first published = true"
-      // so next time we skip the general topic
-      // We can do it either by updating the newly created memory above or by re-creating it.
       await intentManager.createMemory({
         userId: message.userId,
         agentId: message.agentId,
@@ -97,27 +97,59 @@ export const confirmIntentAction: Action = {
       });
     }
 
-    // 7. Subscribe to the room’s topic for subsequent messages
-    await subscriptionMgr.subscribeRoom(
+    // 7. Subscribe to the room's topic for subsequent messages
+    await provider.subscribeToRoom(
       message.roomId,
-      async (receivedBody) => {
-        console.log('Received a Waku message in room', message.roomId, receivedBody);
-        // Could store this solver response in memory if desired
+      async (receivedMessage) => {
+        console.log('Received a message in room', message.roomId, receivedMessage.body);
+
+        // Create a response memory
+        const responseMemory: Memory = {
+          id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
+          userId: runtime.agentId,
+          agentId: runtime.agentId,
+          roomId: message.roomId,
+          content: {
+            text: `Proposal:\n\`\`\`json\n${JSON.stringify(receivedMessage.body, null, 2)}\n\`\`\``,
+            source: 'chroma'
+          },
+          createdAt: Date.now(),
+          embedding: getEmbeddingZeroVector()
+        };
+
+        // Store the response in the message manager
+        await runtime.messageManager.createMemory(responseMemory);
+
+        // Use callback to ensure the message appears in chat
+        await callback({
+          text: responseMemory.content.text
+        });
+
+        // Update state and process any actions if needed
+        const state = await runtime.updateRecentMessageState(
+          await runtime.composeState(responseMemory)
+        );
+
+        await runtime.evaluate(responseMemory, state, false, callback);
       },
       configuredExpiration
     );
 
-    // 8. For the user’s current “confirm” request, we might also want to broadcast to the room
-    //    so that any watchers in this room topic see the "confirmed" status. This is optional
-    //    but many flows do it to keep the conversation in one place.
+    // 8. For the user's current "confirm" request, we might also want to broadcast to the room
     if (wasFirstPublished) {
       // Only do this if the general publish was previously done
-      await subscriptionMgr.publishToRoom(message.roomId, confirmedIntent);
+      await provider.publishToRoom({
+        timestamp: Date.now(),
+        roomId: message.roomId,
+        body: confirmedIntent
+      });
     }
 
     // 9. Let the user know
     callback({ text: 'Broadcasting your swap intent...' });
-    return true;
+
+    // Do not respond to the user's message
+    return false;
   },
 
   examples: [
