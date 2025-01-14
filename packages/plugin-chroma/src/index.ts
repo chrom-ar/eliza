@@ -4,6 +4,8 @@ import { parseTransferAction } from './actions/parseTransferAction';
 import { confirmIntentAction } from './actions/confirmIntentAction';
 import { cancelIntentAction } from './actions/cancelIntentAction';
 import { MessageService } from './lib/messaging/service';
+import { walletEvaluator } from './evaluators/wallet';
+import { walletProvider } from './providers/wallet';
 
 export const chromaPlugin: Plugin = {
   name: 'plugin-chroma',
@@ -14,5 +16,7 @@ export const chromaPlugin: Plugin = {
     confirmIntentAction,
     cancelIntentAction,
   ],
+  evaluators: [walletEvaluator],
+  providers: [walletProvider],
   services: [new MessageService()]
 };
