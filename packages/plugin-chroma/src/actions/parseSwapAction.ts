@@ -1,5 +1,15 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, embed, generateText, MemoryManager } from '@elizaos/core';
-import { SwapIntent } from '../lib/types';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, embed, generateObject, MemoryManager } from '@elizaos/core';
+import { z } from 'zod';
+
+// Define the schema for swap intent
+const swapSchema = z.object({
+  amount: z.string(),
+  sourceToken: z.string(),
+  sourceChain: z.string(),
+  destinationToken: z.union([z.string(), z.array(z.string())]),
+  destinationChain: z.string(),
+  deadline: z.number().optional()
+});
 
 export const parseSwapAction: Action = {
   name: 'PARSE_SWAP_INTENT',
@@ -7,83 +17,38 @@ export const parseSwapAction: Action = {
   description: 'Parses user query and constructs a GaslessCrossChainIntent JSON for a swap',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
-    // Basic check if user query mentions "swap" or relevant tokens
     const text = message.content.text.toLowerCase();
-
     return text.includes('swap') ||
            (text.includes('from') && text.includes('to') && /eth|sol|btc|usdc|usdt/i.test(text));
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
-    const text = message.content.text;
-    const context = `
-    Extract the following information from the user query:
-    - The amount of tokens to swap
-    - The source token
-    - The destination token
-
-    If the user query does not mention a swap, return an empty JSON object.
-
-    This is the user query:
-
-    \`\`\`
-    ${text}
-    \`\`\`
-
-    Return ONLY the information in the following JSON format:
-
-    \`\`\`json
-    {
-      "amount": "1",
-      "sourceToken": "ETH",
-      "destinationToken": "SOL"
-    }
-    \`\`\`
-
-    - If the user mentions a deadline, add it to the JSON object as a timestamp in seconds.
-    - If the user mentions several destination tokens, add them to the JSON object as an array.
-    - If the user mentions several source tokens, use the first one.
-    `
-
-    const response = await generateText({
+    // Extract swap info with schema validation
+    const intentData = await generateObject({
       runtime,
-      context,
       modelClass: ModelClass.SMALL,
-      stop: ['```']
-    });
-
-    const parsedResponse = response.replace(/^```json\n/g, '').replace(/\n```$/g, '');
-
-    let intentData: SwapIntent = {};
-
-    try {
-      intentData = JSON.parse(parsedResponse);
-    } catch (error) {
-      console.error('Error parsing intent data', error);
-      console.log('response', parsedResponse);
-      return false;
-    }
-
-    console.log('intentData', intentData);
+      schema: swapSchema,
+      schemaName: 'SwapIntent',
+      schemaDescription: 'Extract swap intent information from the message',
+      context: message.content.text
+    }) as z.infer<typeof swapSchema>;
 
     if (Object.keys(intentData).length === 0) {
       callback(message.content);
-
       return true;
     }
 
-    // Store the intent in the runtime state for confirmation
-    //await runtime.setState('pendingIntent', intent);
-    const { amount, sourceToken, destinationToken } = intentData || {};
-    const destination = Array.isArray(destinationToken) ? destinationToken.join(', ') : destinationToken;
-    const responseText = `I've created a swap intent for ${amount} ${sourceToken} to ${destination}. Would you like to confirm this swap?`;
-
+    // Store the intent in memory manager
     const intentManager = new MemoryManager({
       runtime,
       tableName: 'intents'
     });
 
     await intentManager.removeAllMemories(message.roomId);
+
+    const { amount, sourceToken, destinationToken } = intentData;
+    const destination = Array.isArray(destinationToken) ? destinationToken.join(', ') : destinationToken;
+    const responseText = `I've created a swap intent for ${amount} ${sourceToken} to ${destination}. Would you like to confirm this swap?`;
 
     const newMemory: Memory = await intentManager.addEmbeddingToMemory({
       userId: message.userId,

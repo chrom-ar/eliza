@@ -1,5 +1,16 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, generateText, MemoryManager } from '@elizaos/core';
-import { TransferIntent } from '../lib/types';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, generateObject, MemoryManager } from '@elizaos/core';
+import { z } from 'zod';
+
+// Define the schema for transfer intent
+const transferSchema = z.object({
+  amount: z.string(),
+  token: z.string(),
+  fromAddress: z.string(),
+  fromChain: z.string(),
+  recipientAddress: z.string(),
+  recipientChain: z.string(),
+  deadline: z.number().optional()
+});
 
 export const parseTransferAction: Action = {
   name: 'PARSE_TRANSFER_INTENT',
@@ -8,66 +19,26 @@ export const parseTransferAction: Action = {
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
-
     return text.includes('transfer') ||
            text.includes('send') ||
            ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State | undefined, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
-    const text = message.content.text;
-    const context = `
-    Extract the following information from the user query:
-    - The amount of tokens to transfer
-    - The token type
-    - The recipient address (if provided)
-    - The recipient chain (if provided)
-
-    If the user query does not mention a transfer, return an empty JSON object.
-
-    This is the user query:
-
-    \`\`\`
-    ${text}
-    \`\`\`
-
-    Return ONLY the information in the following JSON format:
-
-    \`\`\`json
-    {
-      "amount": "1",
-      "token": "ETH",
-      "fromAddress": "0x...",
-      "fromChain": "ethereum",
-      "recipientAddress": "0x...",
-      "recipientChain": "ethereum"
-    }
-    \`\`\`
-
-    - If the user mentions a deadline, add it to the JSON object as a timestamp in seconds.
-    - If the user mentions a sender address, add it to the JSON object as a sender address. If no, assume the following: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266.
-    - If no recipient address is provided, leave it as null.
-    - If no recipient chain is specified, infer it from the token type.
-    `
-
-    const response = await generateText({
+    const schemaDescription = `
+    Extract transfer intent information from the message.
+    If no chain (source or destination) is specified, use "ethereum" as the default.
+    If no from address is specified, use this one: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    `;
+    // Extract transfer info using schema validation
+    const intentData = (await generateObject({
       runtime,
-      context,
       modelClass: ModelClass.SMALL,
-      stop: ['```']
-    });
-
-    const parsedResponse = response.replace(/^```json\n/g, '').replace(/\n```$/g, '');
-
-    let intentData: TransferIntent = {};
-
-    try {
-      intentData = JSON.parse(parsedResponse);
-    } catch (error) {
-      console.error('Error parsing intent data', error);
-      console.log('response', parsedResponse);
-      return false;
-    }
+      schema: transferSchema,
+      schemaName: 'TransferIntent',
+      schemaDescription,
+      context: message.content.text
+    })).object as z.infer<typeof transferSchema>;
 
     console.log('intentData', intentData);
 
@@ -76,7 +47,7 @@ export const parseTransferAction: Action = {
       return true;
     }
 
-    const { amount, token, recipientAddress, recipientChain } = intentData || {};
+    const { amount, token, recipientAddress, recipientChain, fromAddress, fromChain } = intentData;
     const responseText = recipientAddress
       ? `I've created a transfer intent for ${amount} ${token} to ${recipientAddress} on ${recipientChain}. Would you like to confirm this transfer?`
       : `I've started creating a transfer intent for ${amount} ${token}. Please provide a recipient address to continue.`;
@@ -105,10 +76,7 @@ export const parseTransferAction: Action = {
       }
     });
 
-    console.log('intent from parseTransferAction', newMemory.content.intent);
-
     await intentManager.createMemory(newMemory);
-
     callback(newMemory.content);
 
     return true;
