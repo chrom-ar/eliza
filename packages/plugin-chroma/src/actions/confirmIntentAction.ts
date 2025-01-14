@@ -98,42 +98,39 @@ export const confirmIntentAction: Action = {
     }
 
     // 7. Subscribe to the room's topic for subsequent messages
-    await provider.subscribeToRoom(
-      message.roomId,
-      async (receivedMessage) => {
-        console.log('Received a message in room', message.roomId, receivedMessage.body);
+    await new Promise<void>((resolve) => {
+      provider.subscribeToRoom(
+        message.roomId,
+        async (receivedMessage) => {
+          console.log('Received a message in room', message.roomId, receivedMessage.body);
 
-        // Create a response memory
-        const responseMemory: Memory = {
-          id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
-          userId: runtime.agentId,
-          agentId: runtime.agentId,
-          roomId: message.roomId,
-          content: {
-            text: `Proposal:\n\`\`\`json\n${JSON.stringify(receivedMessage.body, null, 2)}\n\`\`\``,
-            source: 'chroma'
-          },
-          createdAt: Date.now(),
-          embedding: getEmbeddingZeroVector()
-        };
+          // Create a response memory
+          const responseMemory: Memory = {
+            id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
+            userId: runtime.agentId,
+            agentId: runtime.agentId,
+            roomId: message.roomId,
+            content: {
+              text: JSON.stringify(receivedMessage.body, null, 2),
+              contentType: 'application/json'
+            },
+            createdAt: Date.now(),
+            embedding: getEmbeddingZeroVector()
+          };
 
-        // Store the response in the message manager
-        await runtime.messageManager.createMemory(responseMemory);
+          await runtime.messageManager.createMemory(responseMemory);
+          await callback(responseMemory.content);
 
-        // Use callback to ensure the message appears in chat
-        await callback({
-          text: responseMemory.content.text
-        });
+          const state = await runtime.updateRecentMessageState(
+            await runtime.composeState(responseMemory)
+          );
 
-        // Update state and process any actions if needed
-        const state = await runtime.updateRecentMessageState(
-          await runtime.composeState(responseMemory)
-        );
-
-        await runtime.evaluate(responseMemory, state, false, callback);
-      },
-      configuredExpiration
-    );
+          await runtime.evaluate(responseMemory, state, false, callback);
+          resolve();
+        },
+        configuredExpiration
+      );
+    });
 
     // 8. For the user's current "confirm" request, we might also want to broadcast to the room
     if (wasFirstPublished) {
@@ -144,9 +141,6 @@ export const confirmIntentAction: Action = {
         body: confirmedIntent
       });
     }
-
-    // 9. Let the user know
-    callback({ text: 'Broadcasting your swap intent...' });
 
     // Do not respond to the user's message
     return false;

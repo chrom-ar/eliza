@@ -43,7 +43,7 @@ export const parseTransferAction: Action = {
     console.log('intentData', intentData);
 
     if (Object.keys(intentData).length === 0) {
-      callback(message.content);
+      await callback(message.content);
       return true;
     }
 
@@ -77,7 +77,7 @@ export const parseTransferAction: Action = {
     });
 
     await intentManager.createMemory(newMemory);
-    callback(newMemory.content);
+    await callback(newMemory.content);
 
     return true;
   },
