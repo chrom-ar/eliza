@@ -19,8 +19,9 @@
         "dist"
     ],
     "dependencies": {
-        "@libp2p/bootstrap": "^11.0.16",
         "@elizaos/core": "workspace:*",
+        "@libp2p/bootstrap": "^11.0.16",
+        "@libp2p/tcp": "^10.0.15",
         "@waku/message-hash": "^0.1.16",
         "@waku/sdk": "0.0.29-2fe9875.0",
         "bs58": "^6.0.0",

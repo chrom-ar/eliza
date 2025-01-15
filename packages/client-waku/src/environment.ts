@@ -18,6 +18,9 @@ const wakuEnvSchema = z.object({
     .number()
     .int()
     .default(20),
+  WAKU_STATIC_PEERS: z
+    .string()
+    .trim(),
 });
 
 export type WakuConfig = z.infer<typeof wakuEnvSchema>;
@@ -29,7 +32,8 @@ export async function validateWakuConfig(
     const wakuConfig = {
       WAKU_CONTENT_TOPIC: runtime.getSetting('WAKU_CONTENT_TOPIC'),
       WAKU_TOPIC: runtime.getSetting('WAKU_TOPIC'),
-      WAKU_PING_COUNT: parseInt(runtime.getSetting('WAKU_PING_COUNT')) || 20
+      WAKU_PING_COUNT: parseInt(runtime.getSetting('WAKU_PING_COUNT')) || 20,
+      WAKU_STATIC_PEERS: runtime.getSetting('WAKU_STATIC_PEERS'),
     };
 
     return wakuEnvSchema.parse(wakuConfig);

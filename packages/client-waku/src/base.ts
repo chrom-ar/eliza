@@ -7,6 +7,7 @@ import {
   utf8ToBytes,
   Protocols
 } from '@waku/sdk';
+import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
 import { WakuConfig } from './environment';
@@ -36,15 +37,33 @@ export class WakuBase extends EventEmitter {
   }
 
   async init() {
-    this.wakuNode = await createLightNode({
-      defaultBootstrap: true
-    });
+    const nodeConfig = {}
+    const usePeers = this.wakuConfig.WAKU_STATIC_PEERS.length > 0;
+
+    if (usePeers) {
+      // NOTE: If other transports are needed we **have** to add them here
+      nodeConfig['libp2p'] = { transports: [tcp()] }
+    } else {
+      nodeConfig['defaultBootstrap'] = true
+    }
+
+    this.wakuNode = await createLightNode(nodeConfig);
+
+    if (usePeers) {
+      const peers = this.wakuConfig.WAKU_STATIC_PEERS.split(',');
+      elizaLogger.info(`[WakuBase] Connecting to static peers: ${peers}`);
+
+      await Promise.all(
+        peers.map(multiaddr => this.wakuNode.dial(multiaddr))
+      )
+    }
+
     await this.wakuNode.start();
 
     // Wait for remote peer. This is repeated up to WAKU_PING_COUNT times.
     for (let i = 0; i < this.wakuConfig.WAKU_PING_COUNT; i++) {
       try {
-        await waitForRemotePeer(this.wakuNode, [Protocols.LightPush, Protocols.Filter], 5000);
+        await this.wakuNode.waitForPeers([Protocols.LightPush, Protocols.Filter], 5000);
 
         if (this.wakuNode.isConnected()) {
           break;
