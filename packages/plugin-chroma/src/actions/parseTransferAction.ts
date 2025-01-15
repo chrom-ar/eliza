@@ -19,6 +19,10 @@ export const parseTransferAction: Action = {
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
+    const cond = text.includes('transfer') ||
+           text.includes('send') ||
+           ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
+    console.log("VALIDATE DEL transfer: ", cond)
     return text.includes('transfer') ||
            text.includes('send') ||
            ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
