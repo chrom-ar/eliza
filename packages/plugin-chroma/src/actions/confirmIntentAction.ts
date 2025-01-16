@@ -13,6 +13,7 @@ export const confirmIntentAction: Action = {
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options, callback: HandlerCallback): Promise<boolean> => {
+    console.log('confirmIntentAction.ts:15');
     // 1. Get the stored (pending) intent
     const intentManager = new MemoryManager({ runtime, tableName: 'intents' });
     const [intentMemory] = await intentManager.getMemories({
@@ -21,10 +22,12 @@ export const confirmIntentAction: Action = {
       unique: true
     });
 
+    console.log('confirmIntentAction.ts:24');
     if (!intentMemory?.content?.intent) {
       callback({ text: 'Sorry, I could not find a pending intent to confirm. Please create a new swap request.' });
       return false;
     }
+    console.log('confirmIntentAction.ts:29');
 
     const intent: SwapIntent = typeof intentMemory.content.intent === 'object'
       ? intentMemory.content.intent
@@ -35,6 +38,7 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
+    console.log('confirmIntentAction.ts:40');
     // 2. Remove the old memory
     await intentManager.removeMemory(intentMemory.id);
 
@@ -44,6 +48,7 @@ export const confirmIntentAction: Action = {
       status: 'confirmed'
     };
 
+    console.log('confirmIntentAction.ts:50');
     // 4. Prepare the new content
     const newContent = {
       ...intentMemory.content,
@@ -54,6 +59,7 @@ export const confirmIntentAction: Action = {
     // Check if we have already published to the general topic once
     const wasFirstPublished = Boolean(intentMemory.content?.publishedFirstWaku);
 
+    console.log('confirmIntentAction.ts:61');
     // 5. Create new memory that indicates we have published (or not)
     await intentManager.createMemory({
       userId: message.userId,
@@ -67,12 +73,14 @@ export const confirmIntentAction: Action = {
       }
     });
 
+    console.log('confirmIntentAction.ts:75');
     // 6. Get the message provider
     const provider = await MessageProviderFactory.getProvider();
     const configuredExpiration =
       parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
       600;
 
+    console.log('confirmIntentAction.ts:82');
     // -- If we haven't posted to the general topic yet, do that first
     if (!wasFirstPublished) {
       console.log('Publishing to the general topic');
@@ -97,6 +105,7 @@ export const confirmIntentAction: Action = {
       });
     }
 
+    console.log('confirmIntentAction.ts:107');
     // 7. Subscribe to the room's topic for subsequent messages
     await provider.subscribeToRoom(
       message.roomId,
@@ -135,8 +144,10 @@ export const confirmIntentAction: Action = {
       configuredExpiration
     );
 
+    console.log('confirmIntentAction.ts:146');
     // 8. For the user's current "confirm" request, we might also want to broadcast to the room
     if (wasFirstPublished) {
+      console.log('confirmIntentAction.ts:149');
       // Only do this if the general publish was previously done
       await provider.publishToRoom({
         timestamp: Date.now(),

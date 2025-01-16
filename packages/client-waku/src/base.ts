@@ -34,11 +34,14 @@ export class WakuBase extends EventEmitter {
   constructor(wakuConfig: WakuConfig) {
     super();
     this.wakuConfig = wakuConfig;
+    console.log("Initializing waku with: ", wakuConfig)
   }
 
   async init() {
     const nodeConfig = {}
     const usePeers = this.wakuConfig.WAKU_STATIC_PEERS.length > 0;
+    console.log("usePeers", usePeers)
+    elizaLogger.info(`[MANSO] Connecting to static peers: ${usePeers}`);
 
     if (usePeers) {
       // NOTE: If other transports are needed we **have** to add them here
@@ -51,6 +54,7 @@ export class WakuBase extends EventEmitter {
 
     if (usePeers) {
       const peers = this.wakuConfig.WAKU_STATIC_PEERS.split(',');
+      console.log("Peers: ", peers)
       elizaLogger.info(`[WakuBase] Connecting to static peers: ${peers}`);
 
       await Promise.all(

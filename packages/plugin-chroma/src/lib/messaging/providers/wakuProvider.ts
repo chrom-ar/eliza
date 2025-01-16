@@ -9,6 +9,7 @@ import {
   Protocols,
   LightNode
 } from '@waku/sdk';
+import { tcp} from '@libp2p/tcp';
 import { Message, MessageCallback, MessageProvider, MessageProviderConfig } from '../types';
 
 export class WakuMessageProvider implements MessageProvider {
@@ -31,7 +32,20 @@ export class WakuMessageProvider implements MessageProvider {
 
   async connect(): Promise<void> {
     if (!this.node) {
-      this.node = await createLightNode({ defaultBootstrap: true });
+      this.node = await createLightNode({
+        // @ts-ignore
+        libp2p: { transports: [tcp()] }
+      });
+      for (let i = 0; i < 5; i++) {
+        try {
+          await this.node.dial(
+            "/ip4/52.22.92.109/tcp/30304/p2p/16Uiu2HAkuuNT9a6qbMDh3scEEegGEcKTDnYp7iaT6oHUrBzEKT5r"
+          )
+        } catch (err) {
+          console.error('Error dialing Waku node:', err);
+          await this.sleep(1000);
+        }
+      }
       await this.node.start();
 
       // Wait for Filter & LightPush support
@@ -107,15 +121,18 @@ export class WakuMessageProvider implements MessageProvider {
   async subscribeToRoom(roomId: string, callback: MessageCallback, expirationSeconds = 600): Promise<void> {
     if (!this.node) throw new Error('Not connected');
 
+    console.log('wakuProvider.ts:109');
     // If already subscribed, just renew expiration
     if (this.subscriptionMap.has(roomId)) {
       const entry = this.subscriptionMap.get(roomId);
       if (entry) {
         entry.expiration = Date.now() + expirationSeconds * 1000;
       }
+      console.log('wakuProvider.ts:116');
       return;
     }
 
+    console.log('wakuProvider.ts:120');
     const contentTopic = this.buildRoomTopic(roomId);
 
     // @ts-ignore
@@ -125,11 +142,13 @@ export class WakuMessageProvider implements MessageProvider {
       contentTopics: [contentTopic]
     });
 
+    console.log('wakuProvider.ts:130');
     if (error) {
       console.error(`Error creating subscription for roomId=${roomId}`, error);
       throw error;
     }
 
+    console.log('wakuProvider.ts:136');
     await subscription.subscribe([createDecoder(contentTopic)], async (wakuMessage) => {
       try {
         // @ts-ignore
@@ -150,6 +169,7 @@ export class WakuMessageProvider implements MessageProvider {
           return;
         }
 
+        console.log('wakuProvider.ts:157');
         await callback({
           timestamp: decoded.timestamp,
           roomId: decoded.roomId,

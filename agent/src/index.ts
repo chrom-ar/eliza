@@ -569,6 +569,7 @@ export async function initializeClients(
     }
 
     if (clientTypes.includes(Clients.WAKU)) {
+        console.log("MANSO WAKU")
         const wakuClient = await WakuClientInterface.start(runtime);
         if (wakuClient) {
             clients.waku = wakuClient;
