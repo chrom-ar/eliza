@@ -10,10 +10,12 @@ import { LensAgentClient } from "@elizaos/client-lens";
 import { SlackClientInterface } from "@elizaos/client-slack";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
+
 // import { ReclaimAdapter } from "@elizaos/plugin-reclaim";
 import { DirectClient } from "@elizaos/client-direct";
 import { PrimusAdapter } from "@elizaos/plugin-primus";
 
+import { WakuClientInterface } from "@elizaos/client-waku";
 import {
     AgentRuntime,
     CacheManager,
@@ -565,6 +567,14 @@ export async function initializeClients(
             clients.farcaster = farcasterClient;
         }
     }
+
+    if (clientTypes.includes(Clients.WAKU)) {
+        const wakuClient = await WakuClientInterface.start(runtime);
+        if (wakuClient) {
+            clients.waku = wakuClient;
+        }
+    }
+
     if (clientTypes.includes("lens")) {
         const lensClient = new LensAgentClient(runtime);
         lensClient.start();
