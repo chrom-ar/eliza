@@ -9,6 +9,7 @@ export const confirmIntentAction: Action = {
 
   validate: async (_runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
+    console.log("confirmIntentAction.ts:14", text, /\b(confirm|yes|ok|go|proceed)\b/i.test(text))
     return /\b(confirm|yes|ok|go|proceed)\b/i.test(text);
   },
 
@@ -76,22 +77,16 @@ export const confirmIntentAction: Action = {
 
     console.log('confirmIntentAction.ts:75');
     // 6. Get the message provider
-    const provider = await MessageProviderFactory.getProvider();
-    const configuredExpiration =
-      parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
-      600;
+    // TMP refactor MsgProvider
+    const waku = MessageProviderFactory.getProvider();
+    // const configuredExpiration =
+    //   parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
+    //   600;
 
     console.log('confirmIntentAction.ts:82');
     // -- If we haven't posted to the general topic yet, do that first
     // IF NOT NEEDED
     // if (!wasFirstPublished) {
-    console.log('Publishing to the general topic');
-    // Publish the *first* message to the "general" topic
-    await provider.publishToGeneral({
-      timestamp: Date.now(),
-      roomId: message.roomId,
-      body: confirmedIntent
-    });
 
     // Mark memory as "first published = true"
     // await intentManager.createMemory({
@@ -107,25 +102,32 @@ export const confirmIntentAction: Action = {
     // });
     // }
 
+    const persistedRoomId = runtime.roomId;
+    const persistedUserId = runtime.userId;
     console.log('confirmIntentAction.ts:107');
     // 7. Subscribe to the room's topic for subsequent messages
-    await provider.subscribeToRoom(
+    await waku.subscribe(
       message.roomId,
       async (receivedMessage) => {
+        try {
+        // console.log("Received msj in subscription:", receivedMessage)
         console.log('Received a message in room', message.roomId, receivedMessage.body);
+        console.log("Runtime milonga:", runtime.userId, runtime.agentId, runtime.roomId,
+          persistedUserId, persistedRoomId)
 
         // Create a response memory
         const responseMemory: Memory = {
-          // id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
-          userId: runtime.userId,
+          id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
+          userId: runtime.agentId,
           agentId: runtime.agentId,
-          roomId: runtime.roomId,
+          roomId: message.roomId,
           content: {
-            text: `Proposal:\n\`\`\`json\n${JSON.stringify(receivedMessage.body, null, 2)}\n\`\`\``
+            text: JSON.stringify(receivedMessage.body, null, 2),
+            contentType: 'application/json'
             // source: 'chroma'
           },
           createdAt: Date.now(),
-          // embedding: getEmbeddingZeroVector()
+          embedding: getEmbeddingZeroVector()
         };
 
         console.log("Creating msg memory:", responseMemory)
@@ -144,9 +146,75 @@ export const confirmIntentAction: Action = {
         );
 
         await runtime.evaluate(responseMemory, state, false, callback);
-      },
-      configuredExpiration
+        } catch (e) {
+          console.error("Error inside subscription:", e)
+        }
+      }
+      // configuredExpiration
+    )
+
+    console.log('Publishing to the general topic');
+    // Publish the *first* message to the "general" topic
+    await waku.send(
+      confirmedIntent,
+      '', // General intent topic
+      message.roomId
     );
+
+
+
+    // await new Promise<void>((resolve) => {
+    // waku.subscribe(
+    //   message.roomId,
+    //   async (receivedMessage) => {
+    //     try {
+    //     // console.log("Received msj in subscription:", receivedMessage)
+    //     console.log('Received a message in room', message.roomId, receivedMessage.body);
+    //     console.log("Runtime milonga:", runtime.userId, runtime.agentId, runtime.roomId,
+    //       persistedUserId, persistedRoomId)
+
+    //     // Create a response memory
+    //     const responseMemory: Memory = {
+    //       id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
+    //       userId: runtime.agentId,
+    //       agentId: runtime.agentId,
+    //       roomId: message.roomId,
+    //       content: {
+    //         text: "TANGALANGA",
+    //         // contentType: 'application/json'
+    //         // source: 'chroma'
+    //       },
+    //       createdAt: Date.now(),
+    //       embedding: getEmbeddingZeroVector()
+    //     };
+
+    //     console.log("Creating msg memory:", responseMemory)
+
+    //     // Store the response in the message manager
+    //     await runtime.messageManager.createMemory(responseMemory);
+
+    //     // Use callback to ensure the message appears in chat
+    //     await callback({
+    //       text: responseMemory.content.text
+    //     });
+
+    //     // Update state and process any actions if needed
+    //     const state = await runtime.updateRecentMessageState(
+    //       await runtime.composeState(responseMemory)
+    //     );
+
+    //     await runtime.evaluate(responseMemory, state, false, callback);
+    //     } catch (e) {
+    //       console.error("Error inside subscription:", e)
+    //     }
+
+    //     resolve()
+    //   }
+    //   // configuredExpiration
+    // )
+    // })
+
+
 
     console.log('confirmIntentAction.ts:146');
     // 8. For the user's current "confirm" request, we might also want to broadcast to the room
