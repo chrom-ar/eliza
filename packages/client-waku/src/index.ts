@@ -2,12 +2,15 @@ import { Client, elizaLogger, IAgentRuntime } from '@elizaos/core';
 import { validateWakuConfig, WakuConfig } from './environment';
 import { WakuDelivery } from './wakuDelivery';
 
-class WakuManager {
+export class WakuClient {
   delivery: WakuDelivery;
 
   constructor(runtime: IAgentRuntime, wakuConfig: WakuConfig) {
     this.delivery = new WakuDelivery(runtime, wakuConfig);
   }
+
+  async subscribe(topic: string, fn: any) { return await this.delivery.subscribe(topic, fn); }
+  async send(message: object, topic: string, roomId: string) { return await this.delivery.send(message, topic, roomId); }
 }
 
 /**
@@ -18,14 +21,14 @@ export const WakuClientInterface: Client = {
     const wakuConfig: WakuConfig = await validateWakuConfig(runtime);
 
     // Create manager & plugin
-    const manager = new WakuManager(runtime, wakuConfig);
+    const client = new WakuClient(runtime, wakuConfig);
 
     // Initialize plugin
-    await manager.delivery.init();
+    await client.delivery.init();
 
     elizaLogger.log('Waku client started');
 
-    return manager;
+    return client;
   },
 
   async stop(_runtime: IAgentRuntime) {

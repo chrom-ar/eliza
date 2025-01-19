@@ -14,6 +14,8 @@ import { WakuConfig } from './environment';
 import { randomHexString } from './utils';
 import { elizaLogger } from '@elizaos/core';
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export const ChatMessage = new protobuf.Type('ChatMessage')
   .add(new protobuf.Field('timestamp', 1, 'uint64'))
   .add(new protobuf.Field('body', 2, 'bytes'))
@@ -57,9 +59,18 @@ export class WakuBase extends EventEmitter {
       console.log("Peers: ", peers)
       elizaLogger.info(`[WakuBase] Connecting to static peers: ${peers}`);
 
-      await Promise.all(
-        peers.map(multiaddr => this.wakuNode.dial(multiaddr))
-      )
+      for (let peer of peers) {
+        for (let i = 0; i < 5; i++) {
+          try {
+            await this.wakuNode.dial(peer);
+            elizaLogger.info(`[WakuBase] ${peer} connected`);
+            break
+          } catch (e) {
+            elizaLogger.error(`[WakuBase] Error ${i} dialing peer ${peer}: ${e}`);
+            await sleep(1000)
+          }
+        }
+      }
     }
 
     await this.wakuNode.start();
@@ -74,6 +85,7 @@ export class WakuBase extends EventEmitter {
         }
       } catch (e) {
         elizaLogger.info(`[WakuBase] Attempt ${i + 1}/${this.wakuConfig.WAKU_PING_COUNT} => still waiting for peers`);
+        await sleep(1000)
 
         if (i === this.wakuConfig.WAKU_PING_COUNT - 1) {
           throw new Error('[WakuBase] Could not find remote peer after max attempts');
@@ -88,23 +100,19 @@ export class WakuBase extends EventEmitter {
    * Subscribe to the user-specified WAKU_CONTENT_TOPIC
    * If it contains the placeholder, we replace with the WAKU_TOPIC value, possibly with an appended random hex if so desired.
    */
-  async subscribe(): Promise<void> {
-    if (!this.wakuConfig.WAKU_CONTENT_TOPIC || !this.wakuConfig.WAKU_TOPIC) {
-      elizaLogger.warn('[WakuBase] subscription not configured (missing env). No messages will be received.');
-      return;
+  async subscribe(topic: string, fn: any): Promise<void> {
+    if (!topic) {
+      if (!this.wakuConfig.WAKU_CONTENT_TOPIC || !this.wakuConfig.WAKU_TOPIC) {
+        throw new Error('[WakuBase] subscription not configured (missing env). No messages will be received.');
+      }
     }
 
-    let actualTopic = this.wakuConfig.WAKU_CONTENT_TOPIC.replace('PLACEHOLDER', this.wakuConfig.WAKU_TOPIC);
-    // Optionally append random if you want ephemeral uniqueness
-    if (actualTopic.includes('random-hex')) {
-      actualTopic = actualTopic.replace('random-hex', randomHexString(16));
-    }
+    this.subscribedTopic = this.buildFullTopic(topic);
 
-    this.subscribedTopic = actualTopic;
     const { error, subscription } = await this.wakuNode.filter.createSubscription({
-      forceUseAllPeers: true,
+      // forceUseAllPeers: true,
       maxAttempts: 10,
-      contentTopics: [actualTopic]
+      contentTopics: [this.subscribedTopic]
     });
 
     if (error) {
@@ -115,27 +123,31 @@ export class WakuBase extends EventEmitter {
 
     elizaLogger.info(`[WakuBase] Subscribed to topic: ${this.subscribedTopic}`);
 
-    await subscription.subscribe([createDecoder(actualTopic)], async (wakuMsg) => {
-      if (!wakuMsg?.payload) return;
+    await subscription.subscribe(
+      [createDecoder(this.subscribedTopic)],
+      async (wakuMsg) => {
+        if (!wakuMsg?.payload) return;
 
-      try {
-        const msgDecoded = ChatMessage.decode(wakuMsg.payload);
-        // @ts-ignore
-        const text = bytesToUtf8(msgDecoded.body);
+        try {
+          const msgDecoded = ChatMessage.decode(wakuMsg.payload);
 
-        const event: WakuMessageEvent = {
-          // @ts-ignore
-          timestamp: Number(msgDecoded.timestamp),
-          body: text,
-          // @ts-ignore
-          roomId: msgDecoded.roomId
-        };
+          const event: WakuMessageEvent = {
+            // @ts-ignore
+            body: JSON.parse(bytesToUtf8(msgDecoded.body)),
+            // @ts-ignore
+            timestamp: Number(msgDecoded.timestamp),
+            // @ts-ignore
+            roomId: bytesToUtf8(msgDecoded.roomId)
+          };
 
-        this.emit('message', event);
-      } catch (err) {
-        elizaLogger.error('[WakuBase] Error decoding message payload:', err);
+          // this.emit('message', event);
+
+          await fn(event);
+        } catch (err) {
+          elizaLogger.error('[WakuBase] Error decoding message payload:', err);
+        }
       }
-    });
+    );
 
     // Attempt a 'ping' to ensure it is up
     for (let i = 0; i < this.wakuConfig.WAKU_PING_COUNT; i++) {
@@ -145,7 +157,7 @@ export class WakuBase extends EventEmitter {
       } catch (e) {
         if (e instanceof Error && e.message.includes('peer has no subscriptions')) {
           elizaLogger.warn('[WakuBase] Peer has no subs, retrying subscription...');
-          return this.subscribe();
+          return this.subscribe(topic, fn);
         }
         elizaLogger.warn(`[WakuBase] Subscription ping attempt ${i} error, retrying...`);
         await new Promise((r) => setTimeout(r, 1000));
@@ -155,28 +167,19 @@ export class WakuBase extends EventEmitter {
     elizaLogger.success(`[WakuBase] Subscribed to topic: ${this.subscribedTopic}`);
   }
 
-  async sendMessage(body: string, topic: string, roomId: string): Promise<void> {
-    if (!topic) {
-      elizaLogger.warn('[WakuBase] sendMessage => not configured (missing env).');
-      return;
-    }
-
-    let actualTopic = topic.replace('PLACEHOLDER', this.wakuConfig.WAKU_TOPIC);
-    if (actualTopic.includes('random-hex')) {
-      actualTopic = actualTopic.replace('random-hex', randomHexString(16));
-    }
-
-    elizaLogger.info(`[WakuBase] Sending message to topic ${actualTopic} => ${body}`);
+  async sendMessage(body: object, topic: string, roomId: string): Promise<void> {
+    topic = this.buildFullTopic(topic);
+    elizaLogger.info(`[WakuBase] Sending message to topic ${topic} =>`, body);
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
-      body: utf8ToBytes(body),
-      roomId
+      body: utf8ToBytes(JSON.stringify(body)),
+      roomId: utf8ToBytes(roomId)
     });
 
     try {
       await this.wakuNode.lightPush.send(
-        createEncoder({ contentTopic: actualTopic }),
+        createEncoder({ contentTopic: topic }),
         { payload: ChatMessage.encode(protoMessage).finish() }
       );
       elizaLogger.success('[WakuBase] Message sent!');
@@ -194,5 +197,22 @@ export class WakuBase extends EventEmitter {
       elizaLogger.info('[WakuBase] stopping node...');
       await this.wakuNode.stop();
     }
+  }
+
+  defaultIntentsTopic(): string {
+    return this.wakuConfig.WAKU_CONTENT_TOPIC.replace('PLACEHOLDER', this.wakuConfig.WAKU_TOPIC);
+  }
+
+  buildFullTopic(topic?: string): string {
+    if (!topic) {
+      return this.defaultIntentsTopic()
+    } else if (topic.includes('random')) {
+      // Optionally append random if you want ephemeral uniqueness
+      return this.wakuConfig.WAKU_CONTENT_TOPIC.replace('PLACEHOLDER', randomHexString(16));
+    } else if (!topic.startsWith('/')) { // partial topic
+      return this.wakuConfig.WAKU_CONTENT_TOPIC.replace('PLACEHOLDER', topic);
+    }
+
+    return topic;
   }
 }

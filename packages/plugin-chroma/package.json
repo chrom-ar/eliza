@@ -12,9 +12,8 @@
   },
   "dependencies": {
     "@elizaos/core": "workspace:*",
-    "@libp2p/bootstrap": "^11.0.16",
-    "@waku/message-hash": "^0.1.16",
-    "@waku/sdk": "0.0.29-2fe9875.0",
+    "@elizaos/client-waku": "workspace:*",
+    "@waku/sdk": "0.0.30-9f1d8ca.0",
     "bs58": "^6.0.0",
     "protobufjs": "^7.4.0",
     "tweetnacl": "^1.0.3",

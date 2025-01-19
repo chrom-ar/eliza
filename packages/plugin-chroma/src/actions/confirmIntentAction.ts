@@ -57,7 +57,8 @@ export const confirmIntentAction: Action = {
     };
 
     // Check if we have already published to the general topic once
-    const wasFirstPublished = Boolean(intentMemory.content?.publishedFirstWaku);
+    // NOT NEEDED
+    // const wasFirstPublished = Boolean(intentMemory.content?.publishedFirstWaku);
 
     console.log('confirmIntentAction.ts:61');
     // 5. Create new memory that indicates we have published (or not)
@@ -69,7 +70,7 @@ export const confirmIntentAction: Action = {
       unique: true,
       content: {
         ...newContent,
-        publishedFirstWaku: !!wasFirstPublished
+        // publishedFirstWaku: !!wasFirstPublished
       }
     });
 
@@ -82,28 +83,29 @@ export const confirmIntentAction: Action = {
 
     console.log('confirmIntentAction.ts:82');
     // -- If we haven't posted to the general topic yet, do that first
-    if (!wasFirstPublished) {
-      console.log('Publishing to the general topic');
-      // Publish the *first* message to the "general" topic
-      await provider.publishToGeneral({
-        timestamp: Date.now(),
-        roomId: message.roomId,
-        body: confirmedIntent
-      });
+    // IF NOT NEEDED
+    // if (!wasFirstPublished) {
+    console.log('Publishing to the general topic');
+    // Publish the *first* message to the "general" topic
+    await provider.publishToGeneral({
+      timestamp: Date.now(),
+      roomId: message.roomId,
+      body: confirmedIntent
+    });
 
-      // Mark memory as "first published = true"
-      await intentManager.createMemory({
-        userId: message.userId,
-        agentId: message.agentId,
-        roomId: message.roomId,
-        createdAt: Date.now(),
-        unique: true,
-        content: {
-          ...newContent,
-          publishedFirstWaku: true
-        }
-      });
-    }
+    // Mark memory as "first published = true"
+    // await intentManager.createMemory({
+    //   userId: message.userId,
+    //   agentId: message.agentId,
+    //   roomId: message.roomId,
+    //   createdAt: Date.now(),
+    //   unique: true,
+    //   content: {
+    //     ...newContent,
+    //     publishedFirstWaku: true
+    //   }
+    // });
+    // }
 
     console.log('confirmIntentAction.ts:107');
     // 7. Subscribe to the room's topic for subsequent messages
@@ -114,17 +116,19 @@ export const confirmIntentAction: Action = {
 
         // Create a response memory
         const responseMemory: Memory = {
-          id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
-          userId: runtime.agentId,
+          // id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
+          userId: runtime.userId,
           agentId: runtime.agentId,
-          roomId: message.roomId,
+          roomId: runtime.roomId,
           content: {
-            text: `Proposal:\n\`\`\`json\n${JSON.stringify(receivedMessage.body, null, 2)}\n\`\`\``,
-            source: 'chroma'
+            text: `Proposal:\n\`\`\`json\n${JSON.stringify(receivedMessage.body, null, 2)}\n\`\`\``
+            // source: 'chroma'
           },
           createdAt: Date.now(),
-          embedding: getEmbeddingZeroVector()
+          // embedding: getEmbeddingZeroVector()
         };
+
+        console.log("Creating msg memory:", responseMemory)
 
         // Store the response in the message manager
         await runtime.messageManager.createMemory(responseMemory);
@@ -146,21 +150,22 @@ export const confirmIntentAction: Action = {
 
     console.log('confirmIntentAction.ts:146');
     // 8. For the user's current "confirm" request, we might also want to broadcast to the room
-    if (wasFirstPublished) {
-      console.log('confirmIntentAction.ts:149');
-      // Only do this if the general publish was previously done
-      await provider.publishToRoom({
-        timestamp: Date.now(),
-        roomId: message.roomId,
-        body: confirmedIntent
-      });
-    }
+    //  THIS STEP IS NOT NEEDED, HERE WE SHOULD SHOW AND THEN SIGN&SEND
+    // if (wasFirstPublished) {
+    //   console.log('confirmIntentAction.ts:149');
+    //   // Only do this if the general publish was previously done
+    //   await provider.publishToRoom({
+    //     timestamp: Date.now(),
+    //     roomId: message.roomId,
+    //     body: confirmedIntent
+    //   });
+    // }
 
     // 9. Let the user know
-    callback({ text: 'Broadcasting your swap intent...' });
+    callback({ text: 'Broadcasting your intent...' });
 
     // Do not respond to the user's message
-    return false;
+    return true;
   },
 
   examples: [

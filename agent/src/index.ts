@@ -12,10 +12,10 @@ import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
 
 // import { ReclaimAdapter } from "@elizaos/plugin-reclaim";
-import { DirectClient } from "@elizaos/client-direct";
+// import { DirectClient } from "@elizaos/client-direct";
 import { PrimusAdapter } from "@elizaos/plugin-primus";
 
-import { WakuClientInterface } from "@elizaos/client-waku";
+import WakuClient from "@elizaos/client-waku";
 import {
     AgentRuntime,
     CacheManager,
@@ -568,13 +568,12 @@ export async function initializeClients(
         }
     }
 
-    if (clientTypes.includes(Clients.WAKU)) {
-        console.log("MANSO WAKU")
-        const wakuClient = await WakuClientInterface.start(runtime);
-        if (wakuClient) {
-            clients.waku = wakuClient;
-        }
-    }
+    // if (clientTypes.includes(Clients.WAKU)) {
+    //     const wakuClient = await WakuClient.start(runtime);
+    //     if (wakuClient) {
+    //         clients.waku = wakuClient;
+    //     }
+    // }
 
     if (clientTypes.includes("lens")) {
         const lensClient = new LensAgentClient(runtime);
