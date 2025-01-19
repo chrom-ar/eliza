@@ -126,7 +126,10 @@ export class WakuBase extends EventEmitter {
     await subscription.subscribe(
       [createDecoder(this.subscribedTopic)],
       async (wakuMsg) => {
-        if (!wakuMsg?.payload) return;
+        if (!wakuMsg?.payload) {
+          elizaLogger.error('[WakuBase] Received message with no payload');
+          return;
+        }
 
         try {
           const msgDecoded = ChatMessage.decode(wakuMsg.payload);
