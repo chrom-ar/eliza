@@ -1,10 +1,10 @@
 import { IAgentRuntime } from '@elizaos/core';
 import { MessageProvider, MessageProviderConfig } from './types';
-// import { WakuMessageProvider } from './providers/wakuProvider';
-// import { RedisMessageProvider } from './providers/redisProvider';
+
 import { WakuClient } from "@elizaos/client-waku";
 import WakuClientInterface from "@elizaos/client-waku";
 
+// TODO: Temporal implementation. Will be replaced by the waku client
 export class MessageProviderFactory {
   private static instance: any | null = null;
 
@@ -13,21 +13,9 @@ export class MessageProviderFactory {
       return MessageProviderFactory.instance;
     }
 
-    // let provider: MessageProvider;
-
-    // switch (config.type) {
-    //   case 'waku':
-    //     provider = new WakuMessageProvider(config);
-    //     break;
-    //   case 'redis':
-    //     provider = new RedisMessageProvider(config);
-    //     break;
-    //   default:
-    //     throw new Error(`Unsupported provider type: ${config.type}`);
-    // }
-
     const provider = await WakuClientInterface.start(runtime);
     MessageProviderFactory.instance = provider;
+    // @ts-ignore
     return provider;
   }
 

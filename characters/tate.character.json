@@ -1,7 +1,7 @@
 {
     "name": "tate",
     "clients": [],
-    "modelProvider": "google",
+    "modelProvider": "anthropic",
     "settings": {
         "secrets": {},
         "voice": {

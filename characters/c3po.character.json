@@ -1,9 +1,11 @@
 {
     "name": "C-3PO",
     "clients": [],
-    "modelProvider": "google",
+    "modelProvider": "anthropic",
     "settings": {
-        "model": "gemini-2.0-flash-exp"
+        "voice": {
+            "model": "en_GB-alan-medium"
+        }
     },
     "plugins": [],
     "bio": [

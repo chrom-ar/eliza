@@ -2,6 +2,7 @@ import { Client, elizaLogger, IAgentRuntime } from '@elizaos/core';
 import { validateWakuConfig, WakuConfig } from './environment';
 import { WakuDelivery } from './wakuDelivery';
 
+// TODO: drop the abstract class for the base class
 export class WakuClient {
   delivery: WakuDelivery;
 

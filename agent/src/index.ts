@@ -12,10 +12,8 @@ import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
 
 // import { ReclaimAdapter } from "@elizaos/plugin-reclaim";
-// import { DirectClient } from "@elizaos/client-direct";
 import { PrimusAdapter } from "@elizaos/plugin-primus";
 
-import WakuClient from "@elizaos/client-waku";
 import {
     AgentRuntime,
     CacheManager,
@@ -568,13 +566,6 @@ export async function initializeClients(
         }
     }
 
-    // if (clientTypes.includes(Clients.WAKU)) {
-    //     const wakuClient = await WakuClient.start(runtime);
-    //     if (wakuClient) {
-    //         clients.waku = wakuClient;
-    //     }
-    // }
-
     if (clientTypes.includes("lens")) {
         const lensClient = new LensAgentClient(runtime);
         lensClient.start();
@@ -720,7 +711,7 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
-            chromaPlugin,
+            getSecret(character, "USE_CHROMA") ? chromaPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,

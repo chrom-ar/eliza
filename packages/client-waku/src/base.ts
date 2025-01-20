@@ -1,6 +1,5 @@
 import {
   createLightNode,
-  waitForRemotePeer,
   createDecoder,
   createEncoder,
   bytesToUtf8,
@@ -11,10 +10,9 @@ import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
 import { WakuConfig } from './environment';
-import { randomHexString } from './utils';
-import { elizaLogger } from '@elizaos/core';
+import { randomHexString, sleep } from './utils';
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import { elizaLogger } from '@elizaos/core';
 
 export const ChatMessage = new protobuf.Type('ChatMessage')
   .add(new protobuf.Field('timestamp', 1, 'uint64'))
@@ -30,36 +28,26 @@ export interface WakuMessageEvent {
 export class WakuBase extends EventEmitter {
   wakuConfig: WakuConfig;
   wakuNode: any; // This will be the LightNode
+  // TODO: this shouldn't be necessary
   subscribedTopic: string = '';
   subscription: any;
 
   constructor(wakuConfig: WakuConfig) {
     super();
     this.wakuConfig = wakuConfig;
-    console.log("Initializing waku with: ", wakuConfig)
   }
 
   async init() {
-    const nodeConfig = {}
-    const usePeers = this.wakuConfig.WAKU_STATIC_PEERS.length > 0;
-    console.log("usePeers", usePeers)
-    elizaLogger.info(`[MANSO] Connecting to static peers: ${usePeers}`);
+    const peers = this.wakuConfig.WAKU_STATIC_PEERS.split(',');
 
-    if (usePeers) {
+    if (peers.length > 0) {
       // NOTE: If other transports are needed we **have** to add them here
-      nodeConfig['libp2p'] = { transports: [tcp()] }
-    } else {
-      nodeConfig['defaultBootstrap'] = true
-    }
-
-    this.wakuNode = await createLightNode(nodeConfig);
-
-    if (usePeers) {
-      const peers = this.wakuConfig.WAKU_STATIC_PEERS.split(',');
-      console.log("Peers: ", peers)
-      elizaLogger.info(`[WakuBase] Connecting to static peers: ${peers}`);
+      this.wakuNode = await createLightNode({
+        libp2p: { transports: [tcp()] }
+      });
 
       for (let peer of peers) {
+        // Dial fails sometimes
         for (let i = 0; i < 5; i++) {
           try {
             await this.wakuNode.dial(peer);
@@ -67,10 +55,12 @@ export class WakuBase extends EventEmitter {
             break
           } catch (e) {
             elizaLogger.error(`[WakuBase] Error ${i} dialing peer ${peer}: ${e}`);
-            await sleep(1000)
+            await sleep(500)
           }
         }
       }
+    } else {
+      this.wakuNode = await createLightNode({ defaultBootstrap: true });
     }
 
     await this.wakuNode.start();
@@ -85,11 +75,12 @@ export class WakuBase extends EventEmitter {
         }
       } catch (e) {
         elizaLogger.info(`[WakuBase] Attempt ${i + 1}/${this.wakuConfig.WAKU_PING_COUNT} => still waiting for peers`);
-        await sleep(1000)
 
         if (i === this.wakuConfig.WAKU_PING_COUNT - 1) {
           throw new Error('[WakuBase] Could not find remote peer after max attempts');
         }
+
+        await sleep(500)
       }
     }
 
@@ -163,7 +154,8 @@ export class WakuBase extends EventEmitter {
           return this.subscribe(topic, fn);
         }
         elizaLogger.warn(`[WakuBase] Subscription ping attempt ${i} error, retrying...`);
-        await new Promise((r) => setTimeout(r, 1000));
+
+        await sleep(500);
       }
     }
 
@@ -176,8 +168,8 @@ export class WakuBase extends EventEmitter {
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
-      body: utf8ToBytes(JSON.stringify(body)),
-      roomId: utf8ToBytes(roomId)
+      roomId:    utf8ToBytes(roomId),
+      body:      utf8ToBytes(JSON.stringify(body)),
     });
 
     try {
@@ -191,6 +183,7 @@ export class WakuBase extends EventEmitter {
     }
   }
 
+  // TODO: This shouldn't be necessary
   async stop(): Promise<void> {
     if (this.subscription) {
       elizaLogger.info('[WakuBase] unsubscribing...');

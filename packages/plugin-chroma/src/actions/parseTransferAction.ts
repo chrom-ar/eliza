@@ -19,10 +19,7 @@ export const parseTransferAction: Action = {
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
-    const cond = text.includes('transfer') ||
-           text.includes('send') ||
-           ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
-    console.log("VALIDATE DEL transfer: ", text, cond)
+
     return text.includes('transfer') ||
            text.includes('send') ||
            ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
@@ -35,7 +32,6 @@ export const parseTransferAction: Action = {
     If no from address is specified, use this one: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
     `;
     // Extract transfer info using schema validation
-    console.log("MANSO, generating object")
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
@@ -44,8 +40,6 @@ export const parseTransferAction: Action = {
       schemaDescription,
       context: message.content.text
     })).object as z.infer<typeof transferSchema>;
-
-    console.log('intentData', intentData);
 
     if (Object.keys(intentData).length === 0) {
       callback(message.content);

@@ -15,3 +15,8 @@ export function randomHexString(byteLength: number): string {
     return Array.from(randomBuf, (b: number) => b.toString(16).padStart(2, '0')).join('');
   }
 }
+
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}

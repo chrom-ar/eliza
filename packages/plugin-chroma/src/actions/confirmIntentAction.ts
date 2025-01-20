@@ -9,12 +9,10 @@ export const confirmIntentAction: Action = {
 
   validate: async (_runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
-    console.log("confirmIntentAction.ts:14", text, /\b(confirm|yes|ok|go|proceed)\b/i.test(text))
     return /\b(confirm|yes|ok|go|proceed)\b/i.test(text);
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options, callback: HandlerCallback): Promise<boolean> => {
-    console.log('confirmIntentAction.ts:15');
     // 1. Get the stored (pending) intent
     const intentManager = new MemoryManager({ runtime, tableName: 'intents' });
     const [intentMemory] = await intentManager.getMemories({
@@ -23,33 +21,31 @@ export const confirmIntentAction: Action = {
       unique: true
     });
 
-    console.log('confirmIntentAction.ts:24');
     if (!intentMemory?.content?.intent) {
-      callback({ text: 'Sorry, I could not find a pending intent to confirm. Please create a new swap request.' });
+      callback({ text: 'Sorry, I could not find a pending intent to confirm. Please create a new request.' });
       return false;
     }
-    console.log('confirmIntentAction.ts:29');
 
+    // TODO: MultiIntent compat
     const intent: SwapIntent = typeof intentMemory.content.intent === 'object'
       ? intentMemory.content.intent
       : {};
 
     if (intent.status !== 'pending') {
-      callback({ text: 'The last intent is not pending. Please create a new swap request.' });
+      callback({ text: 'The last intent is not pending. Please create a new request.' });
       return false;
     }
 
-    console.log('confirmIntentAction.ts:40');
     // 2. Remove the old memory
     await intentManager.removeMemory(intentMemory.id);
 
+    // TODO: MultiIntent compat
     // 3. Mark it as confirmed
     const confirmedIntent: SwapIntent = {
       ...intent,
       status: 'confirmed'
     };
 
-    console.log('confirmIntentAction.ts:50');
     // 4. Prepare the new content
     const newContent = {
       ...intentMemory.content,
@@ -57,25 +53,16 @@ export const confirmIntentAction: Action = {
       intent: confirmedIntent
     };
 
-    // Check if we have already published to the general topic once
-    // NOT NEEDED
-    // const wasFirstPublished = Boolean(intentMemory.content?.publishedFirstWaku);
-
-    console.log('confirmIntentAction.ts:61');
     // 5. Create new memory that indicates we have published (or not)
     await intentManager.createMemory({
-      userId: message.userId,
-      agentId: message.agentId,
-      roomId: message.roomId,
+      userId:    message.userId,
+      agentId:   message.agentId,
+      roomId:    message.roomId,
       createdAt: Date.now(),
-      unique: true,
-      content: {
-        ...newContent,
-        // publishedFirstWaku: !!wasFirstPublished
-      }
+      unique:    true,
+      content:   newContent,
     });
 
-    console.log('confirmIntentAction.ts:75');
     // 6. Get the message provider
     // TMP refactor MsgProvider
     const waku = MessageProviderFactory.getProvider();
@@ -83,47 +70,11 @@ export const confirmIntentAction: Action = {
     //   parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
     //   600;
 
-    console.log('confirmIntentAction.ts:82');
-    // -- If we haven't posted to the general topic yet, do that first
-    // IF NOT NEEDED
-    // if (!wasFirstPublished) {
-
-    // Mark memory as "first published = true"
-    // await intentManager.createMemory({
-    //   userId: message.userId,
-    //   agentId: message.agentId,
-    //   roomId: message.roomId,
-    //   createdAt: Date.now(),
-    //   unique: true,
-    //   content: {
-    //     ...newContent,
-    //     publishedFirstWaku: true
-    //   }
-    // });
-    // }
-
-    const persistedRoomId = runtime.roomId;
-    const persistedUserId = runtime.userId;
-    console.log('confirmIntentAction.ts:107');
     // 7. Subscribe to the room's topic for subsequent messages
     // await waku.subscribe(
     //   message.roomId,
     //   (async (receivedMessage) => {
     //     try {
-    //       // console.log("Received msj in subscription:", receivedMessage)
-    //       console.log('Received a message in room', message.roomId, receivedMessage.body);
-    //       console.log(
-    //         "Runtime milonga:",
-    //         runtime.userId,
-    //         runtime.agentId,
-    //         runtime.roomId,
-    //         persistedUserId,
-    //         persistedRoomId,
-    //         message.userId,
-    //         message.agentId,
-    //         message.roomId
-    //       )
-
     //       // Create a response memory
     //       const responseMemory: Memory = {
     //         id:      stringToUuid(`${Date.now()}-${runtime.agentId}`),
@@ -141,10 +92,9 @@ export const confirmIntentAction: Action = {
 
     //       console.log("Creating msg memory:", responseMemory)
 
-    //       // // Store the response in the message manager
+    //       // Store the response in the message manager
     //       await runtime.messageManager.createMemory(responseMemory);
 
-    //       console.log("Callback definido?: ", callback)
     //       // Use callback to ensure the message appears in chat
     //       await callback(responseMemory.content);
 
@@ -156,7 +106,6 @@ export const confirmIntentAction: Action = {
     //       await runtime.evaluate(responseMemory, state, false);
     //     } catch (e) {
     //       console.error("Error inside subscription:", e)
-    //       // console.trace(e)
     //     }
     //   })
     //   // configuredExpiration
@@ -170,7 +119,7 @@ export const confirmIntentAction: Action = {
       message.roomId
     );
 
-    // This shit should be like this
+    // TMP: This shit should be like this, workaround to make the chat refresh work
     await new Promise<void>((resolve) => {
       waku.subscribe(
         message.roomId,
@@ -215,8 +164,6 @@ export const confirmIntentAction: Action = {
         }
       )
     })
-
-    console.log('confirmIntentAction.ts:146');
 
     // Do not respond to the user's message
     return false;
