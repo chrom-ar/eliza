@@ -649,6 +649,7 @@ export enum Clients {
     AUTO = "auto",
     SLACK = "slack",
     GITHUB = "github",
+    WAKU = "waku",
 }
 
 export interface IAgentConfig {
@@ -1431,6 +1432,8 @@ export enum ServiceType {
     IRYS = "irys",
     TEE_LOG = "tee_log",
     GOPLUS_SECURITY = "goplus_security",
+    WAKU_MESSAGING = "waku_messaging",
+    WAKU_MESSAGING_TMP = "waku_messaging-tmp", // TMP will be dropped
 }
 
 export enum LoggingLevel {

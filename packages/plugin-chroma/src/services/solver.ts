@@ -1,0 +1,53 @@
+import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
+import { WakuClient } from "@elizaos/client-waku";
+import WakuClientInterface from "@elizaos/client-waku";
+
+import { buildResponse } from '../solver';
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export class SolverService extends Service {
+  private runtime: IAgentRuntime;
+  private interval: NodeJS.Timeout | null = null;
+  // @ts-ignore
+  private waku: WakuClient;
+
+  private config: object;
+
+  constructor() {
+    super();
+  }
+
+  static get serviceType(): ServiceType {
+    return "Solver" as ServiceType // ServiceType.WAKU_MESSAGING;
+  }
+
+  async initialize(runtime: IAgentRuntime): Promise<void> {
+    this.runtime = runtime;
+
+    // TMP
+    this.config = {
+      PRIVATE_KEY: (() => {
+        const key = this.runtime.getSetting('SOLVER_PRIVATE_KEY');
+
+        if (!key) throw new Error('PRIVATE_KEY is not set in the environment variables.');
+
+        return key;
+      })()
+    }
+
+    // @ts-ignore
+    this.waku = await WakuClientInterface.start(runtime);
+
+
+    // Empty string for default topic
+    this.waku.subscribe('', async (event) => {
+      const response = await buildResponse(event, this.config);
+
+      await sleep(500); // Sleep a little time to wait for the chat
+      await this.waku.send(response, event.roomId, event.roomId);
+    });
+
+    elizaLogger.info('[SolverService] initialized');
+  }
+}
