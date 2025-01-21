@@ -4,7 +4,8 @@ import {
   createEncoder,
   bytesToUtf8,
   utf8ToBytes,
-  Protocols
+  Protocols,
+  LightNode,
 } from '@waku/sdk';
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
@@ -25,12 +26,14 @@ export interface WakuMessageEvent {
   roomId: string;
 }
 
-export class WakuBase extends EventEmitter {
+export class WakuClient extends EventEmitter {
   wakuConfig: WakuConfig;
-  wakuNode: any; // This will be the LightNode
-  // TODO: this shouldn't be necessary
-  subscribedTopic: string = '';
-  subscription: any;
+  wakuNode: LightNode; // This will be the LightNode
+  private subscriptionMap: Map<string, {
+    subscription: any;
+    expiration: number;
+  }> = new Map();
+  private timer: NodeJS.Timeout | null = null;
 
   constructor(wakuConfig: WakuConfig) {
     super();
@@ -91,31 +94,30 @@ export class WakuBase extends EventEmitter {
    * Subscribe to the user-specified WAKU_CONTENT_TOPIC
    * If it contains the placeholder, we replace with the WAKU_TOPIC value, possibly with an appended random hex if so desired.
    */
-  async subscribe(topic: string, fn: any): Promise<void> {
+  async subscribe(topic: string, fn: any, expirationSeconds: number = 20): Promise<void> {
     if (!topic) {
       if (!this.wakuConfig.WAKU_CONTENT_TOPIC || !this.wakuConfig.WAKU_TOPIC) {
         throw new Error('[WakuBase] subscription not configured (missing env). No messages will be received.');
       }
     }
 
-    this.subscribedTopic = this.buildFullTopic(topic);
+    const subscribedTopic = this.buildFullTopic(topic);
 
+    // @ts-ignore
     const { error, subscription } = await this.wakuNode.filter.createSubscription({
       // forceUseAllPeers: true,
       maxAttempts: 10,
-      contentTopics: [this.subscribedTopic]
+      contentTopics: [subscribedTopic]
     });
 
     if (error) {
       throw new Error(`[WakuBase] Error creating subscription: ${error.toString()}`);
     }
 
-    this.subscription = subscription;
-
-    elizaLogger.info(`[WakuBase] Subscribed to topic: ${this.subscribedTopic}`);
+    elizaLogger.info(`[WakuBase] Subscribed to topic: ${subscribedTopic}`);
 
     await subscription.subscribe(
-      [createDecoder(this.subscribedTopic)],
+      [createDecoder(subscribedTopic)],
       async (wakuMsg) => {
         if (!wakuMsg?.payload) {
           elizaLogger.error('[WakuBase] Received message with no payload');
@@ -159,7 +161,13 @@ export class WakuBase extends EventEmitter {
       }
     }
 
-    elizaLogger.success(`[WakuBase] Subscribed to topic: ${this.subscribedTopic}`);
+    elizaLogger.success(`[WakuBase] Subscribed to topic: ${subscribedTopic}`);
+
+    // Save subscription to check expiration
+    this.subscriptionMap.set(subscribedTopic, {
+      subscription: subscription,
+      expiration: Date.now() + expirationSeconds * 1000
+    });
   }
 
   async sendMessage(body: object, topic: string, roomId: string): Promise<void> {
@@ -183,12 +191,22 @@ export class WakuBase extends EventEmitter {
     }
   }
 
-  // TODO: This shouldn't be necessary
-  async stop(): Promise<void> {
-    if (this.subscription) {
-      elizaLogger.info('[WakuBase] unsubscribing...');
-      await this.subscription.unsubscribe();
+  async unsubscribe(topic: string): Promise<void> {
+    if (this.wakuNode) {
+      const subscribedTopic = this.buildFullTopic(topic);
+      const subscription = this.subscriptionMap.get(subscribedTopic);
+
+      if (subscription) {
+        elizaLogger.info(`[WakuBase] Unsubscribing from topic: ${subscribedTopic}`);
+        await subscription.subscription.unsubscribe();
+        this.subscriptionMap.delete(subscribedTopic);
+      } else {
+        elizaLogger.warn(`[WakuBase] No subscription found for topic: ${subscribedTopic}`);
+      }
     }
+  }
+
+  async stop(): Promise<void> {
     if (this.wakuNode) {
       elizaLogger.info('[WakuBase] stopping node...');
       await this.wakuNode.stop();

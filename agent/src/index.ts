@@ -10,7 +10,6 @@ import { LensAgentClient } from "@elizaos/client-lens";
 import { SlackClientInterface } from "@elizaos/client-slack";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
-
 // import { ReclaimAdapter } from "@elizaos/plugin-reclaim";
 import { PrimusAdapter } from "@elizaos/plugin-primus";
 
@@ -565,7 +564,6 @@ export async function initializeClients(
             clients.farcaster = farcasterClient;
         }
     }
-
     if (clientTypes.includes("lens")) {
         const lensClient = new LensAgentClient(runtime);
         lensClient.start();

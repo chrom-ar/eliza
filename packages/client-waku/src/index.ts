@@ -1,33 +1,28 @@
 import { Client, elizaLogger, IAgentRuntime } from '@elizaos/core';
 import { validateWakuConfig, WakuConfig } from './environment';
-import { WakuDelivery } from './wakuDelivery';
-
-// TODO: drop the abstract class for the base class
-export class WakuClient {
-  delivery: WakuDelivery;
-
-  constructor(runtime: IAgentRuntime, wakuConfig: WakuConfig) {
-    this.delivery = new WakuDelivery(runtime, wakuConfig);
-  }
-
-  async subscribe(topic: string, fn: any) { return await this.delivery.subscribe(topic, fn); }
-  async send(message: object, topic: string, roomId: string) { return await this.delivery.send(message, topic, roomId); }
-}
+import { WakuClient } from './client';
 
 /**
  * Implement the main interface for the agent's plugin 'Client'.
  */
 export const WakuClientInterface: Client = {
   async start(runtime: IAgentRuntime) {
+    if (this.instance) {
+      console.log("WAKU CON INSTANCE")
+      return this.instance
+    }
+      console.log("WAKU SIN INSTANCE")
     const wakuConfig: WakuConfig = await validateWakuConfig(runtime);
 
     // Create manager & plugin
-    const client = new WakuClient(runtime, wakuConfig);
+    const client = new WakuClient(wakuConfig);
 
-    // Initialize plugin
-    await client.delivery.init();
+    // Initialize client
+    await client.init();
 
     elizaLogger.log('Waku client started');
+
+    this.instance = client;
 
     return client;
   },

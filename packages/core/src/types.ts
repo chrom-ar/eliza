@@ -1433,7 +1433,6 @@ export enum ServiceType {
     TEE_LOG = "tee_log",
     GOPLUS_SECURITY = "goplus_security",
     WAKU_MESSAGING = "waku_messaging",
-    WAKU_MESSAGING_TMP = "waku_messaging-tmp", // TMP will be dropped
 }
 
 export enum LoggingLevel {

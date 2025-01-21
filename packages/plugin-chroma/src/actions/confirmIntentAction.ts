@@ -1,6 +1,7 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { SwapIntent } from '../lib/types';
 import { MessageProviderFactory } from '../lib/messaging/providerFactory';
+import WakuClientInterface from '@elizaos/client-waku';
 
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
@@ -64,8 +65,7 @@ export const confirmIntentAction: Action = {
     });
 
     // 6. Get the message provider
-    // TMP refactor MsgProvider
-    const waku = MessageProviderFactory.getProvider();
+    const waku = await WakuClientInterface.start(runtime);
     // const configuredExpiration =
     //   parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
     //   600;
@@ -113,7 +113,7 @@ export const confirmIntentAction: Action = {
 
     console.log('Publishing to the general topic');
     // Publish the *first* message to the "general" topic
-    await waku.send(
+    await waku.sendMessage(
       confirmedIntent,
       '', // General intent topic
       message.roomId
@@ -173,12 +173,12 @@ export const confirmIntentAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'Yes, confirm the swap' }
+        content: { text: 'Yes, confirm' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your swap intent...',
+          text: 'Broadcasting your intent...',
           action: 'CONFIRM_INTENT'
         }
       }
@@ -191,7 +191,7 @@ export const confirmIntentAction: Action = {
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your swap intent...',
+          text: 'Broadcasting your intent...',
           action: 'CONFIRM_INTENT'
         }
       }

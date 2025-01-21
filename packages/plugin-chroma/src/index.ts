@@ -3,7 +3,6 @@ import { parseSwapAction } from './actions/parseSwapAction';
 import { parseTransferAction } from './actions/parseTransferAction';
 import { confirmIntentAction } from './actions/confirmIntentAction';
 import { cancelIntentAction } from './actions/cancelIntentAction';
-import { MessageService } from './lib/messaging/service';
 import { SolverService } from './services/solver';
 import { walletEvaluator } from './evaluators/wallet';
 import { walletProvider } from './providers/wallet';
@@ -19,8 +18,5 @@ export const chromaPlugin: Plugin = {
   ],
   evaluators: [walletEvaluator],
   providers: [walletProvider],
-  services: [
-    new MessageService(),
-    new SolverService(),
-  ]
+  services: [new SolverService()]
 };

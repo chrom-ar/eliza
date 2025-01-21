@@ -1,5 +1,4 @@
 import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
-import { WakuClient } from "@elizaos/client-waku";
 import WakuClientInterface from "@elizaos/client-waku";
 
 import { buildResponse } from '../solver';
@@ -7,10 +6,11 @@ import { buildResponse } from '../solver';
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class SolverService extends Service {
+  private initialized = false;
   private runtime: IAgentRuntime;
   private interval: NodeJS.Timeout | null = null;
   // @ts-ignore
-  private waku: WakuClient;
+  private waku: any;
 
   private config: object;
 
@@ -23,6 +23,10 @@ export class SolverService extends Service {
   }
 
   async initialize(runtime: IAgentRuntime): Promise<void> {
+    if (this.initialized) {
+      return
+    }
+
     this.runtime = runtime;
 
     // TMP
@@ -39,15 +43,16 @@ export class SolverService extends Service {
     // @ts-ignore
     this.waku = await WakuClientInterface.start(runtime);
 
-
     // Empty string for default topic
     this.waku.subscribe('', async (event) => {
       const response = await buildResponse(event, this.config);
 
       await sleep(500); // Sleep a little time to wait for the chat
-      await this.waku.send(response, event.roomId, event.roomId);
+      await this.waku.sendMessage(response, event.roomId, event.roomId);
     });
 
     elizaLogger.info('[SolverService] initialized');
+
+    this.initialized = true;
   }
 }
