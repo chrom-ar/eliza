@@ -111,8 +111,9 @@ export const confirmIntentAction: Action = {
             agentId: runtime.agentId,
             roomId: message.roomId,
             content: {
-              text: JSON.stringify(receivedMessage.body, null, 2),
-              contentType: 'application/json'
+              text: 'This are your proposals',
+              contentType: 'application/json',
+              proposals: [JSON.parse(receivedMessage.body)]
             },
             createdAt: Date.now(),
             embedding: getEmbeddingZeroVector()

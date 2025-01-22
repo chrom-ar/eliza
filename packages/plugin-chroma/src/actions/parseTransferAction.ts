@@ -86,10 +86,10 @@ export const parseTransferAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'Transfer 1 ETH to 0x1234...5678' }
+        content: { text: 'I want to transfer 1 ETH to 0x1234...5678' }
       },
       {
-        user: '{{user2}}',
+        user: '{{agent}}',
         content: {
           text: 'Building your transfer intent...',
           action: 'PARSE_TRANSFER_INTENT'
@@ -102,7 +102,7 @@ export const parseTransferAction: Action = {
         content: { text: 'Send 100 USDC to my friend on Solana' }
       },
       {
-        user: '{{user2}}',
+        user: '{{agent}}',
         content: {
           text: 'Building your transfer intent...',
           action: 'PARSE_TRANSFER_INTENT'
@@ -112,10 +112,10 @@ export const parseTransferAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'Hey {{user2}}, how do I send crypto?' }
+        content: { text: 'Hey {{agent}}, how do I send crypto?' }
       },
       {
-        user: '{{user2}}',
+        user: '{{agent}}',
         content: {
           text: 'I can help you transfer crypto. Just let me know how much and what token you want to send, and to which address.'
         }
