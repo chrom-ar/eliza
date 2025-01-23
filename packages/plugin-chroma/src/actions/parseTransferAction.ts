@@ -4,7 +4,8 @@ import { z } from 'zod';
 // Define the schema for transfer intent
 const transferSchema = z.object({
   amount: z.string(),
-  token: z.string(),
+  fromToken: z.string(),
+  toToken: z.string(),
   fromAddress: z.string(),
   fromChain: z.string(),
   recipientAddress: z.string(),
@@ -46,10 +47,10 @@ export const parseTransferAction: Action = {
       return true;
     }
 
-    const { amount, token, recipientAddress, recipientChain, fromAddress, fromChain } = intentData;
+    const { amount, fromToken, recipientAddress, recipientChain, fromAddress, fromChain } = intentData;
     const responseText = recipientAddress
-      ? `I've created a transfer intent for ${amount} ${token} to ${recipientAddress} on ${recipientChain}. Would you like to confirm this transfer?`
-      : `I've started creating a transfer intent for ${amount} ${token}. Please provide a recipient address to continue.`;
+      ? `I've created a transfer intent for ${amount} ${fromToken} to ${recipientAddress} on ${recipientChain}. Would you like to confirm this transfer?`
+      : `I've started creating a transfer intent for ${amount} ${fromToken}. Please provide a recipient address to continue.`;
 
     const intentManager = new MemoryManager({
       runtime,
