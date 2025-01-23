@@ -176,7 +176,7 @@ export const confirmIntentAction: Action = {
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your intent...',
+          text: 'Sending your intent...',
           action: 'CONFIRM_INTENT'
         }
       }
@@ -189,7 +189,7 @@ export const confirmIntentAction: Action = {
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your intent...',
+          text: 'Sending your intent...',
           action: 'CONFIRM_INTENT'
         }
       }

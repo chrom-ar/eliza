@@ -31,12 +31,12 @@ export class WakuClient {
         return;
       }
 
-      if (!this._checkSignerIsValid(body.signer)) {
+      if (!(await this._checkSignerIsValid(body.signer))) {
         elizaLogger.error("[WakuClient-Chroma] Body without signer or signature", body);
         return;
       }
 
-      if (!this._verifyMessage(body.signer, body.signature, JSON.stringify(body.transaction))) {
+      if (!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.transaction)))) {
         elizaLogger.error("[WakuClient-Chroma] Invalid signature", body);
         return;
       }
@@ -51,7 +51,7 @@ export class WakuClient {
     return true
   }
 
-  private async _verifyMessage(signer: string, signature: string, message: string) {
+  private async _verifyMessage(signer: string, signature: string, message: string): Promise<boolean> {
     if (signer.startsWith('0x') && signer.length == 42) { // EVM signature
       return await verifyMessage({
         signature: signature as `0x${string}`,
