@@ -59,18 +59,15 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
 
   // Check for missing fields (simple example)
   if (!amount || !fromToken || !toToken || !fromAddress || !fromChain || !recipientAddress || !recipientChain) {
-    console.log('transaction_helpers.ts:63');
     return null;
   }
 
   // Multiple chains are not supported yet
   if (fromChain !== recipientChain) {
-    console.log('transaction_helpers.ts:69');
     return null;
   }
 
   if (fromToken == toToken) {
-    console.log('transaction_helpers.ts:74');
     return _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else {
     return _buildSwap(fromChain, fromToken, toToken, amount, fromAddress, recipientAddress);
@@ -82,32 +79,32 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
  * This is a simplistic approach that signs a stringified version of `payload`.
  * For real-world usage, consider EIP-712 or structured data hashing.
  */
-async function signPayload(payload: object, config: object): Promise<{ signature: string; proposer: string }> {
+async function signPayload(payload: object, config: object): Promise<{ signature: string; signer: string }> {
   // @ts-ignore
   const account = privateKeyToAccount(config.PRIVATE_KEY as `0x${string}`);
 
-  const proposer = account.address;
+  const signer = account.address;
   const payloadString = JSON.stringify(payload);
 
   const signature = await account.signMessage({
     message: payloadString
   });
 
-  return { signature, proposer };
+  return { signature, signer };
 }
 
 /**
  * Takes a valid transaction object and returns a "ready to broadcast" result
- *   that includes the transaction, signature, and the proposer (public address).
+ *   that includes the transaction, signature, and the signer (public address).
  */
 export async function buildSignedTransactionResponse(transaction: any, config: any): Promise<object> {
   try {
-  const { signature, proposer } = await signPayload(transaction, config);
+  const { signature, signer } = await signPayload(transaction, config);
 
   return {
     transaction,
     signature,
-    proposer
+    signer
   };
   } catch (e) {
     console.error("Signing", e);
@@ -120,7 +117,6 @@ export async function buildSignedTransactionResponse(transaction: any, config: a
  */
 function _buildTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
   if (isEvmChain(fromChain)) {
-    console.log('transaction_helpers.ts:119');
     return _buildEvmTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else if (fromChain === "solana") {
     return _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
@@ -159,14 +155,11 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
 
   // Native
   if (tokenAddr == ZERO_ADDRESS) {
-    console.log('transaction_helpers.ts:136');
     return {
       to: recipientAddress,
       value: tokenAmount
     };
   } else {
-    console.log('transaction_helpers.ts:142');
-
     return {
       to: tokenAddr,
       value: 0,
