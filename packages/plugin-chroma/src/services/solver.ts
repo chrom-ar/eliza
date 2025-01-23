@@ -47,6 +47,8 @@ export class SolverService extends Service {
     this.waku.subscribe('', async (event) => {
       const response = await buildResponse(event, this.config);
 
+      elizaLogger.info(`[SolverService] Sending response to ${event.roomId}`, response);
+
       await sleep(500); // Sleep a little time to wait for the chat
       await this.waku.sendMessage(response, event.roomId, event.roomId);
     });

@@ -1,4 +1,4 @@
-import { parseEther } from 'viem';
+import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
 export interface GeneralMessage {
@@ -6,13 +6,36 @@ export interface GeneralMessage {
   roomId: string;
   body: {
     amount: string;
-    token: string;
+    fromToken: string;
+    toToken: string;
     fromAddress: string;
     fromChain: string;
     recipientAddress: string;
     recipientChain: string;
     status: string;
   };
+}
+
+const ZERO_ADDRESS = '0x' + '0'.repeat(40);
+
+const TOKENS = {
+  "ethereum": {
+    "eth":  ZERO_ADDRESS,
+    "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+  },
+}
+
+const TOKEN_DECIMALS = {
+  "ethereum": {
+    "eth": 18,
+    "usdc": 6
+  },
+}
+
+const EVM_CHAINS = ["ethereum"];
+
+function isEvmChain(chain: string): boolean {
+  return EVM_CHAINS.includes(chain);
 }
 
 /**
@@ -23,7 +46,8 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
   const {
     body: {
       amount,
-      token,
+      fromToken,
+      toToken,
       fromAddress,
       fromChain,
       recipientAddress,
@@ -31,47 +55,26 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
     }
   } = message;
 
-  console.log('transactionService.ts:27');
+  console.log("Validate and build transaction", message)
+
   // Check for missing fields (simple example)
-  if (!amount || !token || !fromAddress || !fromChain || !recipientAddress || !recipientChain) {
+  if (!amount || !fromToken || !toToken || !fromAddress || !fromChain || !recipientAddress || !recipientChain) {
+    console.log('transaction_helpers.ts:63');
     return null;
   }
 
-  console.log('transactionService.ts:33');
   // Multiple chains are not supported yet
   if (fromChain !== recipientChain) {
+    console.log('transaction_helpers.ts:69');
     return null;
   }
 
-  console.log('transactionService.ts:39');
-  // In a real app, you'd tailor the transaction object to your needs:
-  // - chainId could be derived from recipientChain
-  // - 'to' is recipientAddress
-  // - 'value' is parseEther(amount) if 'amount' is in Ether units, or
-  //   parseUnits(amount, decimals) if you're using tokens. This is just an example.
-
-  // For demonstration, let's assume it's a simple ETH transfer:
-  const chainId = 1 // getChainIdByName(fromChain);
-  const to = recipientAddress as `0x${string}`;
-  // Should be a string so it can be serialized to JSON
-  const value = parseEther(amount).toString(); // parse "0.75" -> string of wei
-  const from = fromAddress as `0x${string}`;
-
-  console.log('transactionService.ts:53');
-  // Minimal transaction object for an EVM chain
-  // (This is not necessarily all fields you'd set in production.)
-  const transaction = {
-    chainId,
-    from,
-    to,
-    value,
-    // Hardcode a gas price or fetch from network
-    // Hardcode a nonce or let the wallet client figure it out
-    // etc.
-  };
-
-  console.log('transactionService.ts:66', transaction);
-  return transaction;
+  if (fromToken == toToken) {
+    console.log('transaction_helpers.ts:74');
+    return _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+  } else {
+    return _buildSwap(fromChain, fromToken, toToken, amount, fromAddress, recipientAddress);
+  }
 }
 
 /**
@@ -98,6 +101,7 @@ async function signPayload(payload: object, config: object): Promise<{ signature
  *   that includes the transaction, signature, and the proposer (public address).
  */
 export async function buildSignedTransactionResponse(transaction: any, config: any): Promise<object> {
+  try {
   const { signature, proposer } = await signPayload(transaction, config);
 
   return {
@@ -105,4 +109,77 @@ export async function buildSignedTransactionResponse(transaction: any, config: a
     signature,
     proposer
   };
+  } catch (e) {
+    console.error("Signing", e);
+    return null;
+  }
+}
+
+/**
+ * Build a transfer transaction object.
+ */
+function _buildTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
+  if (isEvmChain(fromChain)) {
+    console.log('transaction_helpers.ts:119');
+    return _buildEvmTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+  } else if (fromChain === "solana") {
+    return _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+  }
+}
+
+function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
+  const tokenAddr = TOKENS[fromChain][fromToken];
+  const tokenAmount = parseEther(amount, TOKEN_DECIMALS[fromChain][fromToken]).toString();
+
+  const erc20Abi = [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "transfer",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ];
+
+  // Native
+  if (tokenAddr == ZERO_ADDRESS) {
+    console.log('transaction_helpers.ts:136');
+    return {
+      to: recipientAddress,
+      value: tokenAmount
+    };
+  } else {
+    console.log('transaction_helpers.ts:142');
+
+    return {
+      to: tokenAddr,
+      value: 0,
+      data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
+    };
+  }
+}
+
+
+function _buildSolTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
+  return {}
+}
+
+function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
+  return {}
 }

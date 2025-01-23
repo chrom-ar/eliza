@@ -124,8 +124,10 @@ export class WakuClient extends EventEmitter {
           return;
         }
 
+        let msgDecoded: any;
+
         try {
-          const msgDecoded = ChatMessage.decode(wakuMsg.payload);
+          msgDecoded = ChatMessage.decode(wakuMsg.payload);
 
           const event: WakuMessageEvent = {
             // @ts-ignore
@@ -136,11 +138,9 @@ export class WakuClient extends EventEmitter {
             roomId: bytesToUtf8(msgDecoded.roomId)
           };
 
-          // this.emit('message', event);
-
           await fn(event);
         } catch (err) {
-          elizaLogger.error('[WakuBase] Error decoding message payload:', err);
+          elizaLogger.error('[WakuBase] Error decoding message payload:', err, msgDecoded);
         }
       }
     );
