@@ -114,8 +114,6 @@ export class WakuClient extends EventEmitter {
       throw new Error(`[WakuBase] Error creating subscription: ${error.toString()}`);
     }
 
-    elizaLogger.info(`[WakuBase] Subscribed to topic: ${subscribedTopic}`);
-
     await subscription.subscribe(
       [createDecoder(subscribedTopic)],
       async (wakuMsg) => {
