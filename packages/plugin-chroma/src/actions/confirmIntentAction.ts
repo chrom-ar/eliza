@@ -1,6 +1,5 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { SwapIntent } from '../lib/types';
-import { MessageProviderFactory } from '../lib/messaging/providerFactory';
 import WakuClientInterface from '@elizaos/client-waku';
 
 export const confirmIntentAction: Action = {
@@ -129,23 +128,21 @@ export const confirmIntentAction: Action = {
             console.log('Received a message in room', message.roomId, receivedMessage.body);
 
             // Create a response memory
-            const responseMemory: Memory = {
+            const responseMemory: Memory = await runtime.messageManager.addEmbeddingToMemory({
               id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
               userId: message.userId,
               agentId: message.agentId,
               roomId: message.roomId,
               content: {
-                text: JSON.stringify(receivedMessage.body, null, 2),
-                contentType: 'application/json'
+                text: 'These are your proposals',
+                proposals: [receivedMessage.body]
               },
-              createdAt: Date.now(),
-              embedding: getEmbeddingZeroVector()
-            };
+              createdAt: Date.now()
+            });
 
-            console.log("Creating msg memory:", responseMemory)
-
-            // Store the response in the message manager
             await runtime.messageManager.createMemory(responseMemory);
+
+            console.log("Memory created:", responseMemory)
 
             // Use callback to ensure the message appears in chat
             await callback(responseMemory.content)
