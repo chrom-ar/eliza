@@ -8,13 +8,7 @@ export const buildResponse = async (event: any, config: object) => {
 
   let response: object;
 
-  if (!transaction) {
-    response = {
-      error: 'Invalid message. Missing one or more required fields (amount, token, recipientAddress, recipientChain).'
-    };
-  } else {
-    response = await buildSignedTransactionResponse(transaction, config);
+  if (transaction) {
+    return await buildSignedTransactionResponse(transaction, config);
   }
-
-  return response;
 }

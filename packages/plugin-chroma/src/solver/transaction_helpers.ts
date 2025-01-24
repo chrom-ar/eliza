@@ -67,7 +67,7 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
     return null;
   }
 
-  if (fromToken === toToken) {
+  if (fromToken == toToken) {
     return _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else {
     return _buildSwap(fromChain, fromToken, toToken, amount, fromAddress, recipientAddress);

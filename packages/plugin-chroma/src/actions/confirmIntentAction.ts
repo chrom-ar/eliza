@@ -1,6 +1,6 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { SwapIntent } from '../lib/types';
-import WakuClientInterface from '@elizaos/client-waku';
+import { WakuClient } from '../lib/waku-client';
 
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
@@ -64,7 +64,7 @@ export const confirmIntentAction: Action = {
     });
 
     // 6. Get the message provider
-    const waku = await WakuClientInterface.start(runtime);
+    const waku = await WakuClient.new(runtime);
     // const configuredExpiration =
     //   parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
     //   600;
@@ -123,6 +123,7 @@ export const confirmIntentAction: Action = {
       waku.subscribe(
         message.roomId,
         async (receivedMessage) => {
+
           try {
             // console.log("Received msj in subscription:", receivedMessage)
             console.log('Received a message in room', message.roomId, receivedMessage.body);
@@ -175,7 +176,7 @@ export const confirmIntentAction: Action = {
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your intent...',
+          text: 'Sending your intent...',
           action: 'CONFIRM_INTENT'
         }
       }
@@ -188,7 +189,7 @@ export const confirmIntentAction: Action = {
       {
         user: '{{user2}}',
         content: {
-          text: 'Broadcasting your intent...',
+          text: 'Sending your intent...',
           action: 'CONFIRM_INTENT'
         }
       }
