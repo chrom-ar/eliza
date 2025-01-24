@@ -1,4 +1,4 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, generateObject, MemoryManager } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, generateObject, MemoryManager, elizaLogger } from '@elizaos/core';
 import { z } from 'zod';
 
 // Define the schema for transfer intent
@@ -78,6 +78,8 @@ export const parseTransferAction: Action = {
 
     await intentManager.createMemory(newMemory);
     callback(newMemory.content);
+
+    elizaLogger.info('Transfer intent created', intentData );
 
     return true;
   },

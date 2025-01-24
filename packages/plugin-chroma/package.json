@@ -11,16 +11,17 @@
     "lint": "eslint --fix  --cache ."
   },
   "dependencies": {
-    "@elizaos/core": "workspace:*",
     "@elizaos/client-waku": "workspace:*",
+    "@elizaos/core": "workspace:*",
+    "@solana/spl-token": "0.4.9",
+    "@solana/web3.js": "1.95.8",
     "@waku/sdk": "0.0.30-9f1d8ca.0",
     "bs58": "^6.0.0",
     "protobufjs": "^7.4.0",
-    "tweetnacl": "^1.0.3",
-    "redis": "^4.7.0"
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "tsup": "8.3.5",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "tsup": "8.3.5"
   }
 }

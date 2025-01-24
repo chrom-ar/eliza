@@ -1,5 +1,20 @@
 import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
+import {
+    getAssociatedTokenAddressSync,
+    createTransferInstruction,
+    createAssociatedTokenAccountInstruction,
+    TOKEN_PROGRAM_ID,
+    createTransferCheckedInstruction,
+} from "@solana/spl-token";
+import {
+    Connection,
+    PublicKey,
+    TransactionMessage,
+    SystemProgram,
+    clusterApiUrl,
+} from "@solana/web3.js";
+
 
 export interface GeneralMessage {
   timestamp: number;
@@ -19,20 +34,28 @@ export interface GeneralMessage {
 const ZERO_ADDRESS = '0x' + '0'.repeat(40);
 
 const TOKENS = {
-  "ethereum": {
-    "eth":  ZERO_ADDRESS,
-    "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+  "ETHEREUM": {
+    "ETH":  ZERO_ADDRESS,
+    "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
   },
+  "SOLANA": {
+    "SOL": "So11111111111111111111111111111111111111112",
+    "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  }
 }
 
 const TOKEN_DECIMALS = {
-  "ethereum": {
-    "eth": 18,
-    "usdc": 6
+  "ETHEREUM": {
+    "ETH": 18,
+    "USDC": 6
   },
+  "SOLANA": {
+    "SOL": 9,
+    "USDC": 6
+  }
 }
 
-const EVM_CHAINS = ["ethereum"];
+const EVM_CHAINS = ["ETHEREUM"];
 
 function isEvmChain(chain: string): boolean {
   return EVM_CHAINS.includes(chain);
@@ -42,8 +65,8 @@ function isEvmChain(chain: string): boolean {
  * 1. Validate incoming data, ensuring all required fields are present.
  * 2. If valid, build a transaction object using 'viem'.
  */
-export function validateAndBuildTransaction(message: GeneralMessage): object {
-  const {
+export async function validateAndBuildTransaction(message: GeneralMessage): Promise<object> {
+  let {
     body: {
       amount,
       fromToken,
@@ -59,16 +82,23 @@ export function validateAndBuildTransaction(message: GeneralMessage): object {
 
   // Check for missing fields (simple example)
   if (!amount || !fromToken || !toToken || !fromAddress || !fromChain || !recipientAddress || !recipientChain) {
+    console.log('missing fields');
     return null;
   }
 
   // Multiple chains are not supported yet
   if (fromChain !== recipientChain) {
+    console.log('multi chain not supported yet');
     return null;
   }
 
+  fromChain      = fromChain.toUpperCase();
+  fromToken      = fromToken.toUpperCase();
+  recipientChain = recipientChain.toUpperCase();
+  toToken        = toToken.toUpperCase();
+
   if (fromToken == toToken) {
-    return _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+    return await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else {
     return _buildSwap(fromChain, fromToken, toToken, amount, fromAddress, recipientAddress);
   }
@@ -115,11 +145,11 @@ export async function buildSignedTransactionResponse(transaction: any, config: a
 /**
  * Build a transfer transaction object.
  */
-function _buildTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
+async function _buildTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): Promise<object> {
   if (isEvmChain(fromChain)) {
     return _buildEvmTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
-  } else if (fromChain === "solana") {
-    return _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+  } else if (fromChain === "SOLANA") {
+    return await _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   }
 }
 
@@ -129,7 +159,7 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
 
   const erc20Abi = [
     {
-      "constant": false,
+      // "constant": false,
       "inputs": [
         {
           "name": "recipient",
@@ -141,12 +171,12 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
         }
       ],
       "name": "transfer",
-      "outputs": [
-        {
-          "name": "",
-          "type": "bool"
-        }
-      ],
+      // "outputs": [
+      //   {
+      //     "name": "",
+      //     "type": "bool"
+      //   }
+      // ],
       "payable": false,
       "stateMutability": "nonpayable",
       "type": "function"
@@ -156,21 +186,81 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   // Native
   if (tokenAddr == ZERO_ADDRESS) {
     return {
-      to: recipientAddress,
-      value: tokenAmount
+      transaction: {
+        to: recipientAddress,
+        value: tokenAmount
+      }
     };
   } else {
     return {
-      to: tokenAddr,
-      value: 0,
-      data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
+      transaction: {
+        to: tokenAddr,
+        value: 0,
+        data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
+      }
     };
   }
 }
 
 
-function _buildSolTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
-  return {}
+async function _buildSolTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): Promise<object> {
+  const tokenAddr   = TOKENS[fromChain][fromToken];
+  const decimals    = TOKEN_DECIMALS[fromChain][fromToken]
+  const tokenAmount = parseEther(amount, decimals);
+  const from        = new PublicKey(fromAddress);
+  const recipient   = new PublicKey(recipientAddress);
+
+  const instructions = [];
+
+  if (tokenAddr == TOKENS["SOLANA"]["SOL"]) {
+    instructions.push(SystemProgram.transfer({
+      fromPubkey: from,
+      toPubkey:   recipient,
+      lamports:   tokenAmount
+    }));
+  } else {
+    const mint = new PublicKey(tokenAddr);
+    const senderATA = getAssociatedTokenAddressSync(mint, from, true);
+    const recipientATA = getAssociatedTokenAddressSync(mint, recipient, true);
+
+    const connection = new Connection(clusterApiUrl("devnet"), "confirmed"); // TODO: Use config for env
+
+    const recipientATAInfo = await connection.getAccountInfo(recipientATA);
+    if (!recipientATAInfo) {
+      instructions.push(
+        createAssociatedTokenAccountInstruction(
+          from,
+          recipientATA,
+          recipient,
+          mint
+        )
+      );
+    }
+    instructions.push(
+      createTransferCheckedInstruction(
+        senderATA, // source
+        mint, // mint
+        recipientATA, // destination
+        from, // owner
+        tokenAmount, // amount
+        decimals, // decimals
+        [], // signers
+        TOKEN_PROGRAM_ID // programId TODO: Add support to the token2022
+      )
+    );
+  }
+
+  // Fee for the intent
+  // const intentFee = 10;
+  // instructions.push(
+  //   SystemProgram.transfer({
+  //     fromPubkey: ownerPubkey,
+  //     toPubkey: recipientPubkey,
+  //     lamports: intentFee
+  //   })
+  // );
+
+  return { transaction: instructions }; // TODO: improve the main key to Proposal with more info than transaction or instructions
 }
 
 function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
