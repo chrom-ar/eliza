@@ -4,11 +4,15 @@ import {
 } from './transaction_helpers';
 
 export const buildResponse = async (event: any, config: object) => {
-  const transaction = validateAndBuildTransaction(event);
+  try {
+    const transaction = await validateAndBuildTransaction(event);
 
-  let response: object;
+    let response: object;
 
-  if (transaction) {
-    return await buildSignedTransactionResponse(transaction, config);
+    if (transaction) {
+      return await buildSignedTransactionResponse(transaction, config);
+    }
+  } catch (error) {
+    console.error('Error building response:', error);
   }
 }

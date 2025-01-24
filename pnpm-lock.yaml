@@ -1549,18 +1549,21 @@ importers:
       '@elizaos/core':
         specifier: workspace:*
         version: link:../core
+      '@solana/spl-token':
+        specifier: 0.4.9
+        version: 0.4.9(@solana/web3.js@1.95.8(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
+      '@solana/web3.js':
+        specifier: 1.95.8
+        version: 1.95.8(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
       '@waku/sdk':
         specifier: 0.0.30-9f1d8ca.0
-        version: 0.0.30-9f1d8ca.0(@libp2p/bootstrap@11.0.17)(@multiformats/multiaddr@12.3.4)(bufferutil@4.0.9)(utf-8-validate@6.0.5)
+        version: 0.0.30-9f1d8ca.0(@multiformats/multiaddr@12.3.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       bs58:
         specifier: ^6.0.0
         version: 6.0.0
       protobufjs:
         specifier: ^7.4.0
         version: 7.4.0
-      redis:
-        specifier: ^4.7.0
-        version: 4.7.0
       tweetnacl:
         specifier: ^1.0.3
         version: 1.0.3
@@ -8474,35 +8477,6 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
 
-  '@redis/bloom@1.2.0':
-    resolution: {integrity: sha512-HG2DFjYKbpNmVXsa0keLHp/3leGJz1mjh09f2RLGGLQZzSHpkmZWuwJbAvo3QcRY8p80m5+ZdXZdYOSBLlp7Cg==}
-    peerDependencies:
-      '@redis/client': ^1.0.0
-
-  '@redis/client@1.6.0':
-    resolution: {integrity: sha512-aR0uffYI700OEEH4gYnitAnv3vzVGXCFvYfdpu/CJKvk4pHfLPEy/JSZyrpQ+15WhXe1yJRXLtfQ84s4mEXnPg==}
-    engines: {node: '>=14'}
-
-  '@redis/graph@1.1.1':
-    resolution: {integrity: sha512-FEMTcTHZozZciLRl6GiiIB4zGm5z5F3F6a6FZCyrfxdKOhFlGkiAqlexWMBzCi4DcRoyiOsuLfW+cjlGWyExOw==}
-    peerDependencies:
-      '@redis/client': ^1.0.0
-
-  '@redis/json@1.0.7':
-    resolution: {integrity: sha512-6UyXfjVaTBTJtKNG4/9Z8PSpKE6XgSyEb8iwaqDcy+uKrd/DGYHTWkUdnQDyzm727V7p21WUMhsqz5oy65kPcQ==}
-    peerDependencies:
-      '@redis/client': ^1.0.0
-
-  '@redis/search@1.2.0':
-    resolution: {integrity: sha512-tYoDBbtqOVigEDMAcTGsRlMycIIjwMCgD8eR2t0NANeQmgK/lvxNAvYyb6bZDD4frHRhIHkJu2TBRvB0ERkOmw==}
-    peerDependencies:
-      '@redis/client': ^1.0.0
-
-  '@redis/time-series@1.1.0':
-    resolution: {integrity: sha512-c1Q99M5ljsIuc4YdaCwfUEXsofakb9c8+Zse2qxTadu8TalLXuAESzLvFAvNVbkmSlvlzIQOLpBCmWI9wTOt+g==}
-    peerDependencies:
-      '@redis/client': ^1.0.0
-
   '@ref-finance/ref-sdk@1.4.6':
     resolution: {integrity: sha512-HVmcV+lhE+4+RwlDkgnFHwymrplHFlwsIwYZASE2XbGQjSY0sF3wceJkz671II3Us/KcRl1wp23ASSzza+/pbg==}
     engines: {node: '>=10'}
@@ -14452,10 +14426,6 @@ packages:
   generate-object-property@1.2.0:
     resolution: {integrity: sha512-TuOwZWgJ2VAMEGJvAyPWvpqxSANF0LDpmyHauMjFYzaACvn+QTT/AZomvPCzVBV7yDN3OmwHQ5OvHaeLKre3JQ==}
 
-  generic-pool@3.9.0:
-    resolution: {integrity: sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g==}
-    engines: {node: '>= 4'}
-
   genlayer-js@0.4.7:
     resolution: {integrity: sha512-vp+7spuVaX7vflZd2q7qmaYgi5Cf7S/h4lAoVhAkFdyAsDStvhtwCdJGcZDt+U77AWxo3I1mUMXz0sk9ER3JXQ==}
 
@@ -19718,9 +19688,6 @@ packages:
   redis-parser@3.0.0:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
     engines: {node: '>=4'}
-
-  redis@4.7.0:
-    resolution: {integrity: sha512-zvmkHEAdGMn+hMRXuMBtu4Vo5P6rHQjLoHftu+lBqq8ZTA3RCVC/WzD790bkKKiNFp7d5/9PcSD19fJyyRvOdQ==}
 
   reflect-metadata@0.1.13:
     resolution: {integrity: sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg==}
@@ -29293,6 +29260,24 @@ snapshots:
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
 
+  '@libp2p/websockets@9.1.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@libp2p/interface': 2.4.0
+      '@libp2p/utils': 6.3.1
+      '@multiformats/multiaddr': 12.3.4
+      '@multiformats/multiaddr-matcher': 1.6.0
+      '@multiformats/multiaddr-to-uri': 11.0.0
+      '@types/ws': 8.5.13
+      it-ws: 6.1.5(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      p-defer: 4.0.1
+      p-event: 6.0.1
+      progress-events: 1.0.1
+      race-signal: 1.1.0
+      ws: 8.18.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@libp2p/websockets@9.1.2(bufferutil@4.0.9)(utf-8-validate@6.0.5)':
     dependencies:
       '@libp2p/interface': 2.4.0
@@ -32219,32 +32204,6 @@ snapshots:
       '@react-spring/types': 9.7.5
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
-
-  '@redis/bloom@1.2.0(@redis/client@1.6.0)':
-    dependencies:
-      '@redis/client': 1.6.0
-
-  '@redis/client@1.6.0':
-    dependencies:
-      cluster-key-slot: 1.1.2
-      generic-pool: 3.9.0
-      yallist: 4.0.0
-
-  '@redis/graph@1.1.1(@redis/client@1.6.0)':
-    dependencies:
-      '@redis/client': 1.6.0
-
-  '@redis/json@1.0.7(@redis/client@1.6.0)':
-    dependencies:
-      '@redis/client': 1.6.0
-
-  '@redis/search@1.2.0(@redis/client@1.6.0)':
-    dependencies:
-      '@redis/client': 1.6.0
-
-  '@redis/time-series@1.1.0(@redis/client@1.6.0)':
-    dependencies:
-      '@redis/client': 1.6.0
 
   '@ref-finance/ref-sdk@1.4.6(encoding@0.1.13)(react@19.0.0)':
     dependencies:
@@ -35526,6 +35485,29 @@ snapshots:
       libp2p: 2.1.8
     optionalDependencies:
       '@libp2p/bootstrap': 11.0.17
+    transitivePeerDependencies:
+      - '@libp2p/interface'
+      - '@multiformats/multiaddr'
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@waku/sdk@0.0.30-9f1d8ca.0(@multiformats/multiaddr@12.3.4)(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@chainsafe/libp2p-noise': 16.0.1
+      '@libp2p/identify': 3.0.15
+      '@libp2p/mplex': 11.0.17
+      '@libp2p/ping': 2.0.1
+      '@libp2p/websockets': 9.1.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@noble/hashes': 1.7.0
+      '@waku/core': 0.0.34-9f1d8ca.0(@multiformats/multiaddr@12.3.4)(libp2p@2.1.8)
+      '@waku/discovery': 0.0.7-9f1d8ca.0(@multiformats/multiaddr@12.3.4)(libp2p@2.1.8)
+      '@waku/interfaces': 0.0.29-9f1d8ca.0
+      '@waku/message-hash': 0.1.18-9f1d8ca.0
+      '@waku/proto': 0.0.9-9f1d8ca.0
+      '@waku/utils': 0.0.22-9f1d8ca.0
+      async-mutex: 0.5.0
+      libp2p: 2.1.8
     transitivePeerDependencies:
       - '@libp2p/interface'
       - '@multiformats/multiaddr'
@@ -41051,8 +41033,6 @@ snapshots:
     dependencies:
       is-property: 1.0.2
 
-  generic-pool@3.9.0: {}
-
   genlayer-js@0.4.7(@typescript-eslint/parser@8.16.0(eslint@9.16.0(jiti@2.4.2))(typescript@5.6.3))(bufferutil@4.0.9)(eslint@9.18.0(jiti@2.4.2))(typescript@5.7.3)(utf-8-validate@6.0.5)(zod@3.24.1):
     dependencies:
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@8.16.0(eslint@9.16.0(jiti@2.4.2))(typescript@5.6.3))(eslint@9.18.0(jiti@2.4.2))
@@ -42665,6 +42645,17 @@ snapshots:
   it-stream-types@2.0.2: {}
 
   it-take@3.0.6: {}
+
+  it-ws@6.1.5(bufferutil@4.0.9)(utf-8-validate@5.0.10):
+    dependencies:
+      '@types/ws': 8.5.13
+      event-iterator: 2.0.0
+      it-stream-types: 2.0.2
+      uint8arrays: 5.1.0
+      ws: 8.18.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   it-ws@6.1.5(bufferutil@4.0.9)(utf-8-validate@6.0.5):
     dependencies:
@@ -48054,15 +48045,6 @@ snapshots:
   redis-parser@3.0.0:
     dependencies:
       redis-errors: 1.2.0
-
-  redis@4.7.0:
-    dependencies:
-      '@redis/bloom': 1.2.0(@redis/client@1.6.0)
-      '@redis/client': 1.6.0
-      '@redis/graph': 1.1.1(@redis/client@1.6.0)
-      '@redis/json': 1.0.7(@redis/client@1.6.0)
-      '@redis/search': 1.2.0(@redis/client@1.6.0)
-      '@redis/time-series': 1.1.0(@redis/client@1.6.0)
 
   reflect-metadata@0.1.13: {}
 
