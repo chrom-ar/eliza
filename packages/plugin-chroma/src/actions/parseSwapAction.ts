@@ -4,10 +4,11 @@ import { z } from 'zod';
 // Define the schema for swap intent
 const swapSchema = z.object({
   amount: z.string(),
-  sourceToken: z.string(),
-  sourceChain: z.string(),
-  destinationToken: z.union([z.string(), z.array(z.string())]),
-  destinationChain: z.string(),
+  fromToken: z.string(),
+  toToken: z.string(),
+  fromAddress: z.string(),
+  fromChain: z.string(),
+  recipientAddress: z.string(),
   deadline: z.number().optional()
 });
 
@@ -24,14 +25,14 @@ export const parseSwapAction: Action = {
 
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     // Extract swap info with schema validation
-    const intentData = await generateObject({
+    const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
       schema: swapSchema,
       schemaName: 'SwapIntent',
       schemaDescription: 'Extract swap intent information from the message',
       context: message.content.text
-    }) as z.infer<typeof swapSchema>;
+    })).object as z.infer<typeof swapSchema>;
 
     if (Object.keys(intentData).length === 0) {
       callback(message.content);
@@ -46,9 +47,9 @@ export const parseSwapAction: Action = {
 
     await intentManager.removeAllMemories(message.roomId);
 
-    const { amount, sourceToken, destinationToken } = intentData;
-    const destination = Array.isArray(destinationToken) ? destinationToken.join(', ') : destinationToken;
-    const responseText = `I've created a swap intent for ${amount} ${sourceToken} to ${destination}. Would you like to confirm this swap?`;
+    // const { amount, fromToken, toToken, fromChain } = intentData;
+    // const responseText = `I've created a swap intent for ${amount} ${fromToken} to ${toToken} on ${fromChain}. Would you like to confirm this swap?`; //TMP
+    const responseText = `I've created a swap intent. Would you like to confirm this swap? \n ${JSON.stringify(intentData, null, 2)}`; //TMP
 
     const newMemory: Memory = await intentManager.addEmbeddingToMemory({
       userId: message.userId,
@@ -66,8 +67,6 @@ export const parseSwapAction: Action = {
         }
       }
     });
-
-    console.log('intent from parseSwapAction', newMemory.content.intent);
 
     await intentManager.createMemory(newMemory);
 
