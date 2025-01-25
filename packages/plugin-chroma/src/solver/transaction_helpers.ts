@@ -16,6 +16,8 @@ import {
 } from "@solana/web3.js";
 
 
+import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
+
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
@@ -81,26 +83,31 @@ export async function validateAndBuildTransaction(message: GeneralMessage): Prom
   console.log("Validate and build transaction", message)
 
   // Check for missing fields (simple example)
-  if (!amount || !fromToken || !toToken || !fromAddress || !fromChain || !recipientAddress || !recipientChain) {
+  if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
     console.log('missing fields');
     return null;
   }
 
   // Multiple chains are not supported yet
-  if (fromChain !== recipientChain) {
+  if (recipientChain && fromChain !== recipientChain) {
     console.log('multi chain not supported yet');
     return null;
   }
 
   fromChain      = fromChain.toUpperCase();
   fromToken      = fromToken.toUpperCase();
-  recipientChain = recipientChain.toUpperCase();
+  // recipientChain = recipientChain?.toUpperCase();
   toToken        = toToken.toUpperCase();
 
   if (fromToken == toToken) {
+    if (!recipientAddress) {
+      console.log('recipientAddress is required for same token swap');
+      return null;
+    }
+
     return await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else {
-    return _buildSwap(fromChain, fromToken, toToken, amount, fromAddress, recipientAddress);
+    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress);
   }
 }
 
@@ -159,24 +166,11 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
 
   const erc20Abi = [
     {
-      // "constant": false,
       "inputs": [
-        {
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "name": "amount",
-          "type": "uint256"
-        }
+        { "name": "recipient", "type": "address" },
+        { "name": "amount", "type": "uint256" }
       ],
       "name": "transfer",
-      // "outputs": [
-      //   {
-      //     "name": "",
-      //     "type": "bool"
-      //   }
-      // ],
       "payable": false,
       "stateMutability": "nonpayable",
       "type": "function"
@@ -263,6 +257,11 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
   return { transaction: instructions }; // TODO: improve the main key to Proposal with more info than transaction or instructions
 }
 
-function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
-  return {}
+async function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string): Promise<object> {
+  if (isEvmChain(fromChain)) {
+  } else if (fromChain === "SOLANA") {
+    const tokenIn  = TOKENS[fromChain][fromToken];
+    const tokenOut = TOKENS[fromChain][toToken];
+    return { transaction: await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress) };
+  }
 }
