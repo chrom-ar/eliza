@@ -1,4 +1,4 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, embed, generateObject, MemoryManager } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager } from '@elizaos/core';
 import { z } from 'zod';
 
 // Define the schema for swap intent
@@ -12,6 +12,16 @@ const swapSchema = z.object({
   deadline: z.number().optional()
 });
 
+const contextTemplate = `# Recent Messages
+{{recentMessages}}
+
+# Providers data
+{{providers}}
+
+Extract swap intent information from the message.
+When no from address or chain is directly specified, use the user's wallet data provided in the context.
+If no chain (source or destination) is specified, use "ethereum" as the default.`;
+
 export const parseSwapAction: Action = {
   name: 'PARSE_SWAP_INTENT',
   similes: ['SWAP_INTENT', 'CREATE_INTENT'],
@@ -23,15 +33,18 @@ export const parseSwapAction: Action = {
            (text.includes('from') && text.includes('to') && /eth|sol|btc|usdc|usdt/i.test(text));
   },
 
-  handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
+  handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
+    const context = composeContext({
+      state: state,
+      template: contextTemplate
+    });
     // Extract swap info with schema validation
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
       schema: swapSchema,
       schemaName: 'SwapIntent',
-      schemaDescription: 'Extract swap intent information from the message',
-      context: message.content.text
+      context
     })).object as z.infer<typeof swapSchema>;
 
     if (Object.keys(intentData).length === 0) {

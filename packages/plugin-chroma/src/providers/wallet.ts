@@ -17,15 +17,12 @@ We have the following user wallet data so far:
  * 'We have all your wallet data. Here\'s the full info: ...'
  */
 const allDataCollectedTemplate = `
-Great news! We have *all* your wallet data. Here's the summary:
+# User wallet data:
 
 Address: {{address}}
 Preferred chains: {{chains}}
 
-Next Steps:
-- We can proceed to your next request, or
-- If you have more wallet accounts, let me know.
-`;
+Use this when you need to know the user's wallet data and no other context is needed.`;
 
 export const walletProvider: Provider = {
   /**
@@ -34,14 +31,14 @@ export const walletProvider: Provider = {
    */
   get: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
     // 1. Build the cache key ( agentId / userId / data )
-    const cacheKey = path.join(runtime.agentId, message.userId, 'data');
+    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
 
     // 2. Fetch from cache
     //    We'll store an object that has shape:
     //    { address: string | undefined, chains: string[] | undefined }
     let cacheObj = await runtime.cacheManager.get<{
       address?: string;
-      chains?: string[];
+      chains?: string;
     }>(cacheKey);
 
     // 3. If there's no existing data, initialize it with `undefined` fields
@@ -59,7 +56,7 @@ export const walletProvider: Provider = {
     if (hasAddress && hasChains) {
       const finalText = allDataCollectedTemplate
         .replace('{{address}}', cacheObj.address!)
-        .replace('{{chains}}', cacheObj.chains!.join(', '));
+        .replace('{{chains}}', cacheObj.chains!);
 
       // We can return a JSON object if needed, or just a string.
       // Since your code typically returns text context, we’ll do so here.
@@ -69,7 +66,7 @@ export const walletProvider: Provider = {
     // 6. Build partial summary
     const partialSummary = summaryTemplate
       .replace('{{address}}', cacheObj.address ?? '<undefined>')
-      .replace('{{chains}}', (cacheObj.chains ?? ['<undefined>']).join(', '));
+      .replace('{{chains}}', cacheObj.chains ?? '<undefined>');
 
     // 7. Build instructions for missing info
     const missingParts: string[] = [];

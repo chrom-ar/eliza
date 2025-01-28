@@ -12,31 +12,41 @@ export const walletEvaluator: Evaluator = {
   similes: ['EXTRACT_WALLET_DATA'],
   description: 'Collect wallet address and chains from the user, storing in cache',
 
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
-    const cacheKey = path.join(runtime.agentId, message.userId, 'data');
+  validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
+    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
     const dataInCache = await runtime.cacheManager.get<{
       address?: string;
-      chains?: string[];
+      chains?: string;
     }>(cacheKey);
 
     if (!dataInCache) {
+      // This call should be made by the framework, but for some reason it's not working
+      // So we're calling it manually here
+      await walletEvaluator.handler(runtime, message);
       return true;
     }
 
     const hasAddress = Boolean(dataInCache.address);
-    const hasChains = Boolean(dataInCache.chains && dataInCache.chains.length > 0);
+    const hasChains = Boolean(dataInCache.chains);
 
-    return !(hasAddress && hasChains);
+    if (hasAddress && hasChains) {
+      return false;
+    }
+
+    // Again, this call should be made by the framework, but for some reason it's not working
+    // So we're calling it manually here
+    await walletEvaluator.handler(runtime, message);
+    return true;
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory) => {
     // 1. Build cache key
-    const cacheKey = path.join(runtime.agentId, message.userId, 'data');
+    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
 
     // 2. Retrieve old data
     let cached = await runtime.cacheManager.get<{
       address?: string;
-      chains?: string[];
+      chains?: string;
     }>(cacheKey);
 
     if (!cached) {
@@ -46,27 +56,32 @@ export const walletEvaluator: Evaluator = {
     // 3. Define schema for wallet data extraction
     const walletSchema = z.object({
       address: z.string().nullable(),
-      chains: z.array(z.string()).nullable()
+      chains: z.string().nullable()
     });
 
+    const prompt = `
+    Extract wallet address and preferred chains from this message, if any.
+
+    User message:
+    \`\`\`
+    ${message.content.text}
+    \`\`\`
+    `;
+
     // 4. Extract wallet info using AI
-    const extractedData = await generateObject({
+    const extractedData = (await generateObject({
       runtime,
       modelClass: ModelClass.MEDIUM,
       schema: walletSchema,
-      schemaName: 'WalletData',
-      schemaDescription: 'Extract wallet address and blockchain chains from the message',
-      context: message.content.text
-    }) as z.infer<typeof walletSchema>;
-
-    console.log('extractedData', extractedData);
+      context: prompt
+    })).object as z.infer<typeof walletSchema>;
 
     // 5. Update cache with new data if found
     if (extractedData.address && !cached.address) {
       cached.address = extractedData.address;
     }
 
-    if (extractedData.chains?.length && (!cached.chains || cached.chains.length === 0)) {
+    if (extractedData.chains && !cached.chains) {
       cached.chains = extractedData.chains;
     }
 
@@ -97,7 +112,7 @@ export const walletEvaluator: Evaluator = {
           },
         },
       ],
-      outcome: '{"success":true,"data":{"address":"0xABc1234","chains":["Ethereum","BSC"]},"message":"Updated wallet info in cache"}',
+      outcome: '{"success":true,"data":{"address":"0xABc1234","chains":"Ethereum,BSC"},"message":"Updated wallet info in cache"}',
     }
   ]
 };

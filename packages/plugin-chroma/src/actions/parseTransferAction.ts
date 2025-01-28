@@ -1,4 +1,4 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, generateObject, MemoryManager, elizaLogger } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager, elizaLogger } from '@elizaos/core';
 import { z } from 'zod';
 
 // Define the schema for transfer intent
@@ -7,11 +7,21 @@ const transferSchema = z.object({
   fromToken: z.string(),
   toToken: z.string(),
   fromAddress: z.string(),
-  fromChain: z.string(),
+  fromChain: z.string().default('sepolia'),
   recipientAddress: z.string(),
-  recipientChain: z.string(),
+  recipientChain: z.string().default('sepolia'),
   deadline: z.number().optional()
 });
+
+const contextTemplate = `# Recent Messages
+{{recentMessages}}
+
+# Providers data
+{{providers}}
+
+Extract transfer intent information from the message.
+When no from address or chain is directly specified, use the user's wallet data provided in the context.
+If no chain (source or destination) is specified, use "ethereum" as the default.`;
 
 export const parseTransferAction: Action = {
   name: 'PARSE_TRANSFER_INTENT',
@@ -27,19 +37,17 @@ export const parseTransferAction: Action = {
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State | undefined, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
-    const schemaDescription = `
-    Extract transfer intent information from the message.
-    If no chain (source or destination) is specified, use "ethereum" as the default.
-    If no from address is specified, use this one: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-    `;
+    const context = composeContext({
+      state: state,
+      template: contextTemplate
+    });
     // Extract transfer info using schema validation
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
       schema: transferSchema,
       schemaName: 'TransferIntent',
-      schemaDescription,
-      context: message.content.text
+      context
     })).object as z.infer<typeof transferSchema>;
 
     if (Object.keys(intentData).length === 0) {
@@ -79,7 +87,7 @@ export const parseTransferAction: Action = {
     await intentManager.createMemory(newMemory);
     callback(newMemory.content);
 
-    elizaLogger.info('Transfer intent created', intentData );
+    elizaLogger.info('Transfer intent created', intentData);
 
     return true;
   },
