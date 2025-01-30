@@ -180,18 +180,14 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   // Native
   if (tokenAddr == ZERO_ADDRESS) {
     return {
-      transaction: {
-        to: recipientAddress,
-        value: tokenAmount
-      }
+      to: recipientAddress,
+      value: tokenAmount
     };
   } else {
     return {
-      transaction: {
-        to: tokenAddr,
-        value: 0,
-        data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
-      }
+      to: tokenAddr,
+      value: 0,
+      data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
     };
   }
 }
@@ -262,6 +258,7 @@ async function _buildSwap(fromChain: string, fromToken: string, toToken: string,
   } else if (fromChain === "SOLANA") {
     const tokenIn  = TOKENS[fromChain][fromToken];
     const tokenOut = TOKENS[fromChain][toToken];
-    return { transaction: await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress) };
+
+    return await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress);
   }
 }
