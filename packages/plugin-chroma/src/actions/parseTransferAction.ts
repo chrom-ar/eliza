@@ -41,6 +41,7 @@ export const parseTransferAction: Action = {
       state: state,
       template: contextTemplate
     });
+
     // Extract transfer info using schema validation
     const intentData = (await generateObject({
       runtime,
