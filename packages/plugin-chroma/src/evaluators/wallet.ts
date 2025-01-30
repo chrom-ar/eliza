@@ -15,7 +15,7 @@ export const walletEvaluator: Evaluator = {
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
     const dataInCache = await runtime.cacheManager.get<{
-      address?: string;
+      addresses?: string;
       chains?: string;
     }>(cacheKey);
 
@@ -26,10 +26,10 @@ export const walletEvaluator: Evaluator = {
       return true;
     }
 
-    const hasAddress = Boolean(dataInCache.address);
+    const hasAddresses = Boolean(dataInCache.addresses);
     const hasChains = Boolean(dataInCache.chains);
 
-    if (hasAddress && hasChains) {
+    if (hasAddresses && hasChains) {
       return false;
     }
 
@@ -45,22 +45,30 @@ export const walletEvaluator: Evaluator = {
 
     // 2. Retrieve old data
     let cached = await runtime.cacheManager.get<{
-      address?: string;
+      addresses?: string;
       chains?: string;
     }>(cacheKey);
 
     if (!cached) {
-      cached = { address: undefined, chains: undefined };
+      cached = { addresses: undefined, chains: undefined };
     }
 
     // 3. Define schema for wallet data extraction
     const walletSchema = z.object({
-      address: z.string().nullable(),
+      addresses: z.string().nullable(),
       chains: z.string().nullable()
     });
 
     const prompt = `
     Extract wallet address and preferred chains from this message, if any.
+    Return null if no addresses or chains are found.
+
+    - If the user presents more than one address, return them as one string, comma-separated values.
+    - If the user presents more than one chain, return them as one string, comma-separated values.
+    - For addresses, include both EVM (0x...) and Solana addresses.
+    - If there is a Solana address (no 0x starting), include then Solana chain, even if no explicit chain is mentioned.
+    - Do not return any other text, actions or comments.
+    - Do not return arrays or objects, just strings.
 
     User message:
     \`\`\`
@@ -77,11 +85,11 @@ export const walletEvaluator: Evaluator = {
     })).object as z.infer<typeof walletSchema>;
 
     // 5. Update cache with new data if found
-    if (extractedData.address && !cached.address) {
-      cached.address = extractedData.address;
+    if (extractedData.addresses) {
+      cached.addresses = extractedData.addresses;
     }
 
-    if (extractedData.chains && !cached.chains) {
+    if (extractedData.chains) {
       cached.chains = extractedData.chains;
     }
 
@@ -92,7 +100,7 @@ export const walletEvaluator: Evaluator = {
     const resultObj = {
       success: true,
       data: {
-        address: cached.address ?? undefined,
+        addresses: cached.addresses ?? undefined,
         chains: cached.chains ?? undefined,
       },
       message: 'Updated wallet info in cache',
@@ -112,7 +120,19 @@ export const walletEvaluator: Evaluator = {
           },
         },
       ],
-      outcome: '{"success":true,"data":{"address":"0xABc1234","chains":"Ethereum,BSC"},"message":"Updated wallet info in cache"}',
-    }
-  ]
+      outcome: '{"success":true,"data":{"addresses":"0xABc1234","chains":"Ethereum,BSC"},"message":"Updated wallet info in cache"}',
+    },
+    {
+      context: 'User wants to share wallet data quickly',
+      messages: [
+        {
+          user: 'Alice',
+          content: {
+            text: 'My address is 0xABc1234 and the chains: Polygon and yjAgent123 in Solana',
+          },
+        },
+      ],
+      outcome: '{"success":true,"data":{"addresses":"0xABc1234,yjAgent123","chains":"Polygon,Solana"},"message":"Updated wallet info in cache"}',
+    },
+  ],
 };
