@@ -143,8 +143,6 @@ export const confirmIntentAction: Action = {
 
             await runtime.messageManager.createMemory(responseMemory);
 
-            console.log("Memory created:", responseMemory)
-
             // Use callback to ensure the message appears in chat
             await callback(responseMemory.content)
 
