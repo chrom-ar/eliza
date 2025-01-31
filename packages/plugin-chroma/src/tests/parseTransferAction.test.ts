@@ -17,6 +17,9 @@ vi.mock('@elizaos/core', async (importOriginal) => {
     return {
         // @ts-ignore
         ...actual,
+        composeContext: vi.fn().mockImplementation(({state}) => {
+            return state.recentMessages // faked for test
+        }),
         generateObject: vi.fn().mockImplementation(async ({ schema, context }) => {
             if (context.includes('1 ETH')) {
                 return {
@@ -122,7 +125,7 @@ describe('Parse Transfer Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseTransferAction.handler(mockRuntime, message, undefined, {}, mockCallback as HandlerCallback);
+            await parseTransferAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
@@ -143,7 +146,7 @@ describe('Parse Transfer Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseTransferAction.handler(mockRuntime, message, undefined, {}, mockCallback as HandlerCallback);
+            await parseTransferAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
@@ -164,7 +167,7 @@ describe('Parse Transfer Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseTransferAction.handler(mockRuntime, message, undefined, {}, mockCallback as HandlerCallback);
+            await parseTransferAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
@@ -186,7 +189,7 @@ describe('Parse Transfer Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseTransferAction.handler(mockRuntime, message, undefined, {}, mockCallback as HandlerCallback);
+            await parseTransferAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
