@@ -75,7 +75,6 @@ export const parseTransferAction: Action = {
       unique: true,
       content: {
         text: responseText,
-        action: 'PARSE_TRANSFER_INTENT',
         source: message.content?.source,
         intent: {
           ...intentData,
@@ -85,7 +84,7 @@ export const parseTransferAction: Action = {
     });
 
     await intentManager.createMemory(newMemory);
-    callback(newMemory.content);
+    await callback(newMemory.content);
 
     elizaLogger.info('Transfer intent created', intentData);
 

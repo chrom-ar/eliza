@@ -36,7 +36,7 @@ export class WakuClient {
         return;
       }
 
-      if (!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.transaction)))) {
+      if (!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.proposal)))) {
         elizaLogger.error("[WakuClient-Chroma] Invalid signature", body);
         return;
       }
