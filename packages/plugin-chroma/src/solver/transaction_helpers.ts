@@ -181,18 +181,14 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   // Native
   if (tokenAddr == ZERO_ADDRESS) {
     return {
-      transaction: {
-        to: recipientAddress,
-        value: tokenAmount
-      }
+      to: recipientAddress,
+      value: tokenAmount
     };
   } else {
     return {
-      transaction: {
-        to: tokenAddr,
-        value: 0,
-        data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
-      }
+      to: tokenAddr,
+      value: 0,
+      data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
     };
   }
 }
