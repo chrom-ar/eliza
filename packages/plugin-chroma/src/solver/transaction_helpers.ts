@@ -13,6 +13,7 @@ import {
     TransactionMessage,
     SystemProgram,
     clusterApiUrl,
+    VersionedTransaction,
 } from "@solana/web3.js";
 
 
@@ -67,7 +68,7 @@ function isEvmChain(chain: string): boolean {
  * 1. Validate incoming data, ensuring all required fields are present.
  * 2. If valid, build a transaction object using 'viem'.
  */
-export async function validateAndBuildTransaction(message: GeneralMessage): Promise<object> {
+export async function validateAndBuildProposal(message: GeneralMessage): Promise<object> {
   let {
     body: {
       amount,
@@ -80,7 +81,7 @@ export async function validateAndBuildTransaction(message: GeneralMessage): Prom
     }
   } = message;
 
-  console.log("Validate and build transaction", message)
+  console.log("Validate and build proposal", message)
 
   // Check for missing fields (simple example)
   if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
@@ -134,12 +135,12 @@ async function signPayload(payload: object, config: object): Promise<{ signature
  * Takes a valid transaction object and returns a "ready to broadcast" result
  *   that includes the transaction, signature, and the signer (public address).
  */
-export async function buildSignedTransactionResponse(transaction: any, config: any): Promise<object> {
+export async function buildSignedProposalResponse(proposal: any, config: any): Promise<object> {
   try {
-  const { signature, signer } = await signPayload(transaction, config);
+  const { signature, signer } = await signPayload(proposal, config);
 
   return {
-    transaction,
+    proposal,
     signature,
     signer
   };
@@ -201,6 +202,7 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
   const recipient   = new PublicKey(recipientAddress);
 
   const instructions = [];
+  const connection = new Connection(clusterApiUrl("devnet"), "confirmed"); // TODO: Use config for env
 
   if (tokenAddr == TOKENS["SOLANA"]["SOL"]) {
     instructions.push(SystemProgram.transfer({
@@ -212,8 +214,6 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
     const mint = new PublicKey(tokenAddr);
     const senderATA = getAssociatedTokenAddressSync(mint, from, true);
     const recipientATA = getAssociatedTokenAddressSync(mint, recipient, true);
-
-    const connection = new Connection(clusterApiUrl("devnet"), "confirmed"); // TODO: Use config for env
 
     const recipientATAInfo = await connection.getAccountInfo(recipientATA);
     if (!recipientATAInfo) {
@@ -250,7 +250,23 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
   //   })
   // );
 
-  return { transaction: instructions }; // TODO: improve the main key to Proposal with more info than transaction or instructions
+  // Get the latest blockhash
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+  // Create a new transaction message
+  const messageV0 = new TransactionMessage({
+    payerKey: from,
+    recentBlockhash: blockhash,
+    instructions
+  }).compileToV0Message();
+
+  // Create a new VersionedTransaction
+  const transaction = new VersionedTransaction(messageV0);
+
+  return {
+    serializedTransaction: Buffer.from(transaction.serialize()).toString('base64'),
+    lastValidBlockHeight
+  };
 }
 
 async function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string): Promise<object> {
@@ -259,6 +275,6 @@ async function _buildSwap(fromChain: string, fromToken: string, toToken: string,
     const tokenIn  = TOKENS[fromChain][fromToken];
     const tokenOut = TOKENS[fromChain][toToken];
 
-    return await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress);
+    return { transaction: await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress) };
   }
 }

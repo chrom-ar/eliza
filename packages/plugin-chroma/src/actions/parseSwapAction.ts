@@ -62,7 +62,7 @@ export const parseSwapAction: Action = {
 
     // const { amount, fromToken, toToken, fromChain } = intentData;
     // const responseText = `I've created a swap intent for ${amount} ${fromToken} to ${toToken} on ${fromChain}. Would you like to confirm this swap?`; //TMP
-    const responseText = `I've created a swap intent. Would you like to confirm this swap? \n ${JSON.stringify(intentData, null, 2)}`; //TMP
+    const responseText = 'I\'ve created a swap intent. Would you like to confirm this swap?'
 
     const newMemory: Memory = await intentManager.addEmbeddingToMemory({
       userId: message.userId,
@@ -72,7 +72,6 @@ export const parseSwapAction: Action = {
       unique: true,
       content: {
         text: responseText,
-        action: 'PARSE_SWAP_INTENT',
         source: message.content?.source,
         intent: {
           ...intentData,
@@ -82,8 +81,7 @@ export const parseSwapAction: Action = {
     });
 
     await intentManager.createMemory(newMemory);
-
-    callback(newMemory.content);
+    await callback(newMemory.content);
 
     return true;
   },
