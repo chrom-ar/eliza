@@ -36,7 +36,7 @@ export async function swapToken(
             amount: adjustedAmount,
         });
 
-        let quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${adjustedAmount}&dynamicSlippage=true&maxAccounts=64`
+        let quoteUrl = `https://api.jup.ag/swap/v1/quote?inputMint=${fromToken}&outputMint=${toToken}&amount=${adjustedAmount}&dynamicSlippage=true&maxAccounts=64`
         if (withFee)
             quoteUrl += '&platformFeeBps=5'
 
@@ -76,7 +76,7 @@ export async function swapToken(
 
         elizaLogger.log("Requesting swap with body:", swapRequestBody);
 
-        const swapResponse = await fetch("https://quote-api.jup.ag/v6/swap", {
+        const swapResponse = await fetch("https://api.jup.ag/swap/v1/swap", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export async function swapToken(
         }
 
         elizaLogger.log("Swap transaction received");
-        return { quoteResponse, swapData };
+        return { quoteResponse, serializedTransaction: swapData.swapTransaction };
     } catch (error) {
         elizaLogger.error("Error in swapToken:", error);
         throw error;

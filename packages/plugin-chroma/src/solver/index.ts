@@ -1,16 +1,14 @@
 import {
-  validateAndBuildTransaction,
-  buildSignedTransactionResponse,
+  validateAndBuildProposal,
+  buildSignedProposalResponse,
 } from './transaction_helpers';
 
 export const buildResponse = async (event: any, config: object) => {
   try {
-    const transaction = await validateAndBuildTransaction(event);
+    const proposal = await validateAndBuildProposal(event);
 
-    let response: object;
-
-    if (transaction) {
-      return await buildSignedTransactionResponse(transaction, config);
+    if (proposal) {
+      return await buildSignedProposalResponse(proposal, config);
     }
   } catch (error) {
     console.error('Error building response:', error);
