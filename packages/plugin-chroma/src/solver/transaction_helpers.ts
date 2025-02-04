@@ -81,8 +81,6 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
     }
   } = message;
 
-  console.log("Validate and build proposal", message)
-
   // Check for missing fields (simple example)
   if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
     console.log('missing fields');
@@ -106,9 +104,9 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       return null;
     }
 
-    return await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+    return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress);
+    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress)};
   }
 }
 
@@ -275,6 +273,6 @@ async function _buildSwap(fromChain: string, fromToken: string, toToken: string,
     const tokenIn  = TOKENS[fromChain][fromToken];
     const tokenOut = TOKENS[fromChain][toToken];
 
-    return { transaction: await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress) };
+    return await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress);
   }
 }
