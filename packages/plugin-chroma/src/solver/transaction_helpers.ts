@@ -106,7 +106,7 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
 
     return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    return { transaction: await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress) };
+    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress)};
   }
 }
 
