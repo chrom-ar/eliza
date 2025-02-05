@@ -26,11 +26,6 @@ const allDataCollectedTemplate = Handlebars.compile(`
 
 Use this when you need to know the user's wallet data and no other context is needed.`);
 
-interface WalletCache {
-  addresses?: string;
-  chains?: string;
-}
-
 /**
  * Separates addresses into EVM and Solana addresses
  */
