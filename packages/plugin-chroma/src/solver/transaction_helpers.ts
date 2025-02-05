@@ -1,7 +1,7 @@
 import { elizaLogger } from '@elizaos/core';
 import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { mainnet } from 'viem/chains';
+import { mainnet, base } from 'viem/chains';
 import {
     getAssociatedTokenAddressSync,
     createAssociatedTokenAccountInstruction,
@@ -60,7 +60,7 @@ const TOKEN_DECIMALS = {
 }
 
 // TODO: remove sepolia
-const EVM_CHAINS = ["ETHEREUM", "SEPOLIA"];
+const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE"];
 
 function isEvmChain(chain: string): boolean {
   return EVM_CHAINS.includes(chain.toUpperCase());
@@ -273,7 +273,7 @@ async function _buildSwap(message: GeneralMessage): Promise<object> {
   if (isEvmChain(message.body.fromChain)) {
     // TODO: bring all the chains, it is a thing of the agent to support them
     // TODO: remove sepolia
-    const evmSwap = new EVMLiFiSwap({chains: { ethereum: mainnet, sepolia: mainnet }});
+    const evmSwap = new EVMLiFiSwap({chains: { ethereum: mainnet, sepolia: mainnet, base }});
 
     return await evmSwap.buildSwapTransaction(message);
   } else if (message.body.fromChain === "SOLANA") {
