@@ -15,6 +15,8 @@
     "@elizaos/client-waku": "workspace:*",
     "@elizaos/core": "workspace:*",
     "@elizaos/adapter-sqlite": "workspace:*",
+    "@lifi/sdk": "3.4.1",
+    "@lifi/types": "16.3.0",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.8",
     "@waku/sdk": "0.0.30-9f1d8ca.0",
