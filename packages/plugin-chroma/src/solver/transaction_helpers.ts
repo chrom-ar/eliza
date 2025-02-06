@@ -2,7 +2,6 @@ import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
     getAssociatedTokenAddressSync,
-    createTransferInstruction,
     createAssociatedTokenAccountInstruction,
     TOKEN_PROGRAM_ID,
     createTransferCheckedInstruction,
@@ -106,7 +105,7 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
 
     return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress)};
+    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress);
   }
 }
 
