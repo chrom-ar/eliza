@@ -1,4 +1,4 @@
-import { createConfig, executeRoute, getRoutes, CoinKey, ChainKey, type ChainType, getQuote } from '@lifi/sdk';
+import { createConfig, ChainKey, ChainId, getQuote } from '@lifi/sdk';
 import { type Chain, parseEther } from 'viem';
 
 // Types from your existing framework
@@ -15,49 +15,9 @@ interface SwapBuilder {
 export class EVMLiFiSwap implements SwapBuilder {
   private config;
 
-  constructor(private evmConfig: EVMLiFiConfig) {
-    // Create LiFi config from provided EVM chains
-    const chains = Object.values(evmConfig.chains).map(chain => {
-      const nativeCurrencySymbol = chain.nativeCurrency.symbol.toUpperCase();
-
-      // Validate that the symbol is a valid CoinKey
-      if (!Object.values(CoinKey).includes(nativeCurrencySymbol as CoinKey)) {
-        throw new Error(`Invalid native currency symbol: ${chain.nativeCurrency.symbol}. Must be one of: ${Object.values(CoinKey).join(', ')}`);
-      }
-
-      return {
-        id: chain.id,
-        name: chain.name,
-        key: convertToChainKey(chain.name),
-        chainType: "EVM" as ChainType,
-        nativeToken: {
-          ...chain.nativeCurrency,
-          chainId: chain.id,
-          address: "0x0000000000000000000000000000000000000000",
-          coinKey: nativeCurrencySymbol as CoinKey,
-          priceUSD: "0",
-          logoURI: "",
-        },
-        metamask: {
-          chainId: `0x${chain.id.toString(16)}`,
-          chainName: convertToChainKey(chain.name),
-          nativeCurrency: chain.nativeCurrency,
-          rpcUrls: [chain.rpcUrls.default.http[0]],
-          blockExplorerUrls: [chain.blockExplorers?.default?.url],
-        },
-        rpcUrls: {
-          public: { http: [chain.rpcUrls.default.http[0]] },
-        },
-        blockExplorerUrls: [chain.blockExplorers?.default?.url],
-        coin: chain.nativeCurrency.symbol.toLowerCase() as CoinKey,
-        mainnet: true,
-        diamondAddress: "0x0000000000000000000000000000000000000000",
-      };
-    });
-
+  constructor() {
     this.config = createConfig({
       integrator: "chroma",
-      chains,
     });
   }
 
@@ -73,15 +33,12 @@ export class EVMLiFiSwap implements SwapBuilder {
         }
       } = message;
 
-      const chain = this.evmConfig.chains[fromChain.toLowerCase()];
-
-      if (!chain) {
-        throw new Error(`Chain ${fromChain} not supported`);
-      }
+      const fromChainKey = convertToChainKey(fromChain);
+      const fromChainId = ChainId[fromChainKey.toUpperCase()];
 
       const quote = await getQuote({
-        fromChain: chain.id,
-        toChain: chain.id, // Same chain swap
+        fromChain: fromChainId,
+        toChain: fromChainId, // Same chain swap
         fromToken: fromToken,
         toToken: toToken,
         fromAmount: parseEther(amount).toString(),
