@@ -1,5 +1,7 @@
+import { elizaLogger } from '@elizaos/core';
 import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
+import { mainnet, base } from 'viem/chains';
 import {
     getAssociatedTokenAddressSync,
     createAssociatedTokenAccountInstruction,
@@ -15,8 +17,8 @@ import {
     VersionedTransaction,
 } from "@solana/web3.js";
 
-
 import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
+import { EVMLiFiSwap } from './lifi-evm-swap';
 
 export interface GeneralMessage {
   timestamp: number;
@@ -37,7 +39,7 @@ const ZERO_ADDRESS = '0x' + '0'.repeat(40);
 
 const TOKENS = {
   "ETHEREUM": {
-    "ETH":  ZERO_ADDRESS,
+    "ETH": ZERO_ADDRESS,
     "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
   },
   "SOLANA": {
@@ -57,10 +59,11 @@ const TOKEN_DECIMALS = {
   }
 }
 
-const EVM_CHAINS = ["ETHEREUM"];
+// TODO: remove sepolia
+const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE"];
 
 function isEvmChain(chain: string): boolean {
-  return EVM_CHAINS.includes(chain);
+  return EVM_CHAINS.includes(chain.toUpperCase());
 }
 
 /**
@@ -105,7 +108,7 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
 
     return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    return await _buildSwap(fromChain, fromToken, toToken, amount, fromAddress);
+    return await _buildSwap(message);
   }
 }
 
@@ -266,12 +269,17 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
   };
 }
 
-async function _buildSwap(fromChain: string, fromToken: string, toToken: string, amount: string, fromAddress: string): Promise<object> {
-  if (isEvmChain(fromChain)) {
-  } else if (fromChain === "SOLANA") {
-    const tokenIn  = TOKENS[fromChain][fromToken];
-    const tokenOut = TOKENS[fromChain][toToken];
+async function _buildSwap(message: GeneralMessage): Promise<object> {
+  if (isEvmChain(message.body.fromChain)) {
+    const evmSwap = new EVMLiFiSwap(); // TODO: probably should be a singleton
+    return await evmSwap.buildSwapTransaction(message);
+  } else if (message.body.fromChain === "SOLANA") {
+    const tokenIn  = TOKENS[message.body.fromChain][message.body.fromToken];
+    const tokenOut = TOKENS[message.body.fromChain][message.body.toToken];
 
-    return await swapTokenSolJup(amount, tokenIn, tokenOut, fromAddress);
+    return await swapTokenSolJup(message.body.amount, tokenIn, tokenOut, message.body.fromAddress);
+  } else {
+    elizaLogger.debug("chain not supported", message.body.fromChain);
+    return null;
   }
 }
