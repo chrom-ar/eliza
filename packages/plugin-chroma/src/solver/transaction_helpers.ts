@@ -271,10 +271,7 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
 
 async function _buildSwap(message: GeneralMessage): Promise<object> {
   if (isEvmChain(message.body.fromChain)) {
-    // TODO: bring all the chains, it is a thing of the agent to support them
-    // TODO: remove sepolia
-    const evmSwap = new EVMLiFiSwap({chains: { ethereum: mainnet, sepolia: mainnet, base }});
-
+    const evmSwap = new EVMLiFiSwap(); // TODO: probably should be a singleton
     return await evmSwap.buildSwapTransaction(message);
   } else if (message.body.fromChain === "SOLANA") {
     const tokenIn  = TOKENS[message.body.fromChain][message.body.fromToken];
