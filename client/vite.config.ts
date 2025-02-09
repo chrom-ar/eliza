@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
                 env.SERVER_PORT || "3000"
             ),
         },
+        server: {
+            allowedHosts: ["sandbox-www.chrom.ar"],
+        },
         build: {
             outDir: "dist",
             minify: true,
