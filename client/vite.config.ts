@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
             ),
         },
         server: {
-            allowedHosts: ["sandbox-www.chrom.ar"],
+            allowedHosts: [".chrom.ar"],
         },
         build: {
             outDir: "dist",
