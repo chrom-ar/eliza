@@ -26,8 +26,27 @@ jobs:
         ECR_REPOSITORY: sandbox
         IMAGE_TAG: latest
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        # Get the short SHA
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        
+        # Build with latest and commit SHA tags
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$SHORT_SHA .
+        
+        # Push both tags
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$SHORT_SHA
+        
+        # Get git tags pointing to current commit (if any)
+        GIT_TAGS=$(git tag --points-at HEAD)
+        
+        # If there are git tags, build and push with those tags
+        if [ ! -z "$GIT_TAGS" ]; then
+          for TAG in $GIT_TAGS; do
+            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$TAG
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$TAG
+          done
+        fi
 
     - name: Force new deployment
       run: |
