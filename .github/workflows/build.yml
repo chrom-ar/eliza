@@ -48,6 +48,38 @@ jobs:
           done
         fi
 
-    - name: Force new deployment
+    - name: Force new deployment and wait for completion
+      env:
+        CLUSTER: sandbox
+        SERVICE: sandbox
       run: |
-        aws ecs update-service --cluster sandbox --service sandbox --force-new-deployment
+        # Force new deployment
+        aws ecs update-service --cluster $CLUSTER --service $SERVICE --force-new-deployment
+
+        echo "Waiting for service deployment to complete..."
+        
+        # Wait for service to become stable
+        aws ecs wait services-stable \
+          --cluster $CLUSTER \
+          --services $SERVICE
+
+        # Get deployment status
+        DEPLOYMENT_STATUS=$(aws ecs describe-services \
+          --cluster $CLUSTER \
+          --services $SERVICE \
+          --query 'services[0].deployments[0].status' \
+          --output text)
+
+        if [ "$DEPLOYMENT_STATUS" != "PRIMARY" ]; then
+          echo "Deployment failed with status: $DEPLOYMENT_STATUS"
+          
+          # Get failed deployment details
+          aws ecs describe-services \
+            --cluster $CLUSTER \
+            --services $SERVICE \
+            --query 'services[0].deployments[0]'
+            
+          exit 1
+        fi
+
+        echo "Deployment completed successfully!"
