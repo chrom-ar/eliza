@@ -20,6 +20,8 @@ const contextTemplate = `# Recent Messages
 Extract bridge intent information from the message.
 When no from address or chain is directly specified, use the user's wallet data provided in the context.
 If no chain (source or destination) is specified, use "ethereum" as the default.
+If testnet names like "sepolia", "optimism sepolia" is specified, use the corresponding testnet chain name (e.g. "sepolia", "optimism-sepolia" DO NOT OMMIT WORDS WHEN SPECIFYING TESTNETS).
+If sepolia is specified, then source and destination chains are sepolia, so put the suffix "-sepolia" to the chain when applicable.
 The bridge only supports USDC token.`;
 
 export const parseBridgeAction: Action = {
@@ -74,6 +76,7 @@ export const parseBridgeAction: Action = {
         source: message.content?.source,
         intent: {
           ...intentData,
+          type: 'bridge',
           status: 'pending'
         }
       }

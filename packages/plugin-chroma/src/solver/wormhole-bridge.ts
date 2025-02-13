@@ -1,6 +1,7 @@
 import { wormhole } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
-import { toNative } from '@wormhole-foundation/sdk-connect';
+import solana from '@wormhole-foundation/sdk/solana';
+import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { parseUnits } from 'viem';
 import { GeneralMessage } from './transaction_helpers';
 
@@ -42,16 +43,24 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
     }
   } = message;
 
-  const wh = await wormhole("Testnet", [evm]);
+  console.log('building bridge transaction');
+
+  const wh = await wormhole("Testnet", [evm, solana]);
 
   const sourceChain = wh.getChain(convertToWormholeChain(fromChain));
   const destinationChain = wh.getChain(convertToWormholeChain(recipientChain));
 
   const circleBridge = await sourceChain.getCircleBridge();
 
+  // For some reason, toNative is not working.
+  //console.log('native address', toNative(sourceChain.chain, fromAddress));
+  //console.log('destination address', toNative(destinationChain.chain, recipientAddress));
+
   const unsignedTxs = circleBridge.transfer(
-    toNative(sourceChain.chain, fromAddress),
-    { chain: destinationChain.chain, address: toNative(destinationChain.chain, recipientAddress) },
+    //toNative(sourceChain.chain, fromAddress),
+    toUniversal(sourceChain.chain, fromAddress),
+    //{ chain: destinationChain.chain, address: toNative(destinationChain.chain, recipientAddress) },
+    { chain: destinationChain.chain, address: toUniversal(destinationChain.chain, recipientAddress) },
     parseUnits(amount, 6)
   );
 
@@ -65,6 +74,8 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
     
     processedTxs.push(processedTx);
   }
+
+  console.log('processedTxs', processedTxs);
 
   return processedTxs;
 }
