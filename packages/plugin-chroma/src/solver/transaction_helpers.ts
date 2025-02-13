@@ -31,8 +31,8 @@ export interface GeneralMessage {
     recipientAddress: string;
     recipientChain: string;
     status: string;
-    deadline?: number; // Optional deadline field
-    type?: 'swap' | 'bridge'; // Optional type field to differentiate operations
+    deadline?: number;
+    type?: 'swap' | 'bridge';
   };
 }
 
@@ -114,7 +114,10 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       console.log('recipientAddress and recipientChain are required for bridge operations');
       return null;
     }
-    return { transaction: await buildBridgeTransaction(message) };
+    const bridgeResult = await buildBridgeTransaction(message);
+    return bridgeResult.length === 1
+      ? { transaction: bridgeResult[0] }
+      : { transactions: bridgeResult };
   }
 
   if (fromToken === toToken) {

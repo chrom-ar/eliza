@@ -14,15 +14,43 @@ const bridgeSchema = z.object({
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
 
-# Providers data
+# User Wallet Data
 {{providers}}
 
-Extract bridge intent information from the message.
-When no from address or chain is directly specified, use the user's wallet data provided in the context.
-If no chain (source or destination) is specified, use "ethereum" as the default.
-If testnet names like "sepolia", "optimism sepolia" is specified, use the corresponding testnet chain name (e.g. "sepolia", "optimism-sepolia" DO NOT OMMIT WORDS WHEN SPECIFYING TESTNETS).
-If sepolia is specified, then source and destination chains are sepolia, so put the suffix "-sepolia" to the chain when applicable.
-The bridge only supports USDC token.`;
+Extract bridge intent information from the user's message to facilitate USDC transfers between chains.
+
+## Available User Data
+The User Wallet Data section above contains:
+- List of user's EVM addresses (format: 0x...)
+- List of user's Solana addresses (Base58 format)
+- List of user's preferred chains
+
+## Bridge Requirements
+Token: ONLY USDC is supported for bridging operations
+
+Chain Rules:
+1. Default source and destination chain is "ethereum" if not specified
+2. Testnet Rules:
+   - If "sepolia" is mentioned alone (e.g., "from sepolia"), use "sepolia" as the chain name
+   - If "sepolia" is mentioned with other chains (e.g., "from sepolia to optimism"):
+     * Add "-sepolia" suffix to ALL chains (e.g., fromChain: "sepolia", toChain: "optimism-sepolia")
+   - Valid testnet chains: "sepolia", "optimism-sepolia", "arbitrum-sepolia", "base-sepolia", "polygon-sepolia"
+   - Testnets and mainnet chains cannot be mixed in the same transaction
+
+Address Selection Rules:
+1. If address not specified in message:
+   - For EVM chains: Use user's 0x... address from wallet data
+   - For Solana: Use user's Base58 address from wallet data
+2. If multiple addresses available, select the one matching the chain type
+
+## Required Output Fields
+1. amount: (number) USDC quantity to bridge
+2. fromToken: Must be "USDC"
+3. fromChain: Source chain name (use rules above)
+4. fromAddress: Source wallet address (use rules above)
+5. recipientChain: Destination chain name (use rules above)
+6. recipientAddress: Destination wallet address (use rules above)
+7. deadline: (optional) Transaction deadline timestamp`;
 
 export const parseBridgeAction: Action = {
   name: 'PARSE_BRIDGE_INTENT',
