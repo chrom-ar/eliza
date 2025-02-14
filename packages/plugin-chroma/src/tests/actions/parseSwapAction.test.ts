@@ -9,8 +9,21 @@ import {
 } from '@elizaos/core';
 import type { Mock } from 'vitest';
 
-import { parseSwapAction } from '../actions/parseSwapAction';
-import { createRuntime } from './helpers';
+import { parseSwapAction } from '../../actions/parseSwapAction';
+import { createRuntime } from '../helpers';
+
+const mockState = {
+    bio: '',
+    lore: '',
+    messageDirections: '',
+    postDirections: '',
+    recentMessages: '',
+    responseContext: '',
+    responseType: '',
+    roomId: '123' as UUID,
+    actors: '',
+    recentMessagesData: []
+};
 
 vi.mock('@elizaos/core', async (importOriginal) => {
     const actual = await importOriginal();
@@ -116,7 +129,8 @@ describe('Parse Swap Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseSwapAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
+            const state = { ...mockState, recentMessages: message.content.text };
+            await parseSwapAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
@@ -137,7 +151,8 @@ describe('Parse Swap Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseSwapAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
+            const state = { ...mockState, recentMessages: message.content.text };
+            await parseSwapAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
@@ -158,7 +173,8 @@ describe('Parse Swap Action', async () => {
                 roomId: '123' as UUID
             };
 
-            await parseSwapAction.handler(mockRuntime, message, { recentMessages: message.content.text }, {}, mockCallback as HandlerCallback);
+            const state = { ...mockState, recentMessages: message.content.text };
+            await parseSwapAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];

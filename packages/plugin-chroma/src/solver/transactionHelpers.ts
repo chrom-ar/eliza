@@ -16,9 +16,9 @@ import {
     VersionedTransaction,
 } from "@solana/web3.js";
 
-import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
-import { EVMLiFiSwap } from './lifi-evm-swap';
-import { buildBridgeTransaction } from './wormhole-bridge';
+import { swapToken as swapTokenSolJup } from './solJupiterSwap';
+import { EVMLiFiSwap } from './lifiEvmSwap';
+import { buildBridgeTransaction } from './wormholeBridge';
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
@@ -120,15 +120,27 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       : { transactions: bridgeResult };
   }
 
+  let result;
   if (fromToken === toToken) {
     if (!recipientAddress) {
       console.log('recipientAddress is required for same token swap');
       return null;
     }
-    return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
+    result = { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    return await _buildSwap(message);
+    result = await _buildSwap(message);
   }
+
+  // Complete the proposal object
+  return {
+    type,
+    amount,
+    fromToken,
+    toToken,
+    fromChain,
+    toChain: recipientChain || fromChain,
+    ...result
+  };
 }
 
 /**
@@ -155,14 +167,18 @@ async function signPayload(payload: object, config: object): Promise<{ signature
  *   that includes the transaction, signature, and the signer (public address).
  */
 export async function buildSignedProposalResponse(proposal: any, config: any): Promise<object> {
-  try {
-  const { signature, signer } = await signPayload(proposal, config);
+  if (!proposal) {
+    return null;
+  }
 
-  return {
-    proposal,
-    signature,
-    signer
-  };
+  try {
+    const { signature, signer } = await signPayload(proposal, config);
+
+    return {
+      proposal,
+      signature,
+      signer
+    };
   } catch (e) {
     console.error("Signing", e);
     return null;
@@ -289,16 +305,27 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
 }
 
 async function _buildSwap(message: GeneralMessage): Promise<object> {
-  if (isEvmChain(message.body.fromChain)) {
-    const evmSwap = new EVMLiFiSwap(); // TODO: probably should be a singleton
-    return await evmSwap.buildSwapTransaction(message);
-  } else if (message.body.fromChain === "SOLANA") {
-    const tokenIn  = TOKENS[message.body.fromChain][message.body.fromToken];
-    const tokenOut = TOKENS[message.body.fromChain][message.body.toToken];
+  const {
+    body: {
+      fromChain,
+    }
+  } = message;
 
-    return await swapTokenSolJup(message.body.amount, tokenIn, tokenOut, message.body.fromAddress);
-  } else {
-    elizaLogger.debug("chain not supported", message.body.fromChain);
-    return null;
+  if (isEvmChain(fromChain)) {
+    const evmSwap = new EVMLiFiSwap();
+    return evmSwap.buildSwapTransaction(message);
+  } else if (fromChain.toUpperCase() === "SOLANA") {
+    const {
+      body: {
+        amount,
+        fromToken,
+        toToken,
+        fromAddress,
+      }
+    } = message;
+
+    return swapTokenSolJup(amount, fromToken, toToken, fromAddress);
   }
+
+  throw new Error(`Unsupported chain: ${fromChain}`);
 }
