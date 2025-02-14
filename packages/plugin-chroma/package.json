@@ -20,6 +20,7 @@
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.8",
     "@waku/sdk": "0.0.30-9f1d8ca.0",
+    "@wormhole-foundation/sdk": "^1.7.0",
     "bs58": "^6.0.0",
     "handlebars": "^4.7.8",
     "protobufjs": "^7.4.0",
