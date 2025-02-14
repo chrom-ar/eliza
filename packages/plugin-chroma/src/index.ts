@@ -1,5 +1,6 @@
 import { Plugin } from '@elizaos/core';
 import { parseSwapAction } from './actions/parseSwapAction';
+import { parseBridgeAction } from './actions/parseBridgeAction';
 import { parseTransferAction } from './actions/parseTransferAction';
 import { confirmIntentAction } from './actions/confirmIntentAction';
 import { cancelIntentAction } from './actions/cancelIntentAction';
@@ -12,6 +13,7 @@ export const chromaPlugin: Plugin = {
   description: 'Converts user queries to structured intents and broadcasts them',
   actions: [
     parseSwapAction,
+    parseBridgeAction,
     parseTransferAction,
     confirmIntentAction,
     cancelIntentAction,

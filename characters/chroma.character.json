@@ -1,9 +1,9 @@
 {
     "name": "Chroma",
     "clients": [],
-    "modelProvider": "openai",
+    "modelProvider": "deepseek",
     "settings": {
-        "model": "gpt-4o-mini"
+        "model": "deepseek-chat"
     },
     "plugins": [],
     "bio": [

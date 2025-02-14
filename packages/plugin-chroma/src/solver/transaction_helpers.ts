@@ -1,7 +1,6 @@
 import { elizaLogger } from '@elizaos/core';
 import { encodeFunctionData, parseEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { mainnet, base } from 'viem/chains';
 import {
     getAssociatedTokenAddressSync,
     createAssociatedTokenAccountInstruction,
@@ -19,19 +18,21 @@ import {
 
 import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
 import { EVMLiFiSwap } from './lifi-evm-swap';
-
+import { buildBridgeTransaction } from './wormhole-bridge';
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
   body: {
     amount: string;
     fromToken: string;
-    toToken: string;
+    toToken?: string; // Optional for bridge operations
     fromAddress: string;
     fromChain: string;
     recipientAddress: string;
     recipientChain: string;
     status: string;
+    deadline?: number;
+    type?: 'swap' | 'bridge';
   };
 }
 
@@ -80,32 +81,50 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       fromChain,
       recipientAddress,
       recipientChain,
+      type
     }
   } = message;
 
   // Check for missing fields (simple example)
-  if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
+  if (!amount || !fromToken || !fromAddress || !fromChain) {
     console.log('missing fields');
     return null;
   }
 
-  // Multiple chains are not supported yet
-  if (recipientChain && fromChain !== recipientChain) {
-    console.log('multi chain not supported yet');
+  // For bridge operations, toToken is not required
+  if (!type || type === 'swap') {
+    if (!toToken) {
+      console.log('toToken is required for swap operations');
+      return null;
+    }
+  }
+
+  // Multiple chains are supported only for bridge operations
+  if (recipientChain && fromChain !== recipientChain && (!type || type !== 'bridge')) {
+    console.log('multi chain not supported for non-bridge operations');
     return null;
   }
 
-  fromChain      = fromChain.toUpperCase();
-  fromToken      = fromToken.toUpperCase();
-  // recipientChain = recipientChain?.toUpperCase();
-  toToken        = toToken.toUpperCase();
+  fromChain = fromChain.toUpperCase();
+  fromToken = fromToken.toUpperCase();
+  toToken = toToken?.toUpperCase();
 
-  if (fromToken == toToken) {
+  if (type === 'bridge') {
+    if (!recipientAddress || !recipientChain) {
+      console.log('recipientAddress and recipientChain are required for bridge operations');
+      return null;
+    }
+    const bridgeResult = await buildBridgeTransaction(message);
+    return bridgeResult.length === 1
+      ? { transaction: bridgeResult[0] }
+      : { transactions: bridgeResult };
+  }
+
+  if (fromToken === toToken) {
     if (!recipientAddress) {
       console.log('recipientAddress is required for same token swap');
       return null;
     }
-
     return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
     return await _buildSwap(message);
