@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
+import { describe, it, expect, vi } from 'vitest';
+import { swapTokenSolJup } from '../../solver';
 
 describe('swapToken', () => {
   it('should return a swap transaction', async () => {
@@ -12,6 +12,7 @@ describe('swapToken', () => {
 
     console.log(swapData)
 
-    expect(swapData).toHaveProperty('swapData');
+    expect(swapData).toHaveProperty('quoteResponse');
+    expect(swapData).toHaveProperty('serializedTransaction');
   });
 });
