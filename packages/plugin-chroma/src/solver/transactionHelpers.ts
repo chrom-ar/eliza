@@ -30,7 +30,7 @@ export interface GeneralMessage {
     fromChain: string;
     recipientAddress: string;
     recipientChain: string;
-    type?: 'TRANSFER' | 'YIELD' | 'SWAP';
+    type?: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP';
   };
 }
 
@@ -90,18 +90,26 @@ function isEvmChain(chain: string): boolean {
  * 2. If valid, build a transaction object using 'viem'.
  */
 export async function validateAndBuildProposal(message: GeneralMessage): Promise<object> {
+  let result;
+
   switch (message.body.type.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes
-      return await _validateAndBuildTransfer(message);
+      result = await _validateAndBuildTransfer(message);
     case "YIELD":
-      return await _validateAndBuildYield(message);
+      result = await _validateAndBuildYield(message);
     case "SWAP":
-      return await _validateAndBuildSwap(message);
+      result = await _validateAndBuildSwap(message);
     case "BRIDGE":
-      return await _validateAndBuildBridge(message);
+      result = await _validateAndBuildBridge(message);
     default:
       console.log('invalid type', message.body.type);
-      return null;
+      result = null;
+  }
+
+  return {
+    ...message.body,
+    toChain: message.body.recipientChain || message.body.fromChain,
+    ...result
   }
 }
 

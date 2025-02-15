@@ -74,8 +74,7 @@ export const parseSwapAction: Action = {
         text: responseText,
         source: message.content?.source,
         intent: {
-          ...intentData,
-          status: 'pending'
+          ...intentData
         }
       }
     });

@@ -106,7 +106,6 @@ describe('Cancel Intent Action', async () => {
                         destinationToken: 'USDC',
                         sourceChain: 'ethereum',
                         destinationChain: 'ethereum',
-                        status: 'pending'
                     }
                 },
                 userId: '123' as UUID,
@@ -188,4 +187,4 @@ describe('Cancel Intent Action', async () => {
             });
         });
     });
-}); 
+});

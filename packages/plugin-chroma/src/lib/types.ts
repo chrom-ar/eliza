@@ -5,5 +5,4 @@ export interface SwapIntent {
   destinationToken?: string | string[];
   destinationChain?: string;
   deadline?: number;
-  status?: 'pending' | 'confirmed' | 'canceled';
 }

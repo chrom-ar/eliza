@@ -131,7 +131,6 @@ describe('Confirm Intent Action', async () => {
                         destinationToken: 'USDC',
                         sourceChain: 'ethereum',
                         destinationChain: 'ethereum',
-                        status: 'pending'
                     }
                 },
                 userId: '123' as UUID,
