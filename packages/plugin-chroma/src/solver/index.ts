@@ -1,7 +1,19 @@
 import {
   validateAndBuildProposal,
   buildSignedProposalResponse,
-} from './transaction_helpers';
+} from './transactionHelpers';
+import { swapToken as swapTokenSolJup } from './solJupiterSwap';
+import { EVMLiFiSwap, convertToChainKey } from './lifiEvmSwap';
+import { buildBridgeTransaction } from './wormholeBridge';
+
+export {
+  validateAndBuildProposal,
+  buildSignedProposalResponse,
+  swapTokenSolJup,
+  EVMLiFiSwap,
+  convertToChainKey,
+  buildBridgeTransaction,
+};
 
 export const buildResponse = async (event: any, config: object) => {
   try {

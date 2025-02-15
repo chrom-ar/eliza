@@ -2,7 +2,7 @@ import { createConfig, ChainKey, ChainId, getQuote } from '@lifi/sdk';
 import { type Chain, parseEther } from 'viem';
 
 // Types from your existing framework
-import type { GeneralMessage } from '../solver/transaction_helpers';
+import type { GeneralMessage } from './transactionHelpers';
 
 interface EVMLiFiConfig {
   chains: Record<string, Chain>;
@@ -88,4 +88,6 @@ export function convertToChainKey(chainName: string): ChainKey {
             return chainKey as ChainKey;
         }
     }
+
+    return ChainKey.ETH; // Default to Ethereum if no match found
 }
