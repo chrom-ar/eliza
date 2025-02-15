@@ -1,5 +1,5 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
-import { SwapIntent } from '../lib/types';
+// import { SwapIntent } from '../lib/types';
 import { WakuClient } from '../lib/waku-client';
 
 export const confirmIntentAction: Action = {
@@ -26,42 +26,15 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    // TODO: MultiIntent compat
-    const intent: SwapIntent = typeof intentMemory.content.intent === 'object'
-      ? intentMemory.content.intent
-      : {};
+    const intent = intentMemory.content?.intent
 
-    if (intent.status !== 'pending') {
+    if (typeof intent !== 'object') {
       callback({ text: 'The last intent is not pending. Please create a new request.' });
       return false;
     }
 
     // 2. Remove the old memory
-    await intentManager.removeMemory(intentMemory.id);
-
-    // TODO: MultiIntent compat
-    // 3. Mark it as confirmed
-    const confirmedIntent: SwapIntent = {
-      ...intent,
-      status: 'confirmed'
-    };
-
-    // 4. Prepare the new content
-    const newContent = {
-      ...intentMemory.content,
-      action: 'CONFIRM_INTENT',
-      intent: confirmedIntent
-    };
-
-    // 5. Create new memory that indicates we have published (or not)
-    await intentManager.createMemory({
-      userId:    message.userId,
-      agentId:   message.agentId,
-      roomId:    message.roomId,
-      createdAt: Date.now(),
-      unique:    true,
-      content:   newContent,
-    });
+    await intentManager.removeAllMemories(message.roomId);
 
     // 6. Get the message provider
     const waku = await WakuClient.new(runtime);
@@ -113,7 +86,7 @@ export const confirmIntentAction: Action = {
     console.log('Publishing to the general topic');
     // Publish the *first* message to the "general" topic
     await waku.sendMessage(
-      confirmedIntent,
+      intent,
       '', // General intent topic
       message.roomId
     );
@@ -126,17 +99,24 @@ export const confirmIntentAction: Action = {
 
           try {
             // console.log("Received msj in subscription:", receivedMessage)
-            console.log('Received a message in room', message.roomId, receivedMessage.body);
+            // console.log('Received a message in room', message.roomId, receivedMessage.body);
+            let memoryText = `Best proposal: ${receivedMessage.body.proposal.description}.\nActions:\n`
+            const calls = receivedMessage.body.proposal.calls
+            for (let index in calls) {
+              memoryText += `- ${parseInt(index) + 1}: ${calls[index]}\n` // JS always surprising you
+            }
+            memoryText += `\nDo you want to confirm?`
 
             // Create a response memory
             const responseMemory: Memory = await runtime.messageManager.addEmbeddingToMemory({
-              id: stringToUuid(`${Date.now()}-${runtime.agentId}`),
               userId: message.userId,
               agentId: message.agentId,
               roomId: message.roomId,
               content: {
-                text: 'These are your proposals',
-                proposals: [receivedMessage.body]
+                text: memoryText,
+                action: message.content.action,
+                source: receivedMessage.body.source,
+                proposal: receivedMessage.body.proposal
               },
               createdAt: Date.now()
             });
@@ -152,6 +132,31 @@ export const confirmIntentAction: Action = {
             );
 
             await runtime.evaluate(responseMemory, state, false, callback);
+
+            // Persist the proposal
+            const proposalManager = new MemoryManager({
+              runtime,
+              tableName: 'proposals'
+            });
+
+            const newMemory: Memory = await proposalManager.addEmbeddingToMemory({
+              userId: message.userId,
+              agentId: message.agentId,
+              roomId: message.roomId,
+              createdAt: Date.now(),
+              unique: true,
+              content: {
+                text: memoryText,
+                action: message.content.action,
+                source: message.content?.source,
+                proposal: receivedMessage.body.proposal
+              }
+            });
+
+            await proposalManager.createMemory(newMemory);
+
+            // callback(newMemory.content);
+
           } catch (e) {
             console.error("Error inside subscription:", e)
           }
