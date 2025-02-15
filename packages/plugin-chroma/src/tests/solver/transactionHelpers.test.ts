@@ -1,10 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { parseEther } from 'viem';
 import { validateAndBuildProposal, buildSignedProposalResponse } from '../../solver';
 import { GeneralMessage } from '../../solver/transactionHelpers';
 
 describe('Transaction Helpers', () => {
   describe('validateAndBuildProposal', () => {
     it('should validate and build a swap proposal', async () => {
+      const fromAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
       const message: GeneralMessage = {
         timestamp: Date.now(),
         roomId: 'test-room',
@@ -12,21 +14,30 @@ describe('Transaction Helpers', () => {
           amount: '1',
           fromToken: 'ETH',
           toToken: 'USDC',
-          fromAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+          fromAddress,
           fromChain: 'ethereum',
-          recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+          recipientAddress: fromAddress,
           recipientChain: 'ethereum',
           status: 'pending',
           type: 'swap'
         }
       };
 
+      // @ts-ignore
       const result = await validateAndBuildProposal(message);
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('type', 'swap');
-      expect(result).toHaveProperty('amount', '1');
-      expect(result).toHaveProperty('fromToken', 'ETH');
-      expect(result).toHaveProperty('toToken', 'USDC');
+
+      if (!result || !('transaction' in result)) {
+        throw new Error('Invalid message');
+      }
+
+      const transaction = result.transaction;
+
+      expect(transaction).toBeDefined();
+      expect(transaction).toHaveProperty('value', parseEther('1').toString());
+      // LiFiDiamond
+      expect(transaction).toHaveProperty('to', '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE');
+      expect(transaction).toHaveProperty('from', fromAddress);
+      expect(transaction).toHaveProperty('chainId', 1);
     });
 
     it('should validate and build a bridge proposal', async () => {

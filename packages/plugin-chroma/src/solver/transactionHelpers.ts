@@ -120,27 +120,15 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       : { transactions: bridgeResult };
   }
 
-  let result;
   if (fromToken === toToken) {
     if (!recipientAddress) {
       console.log('recipientAddress is required for same token swap');
       return null;
     }
-    result = { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
+    return { transaction: await _buildTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress) };
   } else {
-    result = await _buildSwap(message);
+    return await _buildSwap(message);
   }
-
-  // Complete the proposal object
-  return {
-    type,
-    amount,
-    fromToken,
-    toToken,
-    fromChain,
-    toChain: recipientChain || fromChain,
-    ...result
-  };
 }
 
 /**
