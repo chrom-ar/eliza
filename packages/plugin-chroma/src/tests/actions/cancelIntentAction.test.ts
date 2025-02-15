@@ -10,7 +10,6 @@ import type { Mock } from 'vitest';
 
 import { cancelIntentAction } from '../../actions';
 import { createRuntime } from '../helpers';
-import { SwapIntent } from '../../lib/types';
 
 let mockMemoryManager: Partial<MemoryManager>;
 
@@ -88,7 +87,7 @@ describe('Cancel Intent Action', async () => {
         let mockIntent: Memory & {
             content: {
                 text: string;
-                intent: SwapIntent;
+                intent: object;
             };
         };
 

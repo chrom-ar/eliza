@@ -11,7 +11,6 @@ import type { Mock } from 'vitest';
 import { confirmIntentAction } from '../../actions/confirmIntentAction';
 import { createRuntime } from '../helpers';
 import { WakuClient } from '../../lib/waku-client';
-import { SwapIntent } from '../../lib/types';
 
 let mockMemoryManager: Partial<MemoryManager>;
 
@@ -115,7 +114,7 @@ describe('Confirm Intent Action', async () => {
         let mockIntent: Memory & {
             content: {
                 text: string;
-                intent: SwapIntent;
+                intent: object;
             };
         };
 

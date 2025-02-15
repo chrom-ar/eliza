@@ -1,5 +1,4 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
-// import { SwapIntent } from '../lib/types';
 import { WakuClient } from '../lib/waku-client';
 
 export const confirmIntentAction: Action = {
