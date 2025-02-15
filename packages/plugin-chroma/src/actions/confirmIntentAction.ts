@@ -20,6 +20,8 @@ export const confirmIntentAction: Action = {
       count: 1,
       unique: true
     });
+    console.log("IntentManager: ", intentManager)
+    console.log("IntentMemory: ", intentMemory)
 
     if (!intentMemory?.content?.intent) {
       callback({ text: 'Sorry, I could not find a pending intent to confirm. Please create a new request.' });
@@ -32,6 +34,8 @@ export const confirmIntentAction: Action = {
       callback({ text: 'The last intent is not pending. Please create a new request.' });
       return false;
     }
+
+    // console.log("Antes que explote: ", intentManager, intentManager.removeAllMemories)
 
     // 2. Remove the old memory
     await intentManager.removeAllMemories(message.roomId);
@@ -96,10 +100,7 @@ export const confirmIntentAction: Action = {
       waku.subscribe(
         message.roomId,
         async (receivedMessage) => {
-
           try {
-            // console.log("Received msj in subscription:", receivedMessage)
-            // console.log('Received a message in room', message.roomId, receivedMessage.body);
             let memoryText = `Best proposal: ${receivedMessage.body.proposal.description}.\nActions:\n`
             const calls = receivedMessage.body.proposal.calls
             for (let index in calls) {

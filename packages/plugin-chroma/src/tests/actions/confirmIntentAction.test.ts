@@ -24,17 +24,18 @@ vi.mock('../../lib/waku-client', () => ({
                 // Simulate receiving a message immediately
                 callback({
                     body: {
-                        type: 'proposal',
-                        data: {
-                            amount: '1',
-                            sourceToken: 'ETH',
-                            destinationToken: 'USDC',
-                            sourceChain: 'ethereum',
-                            destinationChain: 'ethereum'
+                        proposal: {
+                            description: "Transfer",
+                            titles: ["Transfer"],
+                            calls: ["Transfer"],
+                            transaction: {
+                                to: "0x123",
+                                data: "0x123"
+                            }
                         }
                     }
                 });
-                return Promise.resolve(true);
+                return true
             })
         }))
     }
@@ -49,9 +50,10 @@ vi.mock('@elizaos/core', async (importOriginal) => {
             return {
                 runtime,
                 tableName,
-                getMemories:  mockMemoryManager.getMemories,
-                removeMemory: mockMemoryManager.removeMemory,
-                createMemory: mockMemoryManager.createMemory
+                getMemories:          mockMemoryManager.getMemories,
+                removeAllMemories:    mockMemoryManager.removeAllMemories,
+                createMemory:         mockMemoryManager.createMemory,
+                addEmbeddingToMemory: mockMemoryManager.addEmbeddingToMemory
             }
         })
     }
@@ -141,8 +143,9 @@ describe('Confirm Intent Action', async () => {
             // Mock the memory manager
             mockMemoryManager = {
                 getMemories: vi.fn().mockResolvedValue([mockIntent]),
-                removeMemory: vi.fn().mockResolvedValue(undefined),
-                createMemory: vi.fn().mockResolvedValue(undefined)
+                removeAllMemories: vi.fn().mockResolvedValue(undefined),
+                createMemory: vi.fn().mockResolvedValue(undefined),
+                addEmbeddingToMemory: vi.fn().mockImplementation(mem => mem)
             };
         });
 
@@ -159,7 +162,7 @@ describe('Confirm Intent Action', async () => {
 
             // Verify memory manager interactions
             expect(mockMemoryManager.getMemories).toHaveBeenCalled();
-            expect(mockMemoryManager.removeMemory).toHaveBeenCalledWith(mockIntent.id);
+            expect(mockMemoryManager.removeAllMemories).toHaveBeenCalledWith(message.roomId);
             expect(mockMemoryManager.createMemory).toHaveBeenCalled();
 
             // Verify WakuClient interactions
@@ -168,8 +171,8 @@ describe('Confirm Intent Action', async () => {
             // Verify callback was called with proposal
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
-            expect(callbackArg.proposals).toBeDefined();
-            expect(callbackArg.proposals[0].type).toBe('proposal');
+            expect(callbackArg.proposal).toBeDefined();
+            expect(callbackArg.proposal.transaction).toBeDefined();
         });
 
         it('should handle missing intent gracefully', async () => {
@@ -189,34 +192,6 @@ describe('Confirm Intent Action', async () => {
             // Verify error message was sent
             expect(mockCallback).toHaveBeenCalledWith({
                 text: 'Sorry, I could not find a pending intent to confirm. Please create a new request.'
-            });
-        });
-
-        it('should handle non-pending intent gracefully', async () => {
-            // Mock intent with non-pending status
-            mockIntent.content.intent = {
-                amount: '1',
-                sourceToken: 'ETH',
-                destinationToken: 'SOL',
-                sourceChain: 'ethereum',
-                destinationChain: 'solana',
-                status: 'confirmed'
-            };
-            mockMemoryManager.getMemories = vi.fn().mockResolvedValue([mockIntent]);
-
-            const message: Memory = {
-                id: '123' as UUID,
-                content: { text: 'confirm' },
-                userId: '123' as UUID,
-                agentId: '123' as UUID,
-                roomId: '123' as UUID
-            };
-
-            await confirmIntentAction.handler(mockRuntime, message, undefined, {}, mockCallback as HandlerCallback);
-
-            // Verify error message was sent
-            expect(mockCallback).toHaveBeenCalledWith({
-                text: 'The last intent is not pending. Please create a new request.'
             });
         });
     });

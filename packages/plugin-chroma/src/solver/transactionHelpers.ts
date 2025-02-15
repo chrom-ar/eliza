@@ -92,18 +92,22 @@ function isEvmChain(chain: string): boolean {
 export async function validateAndBuildProposal(message: GeneralMessage): Promise<object> {
   let result;
 
-  switch (message.body.type.toUpperCase()) {
+  switch (message.body.type?.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes
       result = await _validateAndBuildTransfer(message);
+      break;
     case "YIELD":
       result = await _validateAndBuildYield(message);
+      break;
     case "SWAP":
       result = await _validateAndBuildSwap(message);
+      break;
     case "BRIDGE":
       result = await _validateAndBuildBridge(message);
+      break;
     default:
       console.log('invalid type', message.body.type);
-      result = null;
+      return null
   }
 
   return {
