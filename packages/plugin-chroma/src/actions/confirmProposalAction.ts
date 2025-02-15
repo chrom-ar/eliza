@@ -72,8 +72,6 @@ export const confirmProposalAction: Action = {
       proposalMem = proposals[number - 1]
     }
 
-    console.log("proposal Mem:", proposalMem)
-
     if (!proposalMem || (typeof proposalMem.content.proposal !== 'object')) {
       callback({ text: 'Sorry, I could not find a pending proposal to confirm. Please create a new request.' });
       return false;

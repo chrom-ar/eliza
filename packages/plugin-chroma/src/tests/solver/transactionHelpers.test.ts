@@ -45,7 +45,6 @@ describe('Transaction Helpers', () => {
 
       const result = await validateAndBuildProposal(message);
       expect(result).toBeTruthy();
-      console.log(result)
       if (result) {
         expect('transactions' in result || 'transaction' in result).toBeTruthy();
       }

@@ -186,7 +186,6 @@ async function _validateAndBuildBridge(message: GeneralMessage): Promise<object>
     body: {
       amount,
       fromToken,
-      toToken,
       fromAddress,
       fromChain,
       recipientAddress,
@@ -200,15 +199,9 @@ async function _validateAndBuildBridge(message: GeneralMessage): Promise<object>
     return null;
   }
 
-  // For bridge operations, toToken is not required
-  if (!toToken) {
-    console.log('toToken is required for swap operations');
-    return null;
-  }
 
   fromChain = fromChain.toUpperCase();
   fromToken = fromToken.toUpperCase();
-  toToken = toToken?.toUpperCase();
 
   if (!recipientAddress || !recipientChain) {
     console.log('recipientAddress and recipientChain are required for bridge operations');

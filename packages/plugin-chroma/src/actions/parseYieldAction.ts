@@ -90,8 +90,6 @@ export const parseYieldAction: Action = {
       message.roomId
     );
 
-    console.log("Sent message to waku")
-
     // TMP: This shit shouldn't be like this, workaround to make the chat refresh work
     await new Promise<void>((resolve) => {
       waku.subscribe(
@@ -99,8 +97,6 @@ export const parseYieldAction: Action = {
         async (receivedMessage) => {
 
           try {
-            // console.log("Received msj in subscription:", receivedMessage)
-            // console.log('Received a message in room', message.roomId, receivedMessage.body);
             let memoryText = `${responseText}\n Best proposal: ${receivedMessage.body.proposal.description}.\nActions:\n`
             const calls = receivedMessage.body.proposal.calls
             for (let index in calls) {
