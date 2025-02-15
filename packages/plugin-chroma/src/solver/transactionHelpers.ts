@@ -1,7 +1,6 @@
 import { elizaLogger } from '@elizaos/core';
 import { encodeFunctionData, parseUnits } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { mainnet, base } from 'viem/chains';
 import {
     getAssociatedTokenAddressSync,
     createAssociatedTokenAccountInstruction,
@@ -17,21 +16,21 @@ import {
     VersionedTransaction,
 } from "@solana/web3.js";
 
-import { swapToken as swapTokenSolJup } from './sol-jupiter-swap';
-import { EVMLiFiSwap } from './lifi-evm-swap';
-
+import { swapToken as swapTokenSolJup } from './solJupiterSwap';
+import { EVMLiFiSwap } from './lifiEvmSwap';
+import { buildBridgeTransaction } from './wormholeBridge';
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
   body: {
-    type: string;
     amount: string;
     fromToken: string;
-    toToken: string;
+    toToken?: string; // Optional for bridge operations
     fromAddress: string;
     fromChain: string;
     recipientAddress: string;
     recipientChain: string;
+    type?: 'TRANSFER' | 'YIELD' | 'SWAP';
   };
 }
 
@@ -96,11 +95,16 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       return await _validateAndBuildTransfer(message);
     case "YIELD":
       return await _validateAndBuildYield(message);
+    case "SWAP":
+      return await _validateAndBuildSwap(message);
+    case "BRIDGE":
+      return await _validateAndBuildBridge(message);
     default:
       console.log('invalid type', message.body.type);
       return null;
   }
 }
+
 
 
 /**
@@ -127,18 +131,81 @@ async function signPayload(payload: object, config: object): Promise<{ signature
  *   that includes the transaction, signature, and the signer (public address).
  */
 export async function buildSignedProposalResponse(proposal: any, config: any): Promise<object> {
-  try {
-  const { signature, signer } = await signPayload(proposal, config);
+  if (!proposal) {
+    return null;
+  }
 
-  return {
-    proposal,
-    signature,
-    signer
-  };
+  try {
+    const { signature, signer } = await signPayload(proposal, config);
+
+    return {
+      proposal,
+      signature,
+      signer
+    };
   } catch (e) {
     console.error("Signing", e);
     return null;
   }
+}
+
+
+async function _validateAndBuildSwap(message: GeneralMessage): Promise<object> {
+  let {
+    body: {
+      amount,
+      fromToken,
+      toToken,
+      fromAddress,
+      fromChain,
+    }
+  } = message;
+
+  if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
+    console.log('missing fields');
+    return null;
+  }
+
+  return await _buildSwap(message);
+}
+
+async function _validateAndBuildBridge(message: GeneralMessage): Promise<object> {
+  let {
+    body: {
+      amount,
+      fromToken,
+      toToken,
+      fromAddress,
+      fromChain,
+      recipientAddress,
+      recipientChain,
+    }
+  } = message;
+
+  // Check for missing fields (simple example)
+  if (!amount || !fromToken || !fromAddress || !fromChain) {
+    console.log('missing fields');
+    return null;
+  }
+
+  // For bridge operations, toToken is not required
+  if (!toToken) {
+    console.log('toToken is required for swap operations');
+    return null;
+  }
+
+  fromChain = fromChain.toUpperCase();
+  fromToken = fromToken.toUpperCase();
+  toToken = toToken?.toUpperCase();
+
+  if (!recipientAddress || !recipientChain) {
+    console.log('recipientAddress and recipientChain are required for bridge operations');
+    return null;
+  }
+  const bridgeResult = await buildBridgeTransaction(message);
+  return bridgeResult.length === 1
+    ? { transaction: bridgeResult[0] }
+    : { transactions: bridgeResult };
 }
 
 async function _validateAndBuildTransfer(message: GeneralMessage): Promise<object> {
@@ -297,21 +364,29 @@ async function _buildSolTransfer(fromChain: string, fromToken: string, amount: s
 }
 
 async function _buildSwap(message: GeneralMessage): Promise<object> {
-  if (isEvmChain(message.body.fromChain)) {
-    // TODO: bring all the chains, it is a thing of the agent to support them
-    // TODO: remove sepolia
-    const evmSwap = new EVMLiFiSwap({chains: { ethereum: mainnet, sepolia: mainnet, base }});
+  const {
+    body: {
+      fromChain,
+    }
+  } = message;
 
-    return await evmSwap.buildSwapTransaction(message);
-  } else if (message.body.fromChain === "SOLANA") {
-    const tokenIn  = TOKENS[message.body.fromChain][message.body.fromToken];
-    const tokenOut = TOKENS[message.body.fromChain][message.body.toToken];
+  if (isEvmChain(fromChain)) {
+    const evmSwap = new EVMLiFiSwap();
+    return evmSwap.buildSwapTransaction(message);
+  } else if (fromChain.toUpperCase() === "SOLANA") {
+    const {
+      body: {
+        amount,
+        fromToken,
+        toToken,
+        fromAddress,
+      }
+    } = message;
 
-    return await swapTokenSolJup(message.body.amount, tokenIn, tokenOut, message.body.fromAddress);
-  } else {
-    elizaLogger.debug("chain not supported", message.body.fromChain);
-    return null;
+    return swapTokenSolJup(amount, fromToken, toToken, fromAddress);
   }
+
+  throw new Error(`Unsupported chain: ${fromChain}`);
 }
 
 async function _validateAndBuildYield(message: GeneralMessage): Promise<object> {

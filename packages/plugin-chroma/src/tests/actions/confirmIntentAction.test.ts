@@ -8,21 +8,21 @@ import {
 } from '@elizaos/core';
 import type { Mock } from 'vitest';
 
-import { confirmIntentAction } from '../actions/confirmIntentAction';
-import { createRuntime } from './helpers';
-import { WakuClient } from '../lib/waku-client';
-import { SwapIntent } from '../lib/types';
+import { confirmIntentAction } from '../../actions/confirmIntentAction';
+import { createRuntime } from '../helpers';
+import { WakuClient } from '../../lib/waku-client';
+import { SwapIntent } from '../../lib/types';
 
 let mockMemoryManager: Partial<MemoryManager>;
 
 // Mock the WakuClient
-vi.mock('../lib/waku-client', () => ({
+vi.mock('../../lib/waku-client', () => ({
     WakuClient: {
         new: vi.fn().mockImplementation(() => ({
             sendMessage: vi.fn().mockResolvedValue(undefined),
-            subscribe: vi.fn().mockImplementation(async(roomId, callback) => {
-                // Simulate receiving a message
-                await callback({
+            subscribe: vi.fn().mockImplementation((roomId, callback) => {
+                // Simulate receiving a message immediately
+                callback({
                     body: {
                         type: 'proposal',
                         data: {
@@ -34,7 +34,7 @@ vi.mock('../lib/waku-client', () => ({
                         }
                     }
                 });
-                return true;
+                return Promise.resolve(true);
             })
         }))
     }
@@ -145,9 +145,6 @@ describe('Confirm Intent Action', async () => {
                 removeMemory: vi.fn().mockResolvedValue(undefined),
                 createMemory: vi.fn().mockResolvedValue(undefined)
             };
-
-            // Attach the mock memory manager to runtime
-            // vi.spyOn(mockRuntime, 'memoryManager', 'get').mockReturnValue(mockMemoryManager as MemoryManager);
         });
 
         it('should handle intent confirmation with pending intent', async () => {

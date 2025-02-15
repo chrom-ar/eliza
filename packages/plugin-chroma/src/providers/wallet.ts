@@ -21,10 +21,10 @@ const allDataCollectedTemplate = Handlebars.compile(`
 # User wallet data:
 
 - EVM addresses: {{evmAddresses}}
-- Solana addresses: {{solanaAddresses}}
+- Solana ONLY addresses: {{solanaAddresses}}
 - Preferred chains: {{chains}}
 
-Use this when you need to know the user's wallet data and no other context is needed.`);
+Use this when you need to know the user's wallet data and no other context is given.`);
 
 /**
  * Separates addresses into EVM and Solana addresses
