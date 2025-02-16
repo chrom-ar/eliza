@@ -164,8 +164,7 @@ describe('Parse Bridge Action', async () => {
             expect(callbackArg.intent.fromAddress).toBe('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
             expect(callbackArg.intent.recipientChain).toBe('optimism-sepolia');
             expect(callbackArg.intent.recipientAddress).toBe('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
-            expect(callbackArg.intent.type).toBe('bridge');
-            expect(callbackArg.intent.status).toBe('pending');
+            expect(callbackArg.intent.type).toBe('BRIDGE');
         });
 
         it('should handle USDC bridge from Base to Arbitrum', async () => {
@@ -189,8 +188,7 @@ describe('Parse Bridge Action', async () => {
             expect(callbackArg.intent.fromAddress).toBe('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
             expect(callbackArg.intent.recipientChain).toBe('arbitrum');
             expect(callbackArg.intent.recipientAddress).toBe('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
-            expect(callbackArg.intent.type).toBe('bridge');
-            expect(callbackArg.intent.status).toBe('pending');
+            expect(callbackArg.intent.type).toBe('BRIDGE');
         });
 
         it('should handle USDC bridge from Polygon to Base', async () => {
@@ -214,8 +212,7 @@ describe('Parse Bridge Action', async () => {
             expect(callbackArg.intent.fromAddress).toBe('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
             expect(callbackArg.intent.recipientChain).toBe('base');
             expect(callbackArg.intent.recipientAddress).toBe('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
-            expect(callbackArg.intent.type).toBe('bridge');
-            expect(callbackArg.intent.status).toBe('pending');
+            expect(callbackArg.intent.type).toBe('BRIDGE');
         });
 
         it('should handle invalid bridge request gracefully', async () => {
@@ -234,4 +231,4 @@ describe('Parse Bridge Action', async () => {
             expect(mockCallback).toHaveBeenCalledWith(message.content);
         });
     });
-}); 
+});

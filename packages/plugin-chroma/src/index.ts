@@ -1,26 +1,40 @@
 import { Plugin } from '@elizaos/core';
 
 import { SolverService } from './services/solver';
+
 import { walletEvaluator } from './evaluators/wallet';
 import { walletProvider } from './providers/wallet';
 import {
-  parseSwapAction,
-  parseBridgeAction,
-  parseTransferAction,
+  cancelIntentAction,
   confirmIntentAction,
-  cancelIntentAction
+  confirmProposalAction,
+  createWalletAction,
+  getBalanceAction,
+  parseBridgeAction,
+  parseSwapAction,
+  parseTransferAction,
+  parseYieldAction,
 } from './actions';
+
+const actions = [
+  cancelIntentAction,
+  confirmIntentAction,
+  parseBridgeAction,
+  parseSwapAction,
+  parseTransferAction,
+]
+
+// NOTE: Maybe there's a better way to filter actions
+if (process.env.CHROMA_CDP_API_KEY_NAME) {
+  actions.push(createWalletAction);
+  actions.push(getBalanceAction);
+  actions.push(confirmProposalAction);
+}
 
 export const chromaPlugin: Plugin = {
   name: 'plugin-chroma',
   description: 'Converts user queries to structured intents and broadcasts them',
-  actions: [
-    parseSwapAction,
-    parseBridgeAction,
-    parseTransferAction,
-    confirmIntentAction,
-    cancelIntentAction,
-  ],
+  actions: actions,
   evaluators: [walletEvaluator],
   providers: [walletProvider],
   services: [new SolverService()]

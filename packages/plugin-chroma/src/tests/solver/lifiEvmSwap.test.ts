@@ -35,8 +35,7 @@ describe('EVMLiFiSwap', () => {
           fromChain: 'ethereum',
           recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
           recipientChain: 'ethereum',
-          status: 'pending',
-          type: 'swap' as const
+          type: 'SWAP'
         }
       };
 
@@ -81,4 +80,4 @@ describe('convertToChainKey', () => {
     expect(convertToChainKey('Polygon')).toBe(ChainKey.POL);
     expect(convertToChainKey('ARBITRUM')).toBe(ChainKey.ARB);
   });
-}); 
+});
