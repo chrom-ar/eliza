@@ -71,6 +71,7 @@ export const createWalletAction: Action = {
         // Fund the wallet TMP only testnet
         await (await wallet.faucet()).wait();
       } catch (error) {
+        console.log(error)
       }
 
       // Store wallet data in memory

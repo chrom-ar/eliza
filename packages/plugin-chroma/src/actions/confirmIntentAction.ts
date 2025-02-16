@@ -144,7 +144,7 @@ export const confirmIntentAction: Action = {
               content: {
                 text: memoryText,
                 action: message.content.action,
-                source: message.content?.source,
+                source: message.content.source,
                 proposal: receivedMessage.body.proposal
               }
             });
