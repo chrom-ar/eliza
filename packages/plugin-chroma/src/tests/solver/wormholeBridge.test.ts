@@ -14,8 +14,7 @@ describe('Wormhole Bridge', () => {
         fromChain: 'sepolia',
         recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
         recipientChain: 'bsc',
-        status: 'pending',
-        type: 'bridge'
+        type: 'BRIDGE'
       }
     };
 
@@ -28,4 +27,4 @@ describe('Wormhole Bridge', () => {
       expect(tx).toHaveProperty('data');
     });
   });
-}); 
+});

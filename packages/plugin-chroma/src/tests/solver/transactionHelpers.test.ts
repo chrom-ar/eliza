@@ -16,14 +16,13 @@ describe('Transaction Helpers', () => {
           fromChain: 'ethereum',
           recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
           recipientChain: 'ethereum',
-          status: 'pending',
-          type: 'swap'
+          type: 'SWAP'
         }
       };
 
       const result = await validateAndBuildProposal(message);
       expect(result).toBeDefined();
-      expect(result).toHaveProperty('type', 'swap');
+      expect(result).toHaveProperty('type', 'SWAP');
       expect(result).toHaveProperty('amount', '1');
       expect(result).toHaveProperty('fromToken', 'ETH');
       expect(result).toHaveProperty('toToken', 'USDC');
@@ -40,8 +39,7 @@ describe('Transaction Helpers', () => {
           fromChain: 'sepolia',
           recipientAddress: 'F6HctpX9kbp6t1kdq82HVQRYpUGgJXMd4zGpzuuwdZCd',
           recipientChain: 'solana',
-          status: 'pending',
-          type: 'bridge' as const
+          type: 'BRIDGE'
         }
       };
 
@@ -58,7 +56,6 @@ describe('Transaction Helpers', () => {
         roomId: 'test-room',
         body: {
           // Missing required fields
-          status: 'pending'
         }
       };
 
@@ -70,7 +67,7 @@ describe('Transaction Helpers', () => {
   describe('buildSignedProposalResponse', () => {
     it('should build a signed proposal response', async () => {
       const proposal = {
-        type: 'swap',
+        type: 'SWAP',
         amount: '1',
         fromToken: 'ETH',
         toToken: 'USDC',
@@ -102,4 +99,4 @@ describe('Transaction Helpers', () => {
   it('should build bridge transaction', async () => {
     // Add test implementation
   });
-}); 
+});

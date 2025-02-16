@@ -60,7 +60,7 @@ export const parseBridgeAction: Action = {
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
     return text.includes('bridge') ||
-           ((text.includes('from') && text.includes('to')) && 
+           ((text.includes('from') && text.includes('to')) &&
             (text.includes('chain') || text.includes('network') || /sepolia|optimism|arbitrum|base|polygon/i.test(text)));
   },
 
@@ -104,8 +104,7 @@ export const parseBridgeAction: Action = {
         source: message.content?.source,
         intent: {
           ...intentData,
-          type: 'bridge',
-          status: 'pending'
+          type: 'BRIDGE',
         }
       }
     });

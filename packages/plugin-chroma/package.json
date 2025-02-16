@@ -24,7 +24,9 @@
     "bs58": "^6.0.0",
     "handlebars": "^4.7.8",
     "protobufjs": "^7.4.0",
-    "tweetnacl": "^1.0.3"
+    "tweetnacl": "^1.0.3",
+    "@coinbase/coinbase-sdk": "0.17.0",
+    "@coinbase/agentkit": "0.1.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

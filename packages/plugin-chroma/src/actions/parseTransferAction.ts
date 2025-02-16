@@ -7,10 +7,8 @@ const transferSchema = z.object({
   fromToken: z.string(),
   toToken: z.string(),
   fromAddress: z.string(),
-  fromChain: z.string().default('sepolia'),
-  recipientAddress: z.string(),
-  recipientChain: z.string().default('sepolia'),
-  deadline: z.number().optional()
+  fromChain: z.string().default('base-sepolia'),
+  recipientAddress: z.string()
 });
 
 const contextTemplate = `# Recent Messages
@@ -56,9 +54,9 @@ export const parseTransferAction: Action = {
       return true;
     }
 
-    const { amount, fromToken, recipientAddress, recipientChain, fromAddress, fromChain } = intentData;
+    const { amount, fromToken, recipientAddress, fromAddress, fromChain } = intentData;
     const responseText = recipientAddress
-      ? `I've created a transfer intent for ${amount} ${fromToken} to ${recipientAddress} on ${recipientChain}. Would you like to confirm this transfer?`
+      ? `I've created a transfer intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. Would you like to confirm this transfer?`
       : `I've started creating a transfer intent for ${amount} ${fromToken}. Please provide a recipient address to continue.`;
 
     const intentManager = new MemoryManager({
@@ -79,7 +77,7 @@ export const parseTransferAction: Action = {
         source: message.content?.source,
         intent: {
           ...intentData,
-          status: 'pending'
+          type: 'TRANSFER'
         }
       }
     });
