@@ -19,12 +19,12 @@ const contextTemplate = `# Recent Messages
 
 Extract transfer intent information from the message.
 When no from address or chain is directly specified, use the user's wallet data provided in the context.
-If no chain (source or destination) is specified, use "ethereum" as the default.`;
+If no chain (source or destination) is specified, use "base-sepolia" as the default.`;
 
 export const parseTransferAction: Action = {
   name: 'PARSE_TRANSFER_INTENT',
   similes: ['TRANSFER_INTENT', 'SEND_INTENT'],
-  description: 'Parses user query and constructs a GaslessCrossChainIntent JSON for a transfer',
+  description: 'Parses user query and constructs an intent for a transfer',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();

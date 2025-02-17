@@ -41,6 +41,9 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
 
   let tx;
 
+  fromChain = fromChain.toUpperCase();
+  fromToken = fromToken.toUpperCase();
+
   if (isEvmChain(fromChain)) {
     tx = _buildEvmTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else if (fromChain === "SOLANA") {

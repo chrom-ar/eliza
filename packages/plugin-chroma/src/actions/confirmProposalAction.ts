@@ -45,40 +45,47 @@ export const confirmProposalAction: Action = {
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options, callback: HandlerCallback): Promise<boolean> => {
     // 1. Get the stored (pending) proposal
     const proposalManager = new MemoryManager({ runtime, tableName: 'proposals' });
-    const proposals = await proposalManager.getMemories({
+    const [proposalsMem] = await proposalManager.getMemories({
       roomId: message.roomId,
-      count: 10,
-      // unique: true
+      count:  1,
+      unique: true
     })
-    console.log("Proposals in memory: ", proposals)
 
-    let proposalMem;
-    if (proposals.length == 1) {
-      proposalMem = proposals[0] // testing only 1
-    } else {
-      // get proposal index from message
-      const context = composeContext({
-        state: state,
-        template: contextTemplate
-      })
-      const {number} = (await generateObject({
-        runtime,
-        modelClass: ModelClass.SMALL,
-        schema: numberSchema,
-        schemaName: 'ProposalNumber',
-        context
-      })).object as z.infer<typeof numberSchema>;
+    const proposals = proposalsMem?.content?.proposals || []
 
-      proposalMem = proposals[number - 1]
+    let proposal;
+    switch (proposals.length || 0) {
+      case 0:
+        callback({ text: 'Sorry, I could not find a pending proposal to confirm. Please create a new request.' });
+        return false;
+      case 1:
+        proposal = proposals[0];
+        break;
+      default:
+        // get proposal index from message
+        const context = composeContext({
+          state: state,
+          template: contextTemplate
+        })
+        const { number } = (await generateObject({
+          runtime,
+          modelClass: ModelClass.SMALL,
+          schema: numberSchema,
+          schemaName: 'ProposalNumber',
+          context
+        })).object as z.infer<typeof numberSchema>;
+        console.log("Parsed number from prompt:", number)
+
+        proposal = proposals.find((proposal) => proposal.proposalNumber == number);
+        break;
     }
 
-    if (!proposalMem || (typeof proposalMem.content.proposal !== 'object')) {
+    console.log("Proposal :", proposal)
+
+    if (!proposal || (typeof proposal !== 'object')) {
       callback({ text: 'Sorry, I could not find a pending proposal to confirm. Please create a new request.' });
       return false;
     }
-
-    // TODO: MultiProposal compat
-    const proposal = proposalMem.content.proposal;
 
     const walletManager = new MemoryManager({
       runtime,

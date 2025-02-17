@@ -35,52 +35,39 @@ export const confirmIntentAction: Action = {
     // 2. Remove the old memory
     await intentManager.removeAllMemories(message.roomId);
 
-    // 6. Get the message provider
     const waku = await WakuClient.new(runtime);
-    // const configuredExpiration =
-    //   parseInt(runtime.getSetting('MESSAGE_SUBSCRIPTION_EXPIRATION') || '') ||
-    //   600;
 
-    // 7. Subscribe to the room's topic for subsequent messages
-    // await waku.subscribe(
-    //   message.roomId,
-    //   (async (receivedMessage) => {
-    //     try {
-    //       // Create a response memory
-    //       const responseMemory: Memory = {
-    //         id:      stringToUuid(`${Date.now()}-${runtime.agentId}`),
-    //         userId:  message.userId,
-    //         agentId: message.agentId,
-    //         roomId:  message.roomId,
-    //         content: {
-    //           text: JSON.stringify(receivedMessage.body, null, 2),
-    //           contentType: 'application/json'
-    //           // source: 'chroma'
-    //         },
-    //         createdAt: Date.now(),
-    //         embedding: getEmbeddingZeroVector()
-    //       };
+    let counter = 0
+    let proposals = []
+    let finalText = ''
+    const expiration = Date.now() + 6000;
 
-    //       console.log("Creating msg memory:", responseMemory)
+    // Subscribe to the room to receive the proposals
+    await waku.subscribe(
+      message.roomId,
+      async (receivedMessage) => {
+        if (Date.now() > expiration) {
+          console.log('msg expired', receivedMessage.body);
+          // TODO unsubscribe
+          return;
+        }
 
-    //       // Store the response in the message manager
-    //       await runtime.messageManager.createMemory(responseMemory);
+        try {
+          counter += 1;
+          const proposal = receivedMessage.body.proposal;
+          let memoryText = `Proposal #${counter}: ${proposal.description}.\nActions:\n`
+          for (let index in proposal.calls) {
+            memoryText += `- ${parseInt(index) + 1}: ${proposal.calls[index]}\n` // JS always surprising you
+          }
 
-    //       // Use callback to ensure the message appears in chat
-    //       await callback(responseMemory.content);
+          finalText += memoryText + '\n'
 
-    //       // Update state and process any actions if needed
-    //       const state = await runtime.updateRecentMessageState(
-    //         await runtime.composeState(responseMemory)
-    //       );
-
-    //       await runtime.evaluate(responseMemory, state, false);
-    //     } catch (e) {
-    //       console.error("Error inside subscription:", e)
-    //     }
-    //   })
-    //   // configuredExpiration
-    // )
+          proposals.push({ proposalNumber: counter, ...proposal });
+        } catch (e) {
+          console.error("Error inside subscription:", e)
+        }
+      }
+    )
 
     console.log('Publishing to the general topic');
     // Publish the *first* message to the "general" topic
@@ -90,77 +77,20 @@ export const confirmIntentAction: Action = {
       message.roomId
     );
 
-    // TMP: This shit should be like this, workaround to make the chat refresh work
-    await new Promise<void>((resolve) => {
-      waku.subscribe(
-        message.roomId,
-        async (receivedMessage) => {
-          try {
-            let memoryText = `Best proposal: ${receivedMessage.body.proposal.description}.\nActions:\n`
-            const calls = receivedMessage.body.proposal.calls
-            for (let index in calls) {
-              memoryText += `- ${parseInt(index) + 1}: ${calls[index]}\n` // JS always surprising you
-            }
-            memoryText += `\nDo you want to confirm?`
+    // Sleep 5 seconds to wait for responses
+    await (new Promise((resolve) => setTimeout(resolve, 6000)));
 
-            // Create a response memory
-            const responseMemory: Memory = await runtime.messageManager.addEmbeddingToMemory({
-              userId: message.userId,
-              agentId: message.agentId,
-              roomId: message.roomId,
-              content: {
-                text: memoryText,
-                action: message.content.action,
-                source: receivedMessage.body.source,
-                proposal: receivedMessage.body.proposal
-              },
-              createdAt: Date.now()
-            });
+    // Persist the proposals
+    const proposalManager = new MemoryManager({runtime, tableName: 'proposals' });
+    await proposalManager.createMemory({
+      userId:    message.userId,
+      agentId:   message.agentId,
+      roomId:    message.roomId,
+      content:   { proposals },
+      createdAt: Date.now()
+    });
 
-            await runtime.messageManager.createMemory(responseMemory);
-
-            // Use callback to ensure the message appears in chat
-            await callback(responseMemory.content)
-
-            // Update state and process any actions if needed
-            const state = await runtime.updateRecentMessageState(
-              await runtime.composeState(responseMemory)
-            );
-
-            await runtime.evaluate(responseMemory, state, false, callback);
-
-            // Persist the proposal
-            const proposalManager = new MemoryManager({
-              runtime,
-              tableName: 'proposals'
-            });
-
-            const newMemory: Memory = await proposalManager.addEmbeddingToMemory({
-              userId: message.userId,
-              agentId: message.agentId,
-              roomId: message.roomId,
-              createdAt: Date.now(),
-              unique: true,
-              content: {
-                text: memoryText,
-                action: message.content.action,
-                source: message.content.source,
-                proposal: receivedMessage.body.proposal
-              }
-            });
-
-            await proposalManager.createMemory(newMemory);
-
-            // callback(newMemory.content);
-
-          } catch (e) {
-            console.error("Error inside subscription:", e)
-          }
-
-          resolve()
-        }
-      )
-    })
+    await callback({ text: `Received ${counter} proposal${counter != 1 ? 's' : ''}:\n\n${finalText}\n\n Which do you want to confirm?` });
 
     // Do not respond to the user's message
     return false;
