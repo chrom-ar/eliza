@@ -48,6 +48,7 @@ export const confirmIntentAction: Action = {
       async (receivedMessage) => {
         if (Date.now() > expiration) {
           console.log('msg expired', receivedMessage.body);
+          // TODO unsubscribe
           return;
         }
 
@@ -62,8 +63,6 @@ export const confirmIntentAction: Action = {
           finalText += memoryText + '\n'
 
           proposals.push({ proposalNumber: counter, ...proposal });
-
-          console.log("Created proposal memory: ", counter)
         } catch (e) {
           console.error("Error inside subscription:", e)
         }
@@ -91,7 +90,7 @@ export const confirmIntentAction: Action = {
       createdAt: Date.now()
     });
 
-    await callback({ text: `Received ${counter} proposals: \n ${finalText}` });
+    await callback({ text: `Received ${counter} proposal${counter != 1 ? 's' : ''}:\n\n${finalText}\n\n Which do you want to confirm?` });
 
     // Do not respond to the user's message
     return false;

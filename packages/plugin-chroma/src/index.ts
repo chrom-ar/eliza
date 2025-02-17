@@ -22,6 +22,7 @@ const actions = [
   parseBridgeAction,
   parseSwapAction,
   parseTransferAction,
+  parseYieldAction,
 ]
 
 // NOTE: Maybe there's a better way to filter actions

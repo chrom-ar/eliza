@@ -29,9 +29,9 @@ export const parseYieldAction: Action = {
     const text = message.content.text.toLowerCase();
 
     return text.includes('yield') ||
-    text.includes('deposit') ||
-    text.includes('invest') ||
-    ((text.includes('to') || text.includes('address')) && /eth|usdc|usdt/i.test(text));
+      text.includes('deposit') ||
+      text.includes('invest') ||
+      ((text.includes('to') || text.includes('address')) && /eth|usdc|usdt/i.test(text));
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State | undefined, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
@@ -72,7 +72,7 @@ export const parseYieldAction: Action = {
     intentData.recipientAddress = existingWallet.content.address; // model kinda sucks putting the wallet
 
     const { amount, fromToken, fromChain, recipientAddress } = intentData;
-    const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Broadcasted the intent to receive the best quotas.\n\n`
+    const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Confirm the intent to receive the best quotas?`
 
     await callback({ text: responseText }); // this doesn't work (?)
 
@@ -83,84 +83,26 @@ export const parseYieldAction: Action = {
 
     await intentManager.removeAllMemories(message.roomId);
 
-    const waku = runtime.clients?.waku || await WakuClientInterface.start(runtime)
-    await waku.sendMessage(
-      intentData,
-      '', // General intent topic
-      message.roomId
-    );
-
-    // TMP: This shit shouldn't be like this, workaround to make the chat refresh work
-    await new Promise<void>((resolve) => {
-      waku.subscribe(
-        message.roomId,
-        async (receivedMessage) => {
-
-          try {
-            let memoryText = `${responseText}\n Best proposal: ${receivedMessage.body.proposal.description}.\nActions:\n`
-            const calls = receivedMessage.body.proposal.calls
-            for (let index in calls) {
-              memoryText += `- ${parseInt(index) + 1}: ${calls[index]}\n` // JS always surprising you
-            }
-            memoryText += `\nDo you want to confirm?`
-
-            // Create a response memory
-            const responseMemory: Memory = await runtime.messageManager.addEmbeddingToMemory({
-              userId: message.userId,
-              agentId: message.agentId,
-              roomId: message.roomId,
-              content: {
-                text: memoryText,
-                action: 'YIELD_PROPOSAL',
-                source: receivedMessage.body.source,
-                proposal: receivedMessage.body.proposal
-              },
-              createdAt: Date.now()
-            });
-
-            await runtime.messageManager.createMemory(responseMemory);
-
-            // Use callback to ensure the message appears in chat
-            await callback(responseMemory.content)
-
-            // Update state and process any actions if needed
-            const state = await runtime.updateRecentMessageState(
-              await runtime.composeState(responseMemory)
-            );
-
-            await runtime.evaluate(responseMemory, state, false, callback);
-
-            // Persist the proposal
-            const proposalManager = new MemoryManager({
-              runtime,
-              tableName: 'proposals'
-            });
-
-            const newMemory: Memory = await proposalManager.addEmbeddingToMemory({
-              userId: message.userId,
-              agentId: message.agentId,
-              roomId: message.roomId,
-              createdAt: Date.now(),
-              unique: true,
-              content: {
-                text: responseText,
-                action: 'YIELD_PROPOSAL',
-                source: message.content?.source,
-                proposal: receivedMessage.body.proposal
-              }
-            });
-
-            await proposalManager.createMemory(newMemory);
-          } catch (e) {
-            console.error("Error inside subscription:", e)
-          }
-
-          resolve()
+    const newMemory: Memory = {
+      userId: message.userId,
+      agentId: message.agentId,
+      roomId: message.roomId,
+      createdAt: Date.now(),
+      unique: true,
+      content: {
+        text: responseText,
+        source: message.content?.source,
+        intent: {
+          ...intentData,
+          type: 'YIELD'
         }
-      )
-    })
+      }
+    };
 
-    // elizaLogger.info('Yield intent created', intentData);
+    await intentManager.createMemory(newMemory);
+    await callback(newMemory.content);
+
+    elizaLogger.info('Yield intent created', intentData);
     return true;
   },
 
