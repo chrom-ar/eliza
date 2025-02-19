@@ -22,8 +22,13 @@ describe('Wormhole Bridge', () => {
     expect(result).toBeDefined();
     expect(result).toBeInstanceOf(Array);
     expect(result.length).toBeGreaterThan(0);
-    result.forEach(tx => {
+    // @ts-ignore
+    const transactions = result.map(tx => tx.transaction);
+    expect(transactions.length).toBeGreaterThan(0);
+    transactions.forEach(tx => {
+      // @ts-ignore
       expect(tx).toHaveProperty('to');
+      // @ts-ignore
       expect(tx).toHaveProperty('data');
     });
   });

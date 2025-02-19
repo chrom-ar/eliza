@@ -1,6 +1,6 @@
 import { Provider, IAgentRuntime, Memory, State } from '@elizaos/core';
-import * as path from 'path';
 import Handlebars from 'handlebars';
+import { getWalletCache, categorizeAddresses, getStoredWallet } from '../utils/walletData';
 
 /**
  * This template is an example.
@@ -26,45 +26,36 @@ const allDataCollectedTemplate = Handlebars.compile(`
 
 Use this when you need to know the user's wallet data and no other context is given.`);
 
-/**
- * Separates addresses into EVM and Solana addresses
- */
-function categorizeAddresses(addresses: string): { evmAddresses: string[], solanaAddresses: string[] } {
-  const addressList = addresses.split(',').map(addr => addr.trim());
-  return {
-    evmAddresses: addressList.filter(addr => addr.toLowerCase().startsWith('0x')),
-    solanaAddresses: addressList.filter(addr => !addr.toLowerCase().startsWith('0x'))
-  };
-}
-
 export const walletProvider: Provider = {
   /**
    * Provide context about the user's current wallet data,
    * including instructions if data is missing.
    */
   get: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
-    // 1. Build the cache key ( agentId / userId / data )
-    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
+    // 1. Get wallet data from cache
+    const cacheObj = await getWalletCache(runtime, message.userId);
 
-    // 2. Fetch from cache
-    //    We'll store an object that has shape:
-    //    { address: string | undefined, chains: string[] | undefined }
-    let cacheObj = await runtime.cacheManager.get<{
-      addresses?: string;
-      chains?: string;
-    }>(cacheKey);
+    // 2. Get stored wallet if exists
+    const storedWallet = await getStoredWallet(runtime, message.roomId);
+    if (storedWallet) {
+      if (!cacheObj.addresses) {
+        cacheObj.addresses = storedWallet.address;
+      } else if (!cacheObj.addresses.includes(storedWallet.address)) {
+        cacheObj.addresses = `${cacheObj.addresses},${storedWallet.address}`;
+      }
 
-    // 3. If there's no existing data, initialize it
-    if (!cacheObj) {
-      cacheObj = { addresses: undefined, chains: undefined };
-      await runtime.cacheManager.set(cacheKey, cacheObj);
+      if (!cacheObj.chains) {
+        cacheObj.chains = storedWallet.network;
+      } else if (!cacheObj.chains.includes(storedWallet.network)) {
+        cacheObj.chains = `${cacheObj.chains},${storedWallet.network}`;
+      }
     }
 
-    // 4. Check which data is missing
+    // 3. Check which data is missing
     const hasAddresses = Boolean(cacheObj.addresses);
     const hasChains = Boolean(cacheObj.chains);
 
-    // 5. If all data is available, present final info
+    // 4. If all data is available, present final info
     if (hasAddresses && hasChains) {
       const { evmAddresses, solanaAddresses } = categorizeAddresses(cacheObj.addresses!);
 
@@ -75,7 +66,7 @@ export const walletProvider: Provider = {
       }).trim();
     }
 
-    // 6. Build partial summary
+    // 5. Build partial summary
     let context: Record<string, string>;
     if (hasAddresses) {
       const { evmAddresses, solanaAddresses } = categorizeAddresses(cacheObj.addresses!);
@@ -94,20 +85,22 @@ export const walletProvider: Provider = {
 
     const partialSummary = summaryTemplate(context);
 
-    // 7. Build instructions for missing info
+    // 6. Build instructions for missing info
     const missingParts: string[] = [];
     if (!hasAddresses) {
       missingParts.push(
-        '- Ask the user to share their blockchain wallet addresses. The user may have multiple addresses across different chains.'
+        '- Ask the user to share their blockchain wallet addresses. The user may have multiple addresses across different chains.',
+        '- If the user asks for a wallet to be created, then ommit the previous question.'
       );
     }
     if (!hasChains) {
       missingParts.push(
-        '- Ask the user which blockchain networks they primarily interact with. Examples include Ethereum, BSC, Polygon, or Solana.'
+        '- Ask the user which blockchain networks they primarily interact with. Examples include Ethereum, BSC, Polygon, or Solana.',
+        '- If the user asks for a wallet to be created, then ommit the previous question.'
       );
     }
 
-    // 8. Return the compiled text with instructions header
+    // 7. Return the compiled text with instructions header
     const instructions = missingParts.length > 0
       ? `\nInstructions for collecting missing data:\n${missingParts.join('\n')}`
       : '';
