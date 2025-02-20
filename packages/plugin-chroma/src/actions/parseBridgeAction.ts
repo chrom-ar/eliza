@@ -1,5 +1,16 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager } from '@elizaos/core';
 import { z } from 'zod';
+import {
+  Action,
+  Memory,
+  IAgentRuntime,
+  HandlerCallback,
+  State,
+  ModelClass,
+  composeContext,
+  generateObject,
+  MemoryManager,
+  elizaLogger
+} from '@elizaos/core';
 
 const bridgeSchema = z.object({
   amount: z.string(),
@@ -83,15 +94,16 @@ export const parseBridgeAction: Action = {
       return true;
     }
 
+    const { amount, fromToken, fromChain, recipientChain } = intentData;
+    const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}. Would you like to confirm t
+his bridge operation?`;
+
     const intentManager = new MemoryManager({
       runtime,
       tableName: 'intents'
     });
 
     await intentManager.removeAllMemories(message.roomId);
-
-    const { amount, fromToken, fromChain, recipientChain } = intentData;
-    const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}. Would you like to confirm this bridge operation?`;
 
     const newMemory: Memory = await intentManager.addEmbeddingToMemory({
       userId: message.userId,
@@ -104,7 +116,7 @@ export const parseBridgeAction: Action = {
         source: message.content?.source,
         intent: {
           ...intentData,
-          type: 'BRIDGE',
+          type: 'BRIDGE'
         }
       }
     });
@@ -132,7 +144,7 @@ export const parseBridgeAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'Send 100 USDC from Base to Arbitrum' }
+        content: { text: 'Can you send 100 USDC from Base to Arbitrum?' }
       },
       {
         user: '{{user2}}',

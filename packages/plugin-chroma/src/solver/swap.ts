@@ -1,13 +1,8 @@
-import { encodeFunctionData, parseUnits } from 'viem';
-
 import {
-  AAVE_POOL,
   GeneralMessage,
-  TOKENS,
-  TOKEN_DECIMALS,
-  ZERO_ADDRESS,
   isEvmChain,
 } from "./helpers";
+
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { EVMLiFiSwap } from './lifiEvmSwap';
 
@@ -28,7 +23,18 @@ export async function validateAndBuildSwap(message: GeneralMessage): Promise<obj
     return null;
   }
 
-  return await _buildSwap(message);
+  const swapResult = await _buildSwap(message);
+
+  return {
+    description: `Swap`,
+    titles: [
+      'Swap'
+    ],
+    calls: [
+      'Swap'
+    ],
+    ...swapResult
+  };
 }
 
 async function _buildSwap(message: GeneralMessage): Promise<object> {

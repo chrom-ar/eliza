@@ -74,7 +74,10 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
     // "chain": "Sepolia",
     // "description": "ERC20.approve of CircleRelayer",
     // "parallelizable": false
-    processedTxs.push(processedTx.transaction);
+    processedTxs.push({
+      transaction: processedTx.transaction,
+      description: processedTx.description
+    });
   }
 
   return processedTxs;
