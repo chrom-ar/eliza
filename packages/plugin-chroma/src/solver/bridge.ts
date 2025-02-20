@@ -1,14 +1,7 @@
-import { encodeFunctionData, parseUnits } from 'viem';
-
 import { buildBridgeTransaction } from './wormholeBridge';
 
 import {
-  AAVE_POOL,
-  GeneralMessage,
-  TOKENS,
-  TOKEN_DECIMALS,
-  ZERO_ADDRESS,
-  isEvmChain,
+  GeneralMessage
 } from "./helpers";
 
 export async function validateAndBuildBridge(message: GeneralMessage): Promise<object> {
@@ -23,22 +16,26 @@ export async function validateAndBuildBridge(message: GeneralMessage): Promise<o
     }
   } = message;
 
-  // Check for missing fields (simple example)
   if (!amount || !fromToken || !fromAddress || !fromChain) {
     console.log('missing fields');
     return null;
   }
 
-
-  fromChain = fromChain.toUpperCase();
-  fromToken = fromToken.toUpperCase();
-
   if (!recipientAddress || !recipientChain) {
     console.log('recipientAddress and recipientChain are required for bridge operations');
     return null;
   }
+
   const bridgeResult = await buildBridgeTransaction(message);
-  return bridgeResult.length === 1
-    ? { transaction: bridgeResult[0] }
-    : { transactions: bridgeResult };
+  const [firstTx, ...remainingTxs] = bridgeResult;
+  const transactionData = remainingTxs.length === 0
+    ? { transaction: firstTx.transaction }
+    : { transactions: bridgeResult.map(tx => tx.transaction) };
+
+  return {
+    description: 'Bridge',
+    titles: bridgeResult.map(tx => tx.description),
+    calls: [`Wormhole CCTP Bridge`],
+    ...transactionData
+  };
 }

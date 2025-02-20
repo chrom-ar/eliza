@@ -1,7 +1,8 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, MemoryManager } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/core';
 import { elizaLogger } from '@elizaos/core';
 
 import { getWalletAndProvider, createWallet } from '../utils';
+import { getStoredWallet, storeWallet, setWalletCache } from '../utils/walletData';
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -10,7 +11,6 @@ const contextTemplate = `# Recent Messages
 {{providers}}
 
 Check if the user is requesting to create or access their wallet.`;
-
 
 export const createWalletAction: Action = {
   name: 'CREATE_WALLET',
@@ -25,27 +25,20 @@ export const createWalletAction: Action = {
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     try {
-      // Initialize memory manager for wallets
-      const walletManager = new MemoryManager({
-        runtime,
-        tableName: 'wallets'
-      });
-
       // Check if user already has a wallet
-      // @ts-ignore
-      const [existingWallet] = await walletManager.getMemories({ roomId: message.roomId, count: 1 });
+      const existingWallet = await getStoredWallet(runtime, message.roomId);
 
       let wallet;
       if (existingWallet) {
         // Wallet exists, try to import it
         try {
-          [wallet] = await getWalletAndProvider(runtime, existingWallet.content.walletId as string);
+          [wallet] = await getWalletAndProvider(runtime, existingWallet.walletId);
 
           const walletAddress = (await wallet.getDefaultAddress()).id;
           callback({
             text: `Found your existing wallet with address: ${walletAddress}`,
             walletAddress,
-            walletId: existingWallet.content.walletId
+            walletId: existingWallet.walletId
           });
 
           return true;
@@ -74,22 +67,18 @@ export const createWalletAction: Action = {
         console.log(error)
       }
 
-      // Store wallet data in memory
-      const newMemory: Memory = await walletManager.addEmbeddingToMemory({
-        userId: message.userId,
-        agentId: message.agentId,
-        roomId: message.roomId,
-        createdAt: Date.now(),
-        unique: true,
-        content: {
-          text: `Successfully created a new wallet!\nAddress: ${walletAddress}\nNetwork: ${networkId}`,
-          walletId: walletId,
-          address: walletAddress,
-          network: networkId
-        }
+      // Store wallet data
+      await storeWallet(runtime, message, {
+        walletId,
+        address: walletAddress,
+        network: networkId
       });
 
-      await walletManager.createMemory(newMemory);
+      // Update wallet cache
+      await setWalletCache(runtime, message.userId, {
+        addresses: walletAddress,
+        chains: networkId
+      });
 
       callback({
         text: `Successfully created a new wallet!\nAddress: ${walletAddress}\nNetwork: ${networkId}`,

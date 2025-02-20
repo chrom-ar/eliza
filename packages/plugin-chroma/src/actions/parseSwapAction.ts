@@ -1,7 +1,16 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager } from '@elizaos/core';
 import { z } from 'zod';
+import {
+  Action,
+  Memory,
+  IAgentRuntime,
+  HandlerCallback,
+  State,
+  ModelClass,
+  composeContext,
+  generateObject,
+  MemoryManager
+} from '@elizaos/core';
 
-// Define the schema for swap intent
 const swapSchema = z.object({
   amount: z.string(),
   fromToken: z.string(),
@@ -20,12 +29,12 @@ const contextTemplate = `# Recent Messages
 
 Extract swap intent information from the message.
 When no from address or chain is directly specified, use the user's wallet data provided in the context.
-If no chain (source or destination) is specified, use "ethereum" as the default.`;
+If no chain is specified, use "base-sepolia" as the default.`;
 
 export const parseSwapAction: Action = {
   name: 'PARSE_SWAP_INTENT',
   similes: ['SWAP_INTENT', 'CREATE_INTENT'],
-  description: 'Parses user query and constructs a GaslessCrossChainIntent JSON for a swap',
+  description: 'Parses user query and constructs an intent for a swap',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
@@ -38,7 +47,7 @@ export const parseSwapAction: Action = {
       state: state,
       template: contextTemplate
     });
-    // Extract swap info with schema validation
+
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
@@ -52,17 +61,14 @@ export const parseSwapAction: Action = {
       return true;
     }
 
-    // Store the intent in memory manager
+    const responseText = 'I\'ve created a swap intent. Would you like to confirm this swap?'
+
     const intentManager = new MemoryManager({
       runtime,
       tableName: 'intents'
     });
 
     await intentManager.removeAllMemories(message.roomId);
-
-    // const { amount, fromToken, toToken, fromChain } = intentData;
-    // const responseText = `I've created a swap intent for ${amount} ${fromToken} to ${toToken} on ${fromChain}. Would you like to confirm this swap?`; //TMP
-    const responseText = 'I\'ve created a swap intent. Would you like to confirm this swap?'
 
     const newMemory: Memory = await intentManager.addEmbeddingToMemory({
       userId: message.userId,
@@ -74,7 +80,8 @@ export const parseSwapAction: Action = {
         text: responseText,
         source: message.content?.source,
         intent: {
-          ...intentData
+          ...intentData,
+          type: 'SWAP'
         }
       }
     });
