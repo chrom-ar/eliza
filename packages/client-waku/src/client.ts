@@ -87,6 +87,9 @@ export class WakuClient extends EventEmitter {
       }
     }
 
+    await sleep(2000)
+    console.log("WakuNode", this.wakuNode.health.getHealthStatus(), this.wakuNode.health.getProtocolStatus(Protocols.LightPush), this.wakuNode.health.getProtocolStatus(Protocols.Filter))
+
     elizaLogger.success('[WakuBase] Connected to Waku');
   }
 

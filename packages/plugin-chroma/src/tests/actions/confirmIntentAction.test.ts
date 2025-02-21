@@ -11,8 +11,10 @@ import type { Mock } from 'vitest';
 import { confirmIntentAction } from '../../actions/confirmIntentAction';
 import { createRuntime } from '../helpers';
 import { WakuClient } from '../../lib/waku-client';
+import { storeWallet } from '../../utils/walletData';
 
 let mockMemoryManager: Partial<MemoryManager>;
+let mockSimulationResult: Partial<object>;
 
 // Mock the WakuClient
 vi.mock('../../lib/waku-client', () => ({
@@ -58,8 +60,25 @@ vi.mock('@elizaos/core', async (importOriginal) => {
     }
 });
 
+vi.mock('../../utils/simulation', async (importOriginal) => {
+    // const actual = await importOriginal();
+    return {
+        simulateTxs: vi.fn().mockImplementation((r, w, txs) => {
+            return mockSimulationResult
+        })
+    }
+});
+
+
 describe('Confirm Intent Action', async () => {
     const mockRuntime: IAgentRuntime = await createRuntime();
+    mockSimulationResult = {
+        results: [
+            { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
+        ]
+    }
+
+    await storeWallet(mockRuntime, {userId: '123' as UUID} as Memory, { walletId: '0123-456', address: '0x123', network: 'base-sepolia' })
 
     describe('Action Configuration', () => {
         it('should have correct action name and similes', () => {
@@ -170,6 +189,8 @@ describe('Confirm Intent Action', async () => {
             // Verify callback was called with proposal
             expect(mockCallback).toHaveBeenCalled();
             const callbackArg = mockCallback.mock.calls[0][0];
+            expect(callbackArg.proposals).toBeDefined();
+            expect(callbackArg.proposals[0].transaction).toBeDefined();
             expect(callbackArg.text).toContain('Received 1 proposal');
             expect(callbackArg.text).toContain('Proposal #1: Transfer');
         });

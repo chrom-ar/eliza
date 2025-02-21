@@ -5,6 +5,7 @@ import {
   GeneralMessage,
   TOKENS,
   TOKEN_DECIMALS,
+  getChainId,
 } from "./helpers";
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {
@@ -54,6 +55,8 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
 
   const aavePool = AAVE_POOL[fromChain][fromToken];
 
+  const chainId = getChainId(fromChain);
+
   return {
     description: `Deposit ${fromToken} in Aave V3 on ${fromChain}`,
     titles: [
@@ -65,11 +68,13 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     ],
     transactions: [
       { // approve
+        chainId,
         to: tokenAddr,
         value: 0,
         data: encodeFunctionData({abi, functionName: "approve", args: [aavePool, tokenAmount]})
       },
       { // supply
+        chainId,
         to: aavePool,
         value: 0,
         data: encodeFunctionData({abi, functionName: "supply", args: [tokenAddr, tokenAmount, recipientAddress, 0]})

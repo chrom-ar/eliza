@@ -75,13 +75,10 @@ export const confirmProposalAction: Action = {
           schemaName: 'ProposalNumber',
           context
         })).object as z.infer<typeof numberSchema>;
-        console.log("Parsed number from prompt:", number)
 
         proposal = proposals.find((proposal) => proposal.proposalNumber == number);
         break;
     }
-
-    console.log("Proposal :", proposal)
 
     if (!proposal || (typeof proposal !== 'object')) {
       callback({ text: 'Sorry, I could not find a pending proposal to confirm. Please create a new request.' });
@@ -130,6 +127,9 @@ export const confirmProposalAction: Action = {
         links += `- ${proposal.titles[i]}: ${tx.transactionLink}\n`
         i += 1
       }
+
+      // Clean the proposals
+      await proposalManager.removeAllMemories(message.roomId);
 
       // @ts-ignore
       callback({ text: `Transactions completed! \n${links}` });
