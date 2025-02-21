@@ -1,5 +1,5 @@
+// import fetch from 'node-fetch'
 import { IAgentRuntime } from '@elizaos/core';
-const debug = require("debug")("eliza:dev");
 
 const request = async (runtime: IAgentRuntime, method: string, path: string, body?: string): Promise<any> => {
   const url = `https://api.tenderly.co/api/v1/account/${runtime.getSetting('TENDERLY_ACCOUNT')}/project/${runtime.getSetting('TENDERLY_PROJECT')}/${path}`
@@ -44,8 +44,6 @@ export const simulateTxs = async (runtime: IAgentRuntime, wallet: string, transa
 
   const summary = await buildSummary(result.simulation_results)
 
-  debug("Tu vieja", { result, summary })
-
   return summary
 }
 
@@ -67,11 +65,9 @@ const shareSimulations = async (runtime: IAgentRuntime, simulations: any[]) => {
 
 const buildSummary = (simulations: any[]) => {
   return { results: simulations.map(simulationResult => {
+    const link = `https://www.tdly.co/shared/simulation/${simulationResult.simulation.id}`
     const error = simulationResult.simulation.error_message ||
       simulationResult.transaction?.error_message
-
-
-    const link = `https://www.tdly.co/shared/simulation/${simulationResult.simulation.id}`
 
     if (error && error != '')
       return { error, link }
@@ -110,7 +106,7 @@ const buildSummary = (simulations: any[]) => {
       }
     })
 
-    summary.push(`Simulation: ${link}`)
+    summary.push(`Link: ${link}`)
 
     return { summary, link}
   })}

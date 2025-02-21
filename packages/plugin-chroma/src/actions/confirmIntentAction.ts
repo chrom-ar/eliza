@@ -1,6 +1,9 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { WakuClient } from '../lib/waku-client';
 
+import { getStoredWallet } from '../utils/walletData';
+import { simulateTxs } from '../utils/simulation';
+
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
   similes: ['INTENT_CONFIRMATION', 'CONFIRM_SWAP'],
@@ -42,6 +45,8 @@ export const confirmIntentAction: Action = {
     let finalText = ''
     const expiration = Date.now() + 6000;
 
+    const walletAddr = (await getStoredWallet(runtime, message.roomId)).address
+
     // Subscribe to the room to receive the proposals
     await waku.subscribe(
       message.roomId,
@@ -60,9 +65,21 @@ export const confirmIntentAction: Action = {
             memoryText += `- ${parseInt(index) + 1}: ${proposal.calls[index]}\n` // JS always surprising you
           }
 
+          // @ts-ignore
+          const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions)
+
+          if (error) {
+            memoryText += `Simulation error: error\n`
+          } else {
+            memoryText += `Simulation:\n`
+            for (let index in results) {
+              memoryText += results[index].summary.join("\n") + "\n"
+            }
+          }
+
           finalText += memoryText + '\n'
 
-          proposals.push({ proposalNumber: counter, ...proposal });
+          proposals.push({ proposalNumber: counter, simulation: results, ...proposal });
         } catch (e) {
           console.error("Error inside subscription:", e)
         }
@@ -78,7 +95,8 @@ export const confirmIntentAction: Action = {
     );
 
     // Sleep 5 seconds to wait for responses
-    await (new Promise((resolve) => setTimeout(resolve, 6000)));
+    const timeToSleep = process.env.NODE_ENV == 'test' ? 500: 6000
+    await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
     // Persist the proposals
     const proposalManager = new MemoryManager({runtime, tableName: 'proposals' });
@@ -90,7 +108,7 @@ export const confirmIntentAction: Action = {
       createdAt: Date.now()
     });
 
-    await callback({ text: `Received ${counter} proposal${counter != 1 ? 's' : ''}:\n\n${finalText}\n\n Which do you want to confirm?` });
+    await callback({ text: `Received ${counter} proposal${counter != 1 ? 's' : ''}:\n\n${finalText}\n\n Which do you want to confirm?`, proposals});
 
     // Do not respond to the user's message
     return false;
