@@ -1,5 +1,3 @@
-const debug = require("debug")("eliza:dev");
-
 import { IAgentRuntime, MemoryManager } from '@elizaos/core';
 import { Coinbase, Wallet, ExternalAddress } from '@coinbase/coinbase-sdk';
 import { CdpWalletProvider, CHAIN_ID_TO_NETWORK_ID } from '@coinbase/agentkit';
@@ -118,21 +116,6 @@ export const getWalletAndProvider = async (runtime: IAgentRuntime, walletId: str
   const provider = await getWalletProvider(wallet)
 
   return [wallet, provider]
-}
-
-export const getWalletFromMemory = async (runtime: IAgentRuntime, roomId: string): Promise<object> => {
-  const walletManager = new MemoryManager({
-    runtime,
-    tableName: 'wallets'
-  });
-
-  // Check if user already has a wallet
-  // @ts-ignore
-  const [existingWallet] = await walletManager.getMemories({ roomId, count: 1 });
-
-  console.log("Existing wallet", existingWallet?.content)
-
-  return existingWallet?.content
 }
 
 export const createWallet = async (runtime: IAgentRuntime): Promise<Wallet> => {
