@@ -1,3 +1,5 @@
+import * as chains from 'viem/chains';
+
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
@@ -62,4 +64,21 @@ export const AVAILABLE_TYPES = ["TRANSFER", "YIELD"];
 
 export function isEvmChain(chain: string): boolean {
   return EVM_CHAINS.includes(chain.toUpperCase());
+}
+
+export const getChainId = (network: string) => {
+  network = network.toLowerCase();
+
+  let chainId = chains[network]?.id
+
+  if (!chainId) {
+    for (let k in chains) {
+      // chains has to be "get" to obtain the network
+      if (chains[k].network === network) {
+        return chains[k].id
+      }
+    }
+  }
+
+  return chainId
 }

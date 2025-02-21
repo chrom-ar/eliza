@@ -35,9 +35,6 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    // 2. Remove the old memory
-    await intentManager.removeAllMemories(message.roomId);
-
     const waku = await WakuClient.new(runtime);
 
     let counter = 0
@@ -52,7 +49,6 @@ export const confirmIntentAction: Action = {
       message.roomId,
       async (receivedMessage) => {
         if (Date.now() > expiration) {
-          console.log('msg expired', receivedMessage.body);
           // TODO unsubscribe
           return;
         }
@@ -69,15 +65,17 @@ export const confirmIntentAction: Action = {
           const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions)
 
           if (error) {
-            memoryText += `Simulation error: error\n`
+            memoryText += `\nSimulation error: ${error}\n`
           } else {
-            memoryText += `Simulation:\n`
+            memoryText += `\nSimulation:\n`
             for (let index in results) {
-              memoryText += results[index].summary.join("\n") + "\n"
+              memoryText += `Tx #${parseInt(index) + 1}:\n`
+              memoryText += (results[index].error || results[index].summary.join("\n")) + "\n"
+              memoryText += `Link: ${results[index].link}\n`
             }
           }
 
-          finalText += memoryText + '\n'
+          finalText += memoryText
 
           proposals.push({ proposalNumber: counter, simulation: results, ...proposal });
         } catch (e) {
@@ -86,7 +84,6 @@ export const confirmIntentAction: Action = {
       }
     )
 
-    console.log('Publishing to the general topic');
     // Publish the *first* message to the "general" topic
     await waku.sendMessage(
       intent,
@@ -97,6 +94,14 @@ export const confirmIntentAction: Action = {
     // Sleep 5 seconds to wait for responses
     const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : 6000;
     await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
+
+    if (proposals.length == 0) {
+      callback({ text: 'No proposals received. Do you want to try again?' });
+      return false;
+    }
+
+    // Remove the old memory
+    await intentManager.removeAllMemories(message.roomId);
 
     // Persist the proposals
     const proposalManager = new MemoryManager({runtime, tableName: 'proposals' });

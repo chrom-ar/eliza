@@ -50,6 +50,9 @@ export const simulateTxs = async (runtime: IAgentRuntime, wallet: string, transa
 const shareSimulations = async (runtime: IAgentRuntime, simulations: any[]) => {
   let promises = []
   for (const simulation of simulations) {
+    if (!simulation.simulation.id)
+      continue
+
     promises.push(
       request(runtime, 'POST', `simulations/${simulation.simulation.id}/share`)
     )
@@ -106,15 +109,23 @@ const buildSummary = (simulations: any[]) => {
       }
     })
 
-    summary.push(`Link: ${link}`)
-
     return { summary, link}
   })}
 };
 
+// base-sepolia tokens
+const KNOWN_TOKENS = {
+  "0x036cbd53842c5426634e7929541ec2318f3dcf7e": 'USDC',
+  "0xf53b60f4006cab2b3c4688ce41fd5362427a2a66": 'aUSDC',
+}
+
 const humanizeAmount = (change: any) => {
   const amount = change.amount || change.raw_amount;
-  const symbol = change.token_info.symbol?.toUpperCase() || '??'
+  // In mainnet simulations symbol is always there
+  const symbol = change.token_info.symbol?.toUpperCase() ||
+    KNOWN_TOKENS[change.token_info.contract_address?.toLowerCase()] ||
+    "(unknown token)"
+
 
   return `${amount} ${symbol} ${change.dollar_value ? `($${change.dollar_value})` : ""}`
 }
