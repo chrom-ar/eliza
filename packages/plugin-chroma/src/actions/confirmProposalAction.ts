@@ -15,13 +15,6 @@ import { z } from 'zod';
 import { getWalletAndProvider, sendTransaction } from '../utils';
 import { getStoredWallet } from '../utils/walletData';
 
-interface Proposal {
-  proposalNumber: number;
-  transactions?: any[];
-  transaction?: any;
-  titles?: string[];
-}
-
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
 
@@ -59,7 +52,7 @@ export const confirmProposalAction: Action = {
       unique: true
     })
 
-    const proposals = (proposalsMem?.content?.proposals || []) as Proposal[];
+    const proposals = (proposalsMem?.content?.proposals || []) as any[];
 
     let proposal;
     switch (proposals.length || 0) {

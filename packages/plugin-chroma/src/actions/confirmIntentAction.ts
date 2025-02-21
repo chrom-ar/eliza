@@ -77,8 +77,8 @@ export const confirmIntentAction: Action = {
       message.roomId
     );
 
-    // Sleep 5 seconds to wait for responses
-    await (new Promise((resolve) => setTimeout(resolve, 5000)));
+    // Sleep 4 seconds to wait for responses
+    await (new Promise((resolve) => setTimeout(resolve, 4000)));
 
     // Persist the proposals
     const proposalManager = new MemoryManager({runtime, tableName: 'proposals' });
