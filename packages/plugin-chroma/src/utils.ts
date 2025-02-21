@@ -1,4 +1,4 @@
-import { IAgentRuntime, MemoryManager } from '@elizaos/core';
+import { IAgentRuntime } from '@elizaos/core';
 import { Coinbase, Wallet, ExternalAddress } from '@coinbase/coinbase-sdk';
 import { CdpWalletProvider, CHAIN_ID_TO_NETWORK_ID } from '@coinbase/agentkit';
 
