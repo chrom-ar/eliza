@@ -1,14 +1,15 @@
-import { Action, Memory, IAgentRuntime, HandlerCallback, State, MemoryManager } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/core';
 import { elizaLogger } from '@elizaos/core';
 
 import { getWalletAndProvider, getBalanceFor } from '../utils';
+import { getStoredWallet } from '../utils/walletData';
 
 // For showcase purposes
-const EXTRA_BALANCES = {
-  "base-sepolia":{
+const EXTRA_BALANCES: Record<string, Record<string, string>> = {
+  "base-sepolia": {
     ["Aave-USDC"]: "0xf53b60f4006cab2b3c4688ce41fd5362427a2a66"
   }
-}
+};
 
 export const getBalanceAction: Action = {
   name: 'GET_BALANCE',
@@ -35,16 +36,8 @@ export const getBalanceAction: Action = {
 
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     try {
-
-      // Initialize memory manager for wallets
-      const walletManager = new MemoryManager({
-        runtime,
-        tableName: 'wallets'
-      });
-
-      // Get user's wallet from memory
-      // @ts-ignore
-      const [existingWallet] = await walletManager.getMemories({ roomId: message.roomId, count: 1 });
+      // Get user's wallet from cache
+      const existingWallet = await getStoredWallet(runtime, message.userId);
 
       if (!existingWallet) {
         callback({
@@ -55,11 +48,9 @@ export const getBalanceAction: Action = {
       }
 
       // Fetch the wallet
-      const [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.content.walletId);
-      // @ts-ignore
-      const walletAddress = (await wallet.getDefaultAddress()).id;
+      const [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
+      const walletAddress = (await wallet.getDefaultAddress()).getId();
       const balances = await wallet.listBalances();
-
 
       // Format response
       let balanceText = `Wallet Address: ${walletAddress}\n`
@@ -67,10 +58,13 @@ export const getBalanceAction: Action = {
         balanceText += `- ${v} ${k.toUpperCase()}\n`;
       }
 
-      for (const [k, v] of Object.entries(EXTRA_BALANCES[wallet.getNetworkId()])) {
+      const networkId = wallet.getNetworkId() as string;
+      const extraBalances = EXTRA_BALANCES[networkId] || {};
+
+      for (const [k, v] of Object.entries(extraBalances)) {
         const balance = await getBalanceFor(provider, v, true);
 
-        if (balance && parseFloat(balance) > 0) {
+        if (balance && parseFloat(balance.toString()) > 0) {
           balanceText += `- ${balance} ${k}\n`;
         }
       }

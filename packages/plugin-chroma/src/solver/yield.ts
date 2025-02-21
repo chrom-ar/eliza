@@ -5,8 +5,6 @@ import {
   GeneralMessage,
   TOKENS,
   TOKEN_DECIMALS,
-  ZERO_ADDRESS,
-  isEvmChain,
 } from "./helpers";
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {

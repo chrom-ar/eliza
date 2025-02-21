@@ -1,6 +1,6 @@
 import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager, elizaLogger } from '@elizaos/core';
 import { z } from 'zod';
-import { WakuClientInterface } from '@elizaos/client-waku';
+import { getStoredWallet } from '../utils/walletData';
 
 // Define the schema for transfer intent
 const yieldSchema = z.object({
@@ -17,8 +17,11 @@ const contextTemplate = `# Recent Messages
 # Providers data
 {{providers}}
 
-Extract yield intent information from the message.
-If no chain is specified, use "base-sepolia" as the default.`;
+Follow the instructions:
+1. Extract yield intent information from the message.
+2. If no chain is specified, use "base-sepolia" as the default.
+3. When extracting the amount, make sure to include the decimals and do not put any other text but the number.
+4. Do not include decimals unless the user specifies them.`;
 
 export const parseYieldAction: Action = {
   name: 'PARSE_YIELD_INTENT',
@@ -55,21 +58,15 @@ export const parseYieldAction: Action = {
       return true;
     }
 
-    const walletManager = new MemoryManager({
-      runtime,
-      tableName: 'wallets'
-    });
-
     // Check if user already has a wallet
-    // @ts-ignore
-    const [existingWallet] = await walletManager.getMemories({ roomId: message.roomId, count: 1 });
+    const existingWallet = await getStoredWallet(runtime, message.userId);
 
     if (!existingWallet) {
       callback({ text: 'We need a wallet to continue. Do you want me to create a wallet?' });
       return false;
     }
-    // @ts-ignore
-    intentData.recipientAddress = existingWallet.content.address; // model kinda sucks putting the wallet
+
+    intentData.recipientAddress = existingWallet.address; // model kinda sucks putting the wallet
 
     const { amount, fromToken, fromChain, recipientAddress } = intentData;
     const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Confirm the intent to receive the best quotas?`

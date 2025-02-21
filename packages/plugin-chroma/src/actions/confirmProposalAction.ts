@@ -13,6 +13,7 @@ import {
 import { z } from 'zod';
 
 import { getWalletAndProvider, sendTransaction } from '../utils';
+import { getStoredWallet } from '../utils/walletData';
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -51,7 +52,7 @@ export const confirmProposalAction: Action = {
       unique: true
     })
 
-    const proposals = proposalsMem?.content?.proposals || []
+    const proposals = (proposalsMem?.content?.proposals || []) as any[];
 
     let proposal;
     switch (proposals.length || 0) {
@@ -87,14 +88,8 @@ export const confirmProposalAction: Action = {
       return false;
     }
 
-    const walletManager = new MemoryManager({
-      runtime,
-      tableName: 'wallets'
-    });
-
     // Check if user already has a wallet
-    // @ts-ignore
-    const [existingWallet] = await walletManager.getMemories({ roomId: message.roomId, count: 1 });
+    const existingWallet = await getStoredWallet(runtime, message.userId);
 
     if (!existingWallet) {
       callback({ text: 'Sorry, We need a wallet to continue. Do you want me to create a wallet?' });
@@ -103,7 +98,7 @@ export const confirmProposalAction: Action = {
 
     let wallet, provider;
     try {
-      [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.content.walletId as string);
+      [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
     } catch (error) {
       console.log(error)
       elizaLogger.error('Error importing existing wallet:', error);
