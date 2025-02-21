@@ -188,6 +188,8 @@ describe('Confirm Intent Action', async () => {
             const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.proposals).toBeDefined();
             expect(callbackArg.proposals[0].transaction).toBeDefined();
+            expect(callbackArg.text).toContain('Received 1 proposal');
+            expect(callbackArg.text).toContain('Proposal #1: Transfer');
         });
 
         it('should handle missing intent gracefully', async () => {
