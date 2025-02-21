@@ -11,6 +11,7 @@ import type { Mock } from 'vitest';
 import { confirmIntentAction } from '../../actions/confirmIntentAction';
 import { createRuntime } from '../helpers';
 import { WakuClient } from '../../lib/waku-client';
+import { storeWallet } from '../../utils/walletData';
 
 let mockMemoryManager: Partial<MemoryManager>;
 let mockSimulationResult: Partial<object>;
@@ -76,6 +77,8 @@ describe('Confirm Intent Action', async () => {
             { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
         ]
     }
+
+    await storeWallet(mockRuntime, {userId: '123' as UUID} as Memory, { walletId: '0123-456', address: '0x123', network: 'base-sepolia' })
 
     describe('Action Configuration', () => {
         it('should have correct action name and similes', () => {

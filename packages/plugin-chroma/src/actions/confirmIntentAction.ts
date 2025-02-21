@@ -45,7 +45,7 @@ export const confirmIntentAction: Action = {
     let finalText = ''
     const expiration = Date.now() + 6000;
 
-    const walletAddr = (await getStoredWallet(runtime, message.roomId)).address
+    const walletAddr = (await getStoredWallet(runtime, message.userId)).address
 
     // Subscribe to the room to receive the proposals
     await waku.subscribe(
