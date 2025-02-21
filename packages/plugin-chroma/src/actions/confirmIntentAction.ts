@@ -95,7 +95,7 @@ export const confirmIntentAction: Action = {
     );
 
     // Sleep 5 seconds to wait for responses
-    const timeToSleep = process.env.NODE_ENV == 'test' ? 500: 6000
+    const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : 6000;
     await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
     // Persist the proposals
