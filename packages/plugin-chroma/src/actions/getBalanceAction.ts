@@ -1,7 +1,7 @@
 import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/core';
 import { elizaLogger } from '@elizaos/core';
 
-import { getWalletAndProvider, getBalanceFor } from '../utils';
+import { getWalletAndProvider, getBalanceFor } from '../utils/cdp';
 import { getStoredWallet } from '../utils/walletData';
 
 // For showcase purposes
