@@ -663,6 +663,7 @@ export enum Clients {
     SIMSAI = "simsai",
     XMTP = "xmtp",
     DEVA = "deva",
+    WAKU = "waku",
 }
 
 export interface IAgentConfig {
@@ -1522,6 +1523,7 @@ export enum ServiceType {
     IRYS = "irys",
     TEE_LOG = "tee_log",
     GOPLUS_SECURITY = "goplus_security",
+    WAKU_MESSAGING = "waku_messaging",
     WEB_SEARCH = "web_search",
     EMAIL_AUTOMATION = "email_automation",
 }

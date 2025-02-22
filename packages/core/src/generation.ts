@@ -1290,6 +1290,25 @@ export async function generateText({
                 break;
             }
 
+            case ModelProviderName.BEDROCK: {
+                elizaLogger.debug("Initializing Bedrock model.");
+
+                const { text: bedrockResponse } = await aiGenerateText({
+                    model: bedrock(model),
+                    maxSteps: maxSteps,
+                    temperature: temperature,
+                    maxTokens: max_response_length,
+                    frequencyPenalty: frequency_penalty,
+                    presencePenalty: presence_penalty,
+                    experimental_telemetry: experimental_telemetry,
+                    prompt: context
+                });
+
+                response = bedrockResponse;
+                elizaLogger.debug("Received response from Bedrock model.");
+                break;
+            }
+
             default: {
                 const errorMessage = `Unsupported provider: ${provider}`;
                 elizaLogger.error(errorMessage);
@@ -2219,6 +2238,8 @@ export async function handleProvider(
             return await handleDeepSeek(options);
         case ModelProviderName.LIVEPEER:
             return await handleLivepeer(options);
+        case ModelProviderName.BEDROCK:
+            return await handleBedrock(options);
         default: {
             const errorMessage = `Unsupported provider: ${provider}`;
             elizaLogger.error(errorMessage);
@@ -2243,10 +2264,9 @@ async function handleOpenAI({
     provider,
     runtime,
 }: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
-    const endpoint =
-        runtime.character.modelEndpointOverride || getEndpoint(provider);
     const baseURL =
-        getCloudflareGatewayBaseURL(runtime, "openai") || endpoint;
+        getCloudflareGatewayBaseURL(runtime, "openai") ||
+        models.openai.endpoint;
     const openai = createOpenAI({ apiKey, baseURL });
     return await aiGenerateObject({
         model: openai.languageModel(model),

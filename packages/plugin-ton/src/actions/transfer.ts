@@ -10,6 +10,7 @@ import {
     type State,
 } from "@elizaos/core";
 import { z } from "zod";
+import { sleep, base64ToHex } from "../util.ts";
 import {
     initWalletProvider,
     type WalletProvider,

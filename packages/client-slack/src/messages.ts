@@ -17,9 +17,6 @@ import {
 } from "./templates";
 import type { WebClient } from "@slack/web-api";
 import type { IAgentRuntime } from "@elizaos/core";
-import path from "path";
-import fs from "fs";
-import os from "os";
 
 export class MessageManager {
     private client: WebClient;

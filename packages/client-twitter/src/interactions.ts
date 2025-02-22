@@ -532,11 +532,9 @@ export class TwitterInteractionClient {
                             responseMessage
                         );
                     }
-
                     const responseTweetId =
                     responseMessages[responseMessages.length - 1]?.content
                         ?.tweetId;
-
                     await this.runtime.processActions(
                         message,
                         responseMessages,
