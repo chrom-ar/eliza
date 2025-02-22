@@ -120,17 +120,16 @@ const KNOWN_TOKENS = {
 }
 
 const humanizeAmount = (change: any) => {
-  const amount = change.amount || change.raw_amount;
-  // In mainnet simulations symbol is always there
   const contractAddress = change.token_info.contract_address?.toLowerCase();
   const knownToken = KNOWN_TOKENS[contractAddress];
-
   const symbol = change.token_info.symbol?.toUpperCase() ||
     (knownToken ? knownToken.symbol : "(unknown token)");
 
-  let displayAmount = amount;
-  if (knownToken) {
-    displayAmount = (Number(amount) / Math.pow(10, knownToken.decimals)).toString();
+  let displayAmount = change.raw_amount;
+  if (change.amount) {
+    displayAmount = change.amount;
+  } else if (knownToken) {
+    displayAmount = (Number(change.raw_amount) / Math.pow(10, knownToken.decimals)).toString();
   }
 
   return `${displayAmount} ${symbol} ${change.dollar_value ? `($${change.dollar_value})` : ""}`
