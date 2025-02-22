@@ -11,7 +11,6 @@ import type { Mock } from 'vitest';
 import { confirmIntentAction } from '../../actions/confirmIntentAction';
 import { createRuntime } from '../helpers';
 import { WakuClient } from '../../lib/waku-client';
-import { storeWallet } from '../../utils/walletData';
 
 let mockMemoryManager: Partial<MemoryManager>;
 let mockSimulationResult: Partial<object>;
@@ -40,6 +39,11 @@ vi.mock('../../lib/waku-client', () => ({
             })
         }))
     }
+}));
+
+vi.mock('../../utils/walletData', () => ({
+    getStoredWallet: vi.fn().mockResolvedValue({ address: '0x123', walletId: '0123-456', network: 'base-sepolia' }),
+    storeWallet: vi.fn()
 }));
 
 vi.mock('@elizaos/core', async (importOriginal) => {
@@ -77,8 +81,12 @@ describe('Confirm Intent Action', async () => {
             { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
         ]
     }
-
-    await storeWallet(mockRuntime, {userId: '123' as UUID} as Memory, { walletId: '0123-456', address: '0x123', network: 'base-sepolia' })
+    const mockCacheManager = {
+        set: vi.fn(),
+        get: vi.fn(),
+        delete: vi.fn()
+    };
+    Object.assign(mockRuntime, { cacheManager: mockCacheManager });
 
     describe('Action Configuration', () => {
         it('should have correct action name and similes', () => {
@@ -139,6 +147,9 @@ describe('Confirm Intent Action', async () => {
 
         beforeEach(() => {
             mockCallback = vi.fn();
+            mockCacheManager.set.mockReset();
+            mockCacheManager.get.mockReset();
+            mockCacheManager.delete.mockReset();
 
             // Create a mock intent
             mockIntent = {
@@ -165,6 +176,10 @@ describe('Confirm Intent Action', async () => {
                 createMemory: vi.fn().mockResolvedValue(undefined),
                 addEmbeddingToMemory: vi.fn().mockImplementation(mem => mem)
             };
+
+            Object.assign(mockRuntime, {
+                cacheManager: mockCacheManager
+            });
         });
 
         it('should handle intent confirmation with pending intent', async () => {
@@ -181,7 +196,13 @@ describe('Confirm Intent Action', async () => {
             // Verify memory manager interactions
             expect(mockMemoryManager.getMemories).toHaveBeenCalled();
             expect(mockMemoryManager.removeAllMemories).toHaveBeenCalledWith(message.roomId);
-            expect(mockMemoryManager.createMemory).toHaveBeenCalled();
+
+            // Verify cache manager interactions for proposal storage
+            expect(mockCacheManager.set).toHaveBeenCalled();
+            const [cacheKey, cacheData] = mockCacheManager.set.mock.calls[0];
+            expect(cacheKey).toContain(message.roomId);
+            expect(cacheData.proposals).toBeDefined();
+            expect(cacheData.createdAt).toBeDefined();
 
             // Verify WakuClient interactions
             expect(WakuClient.new).toHaveBeenCalledWith(mockRuntime);

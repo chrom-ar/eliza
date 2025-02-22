@@ -3,6 +3,7 @@ import { WakuClient } from '../lib/waku-client';
 
 import { getStoredWallet } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
+import { storeProposals, formatProposalText } from '../utils/proposal';
 
 export const confirmIntentAction: Action = {
   name: 'CONFIRM_INTENT',
@@ -56,10 +57,8 @@ export const confirmIntentAction: Action = {
         try {
           counter += 1;
           const proposal = receivedMessage.body.proposal;
-          let memoryText = `Proposal #${counter}: ${proposal.description}.\nActions:\n`
-          for (let index in proposal.calls) {
-            memoryText += `- ${parseInt(index) + 1}: ${proposal.calls[index]}\n` // JS always surprising you
-          }
+          proposal.number = counter;
+          let memoryText = formatProposalText(proposal);
 
           // @ts-ignore
           const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions)
@@ -104,12 +103,8 @@ export const confirmIntentAction: Action = {
     await intentManager.removeAllMemories(message.roomId);
 
     // Persist the proposals
-    const proposalManager = new MemoryManager({runtime, tableName: 'proposals' });
-    await proposalManager.createMemory({
-      userId:    message.userId,
-      agentId:   message.agentId,
-      roomId:    message.roomId,
-      content:   { proposals },
+    await storeProposals(runtime, message.userId, message.roomId, {
+      proposals,
       createdAt: Date.now()
     });
 
