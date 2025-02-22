@@ -5,6 +5,7 @@ import { createRuntime } from './helpers';
 
 
 // Test configuration
+// Original tx: https://polygonscan.com/tx/0x022a32cfc8dc8883387466ce8995979277b6bdab469fdc0dbd5ca44083513795
 const TEST_WALLET = '0x9539B9E9253136f7a7EBdEb32FC51393Ebc3a0A8'
 const TEST_TX = {
   chainId: 137,
