@@ -115,17 +115,23 @@ const buildSummary = (simulations: any[]) => {
 
 // base-sepolia tokens
 const KNOWN_TOKENS = {
-  "0x036cbd53842c5426634e7929541ec2318f3dcf7e": 'USDC',
-  "0xf53b60f4006cab2b3c4688ce41fd5362427a2a66": 'aUSDC',
+  "0x036cbd53842c5426634e7929541ec2318f3dcf7e": { symbol: 'USDC', decimals: 6 },
+  "0xf53b60f4006cab2b3c4688ce41fd5362427a2a66": { symbol: 'aUSDC', decimals: 6 },
 }
 
 const humanizeAmount = (change: any) => {
   const amount = change.amount || change.raw_amount;
   // In mainnet simulations symbol is always there
+  const contractAddress = change.token_info.contract_address?.toLowerCase();
+  const knownToken = KNOWN_TOKENS[contractAddress];
+
   const symbol = change.token_info.symbol?.toUpperCase() ||
-    KNOWN_TOKENS[change.token_info.contract_address?.toLowerCase()] ||
-    "(unknown token)"
+    (knownToken ? knownToken.symbol : "(unknown token)");
 
+  let displayAmount = amount;
+  if (knownToken) {
+    displayAmount = (Number(amount) / Math.pow(10, knownToken.decimals)).toString();
+  }
 
-  return `${amount} ${symbol} ${change.dollar_value ? `($${change.dollar_value})` : ""}`
+  return `${displayAmount} ${symbol} ${change.dollar_value ? `($${change.dollar_value})` : ""}`
 }
