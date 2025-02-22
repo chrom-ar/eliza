@@ -14,6 +14,7 @@ import { z } from 'zod';
 
 import { getWalletAndProvider, sendTransaction } from '../utils';
 import { getStoredWallet } from '../utils/walletData';
+import { getProposals, deleteProposals } from '../utils/proposal';
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -45,14 +46,8 @@ export const confirmProposalAction: Action = {
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options, callback: HandlerCallback): Promise<boolean> => {
     // 1. Get the stored (pending) proposal
-    const proposalManager = new MemoryManager({ runtime, tableName: 'proposals' });
-    const [proposalsMem] = await proposalManager.getMemories({
-      roomId: message.roomId,
-      count:  1,
-      unique: true
-    })
-
-    const proposals = (proposalsMem?.content?.proposals || []) as any[];
+    const proposalData = await getProposals(runtime, message.userId, message.roomId);
+    const proposals = proposalData?.proposals || [];
 
     let proposal;
     switch (proposals.length || 0) {
@@ -76,7 +71,7 @@ export const confirmProposalAction: Action = {
           context
         })).object as z.infer<typeof numberSchema>;
 
-        proposal = proposals.find((proposal) => proposal.proposalNumber == number);
+        proposal = proposals.find((proposal) => proposal.number == number);
         break;
     }
 
@@ -103,9 +98,9 @@ export const confirmProposalAction: Action = {
       return false;
     }
 
-    await proposalManager.removeAllMemories(message.roomId);
+    await deleteProposals(runtime, message.userId, message.roomId);
 
-    // Excecute proposal via wallet provider
+    // Execute proposal via wallet provider
     let links = ''
 
     try {
@@ -129,7 +124,7 @@ export const confirmProposalAction: Action = {
       }
 
       // Clean the proposals
-      await proposalManager.removeAllMemories(message.roomId);
+      await deleteProposals(runtime, message.userId, message.roomId);
 
       // @ts-ignore
       callback({ text: `Transactions completed! \n${links}` });
