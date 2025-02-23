@@ -13,6 +13,7 @@ const contextTemplate = `# Recent Messages
 Check if the user is requesting to create or access their wallet.`;
 
 export const createWalletAction: Action = {
+  suppressInitialMessage: true,
   name: 'CREATE_WALLET',
   similes: ['INITIALIZE_WALLET', 'SETUP_WALLET', 'GET_WALLET'],
   description: 'Creates or retrieves a CDP wallet for the user',
@@ -26,7 +27,7 @@ export const createWalletAction: Action = {
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     try {
       // Check if user already has a wallet
-      const existingWallet = await getStoredWallet(runtime, message.roomId);
+      const existingWallet = await getStoredWallet(runtime, message.userId);
 
       let wallet;
       if (existingWallet) {

@@ -1,6 +1,7 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback } from '@elizaos/core';
 
 export const cancelIntentAction: Action = {
+  suppressInitialMessage: true,
   name: 'CANCEL_INTENT',
   similes: ['INTENT_CANCELLATION', 'CANCEL_SWAP'],
   description: 'Checks if user wants to cancel the intent and remove it from pending',

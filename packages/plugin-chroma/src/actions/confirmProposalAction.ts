@@ -30,6 +30,7 @@ const numberSchema = z.object({
 });
 
 export const confirmProposalAction: Action = {
+  suppressInitialMessage: true,
   name: 'CONFIRM_PROPOSAL',
   similes: ['PROPOSAL_CONFIRMATION', 'CONFIRM_OPERATION'],
   description: 'Checks if user wants to confirm the proposal and proceed',
