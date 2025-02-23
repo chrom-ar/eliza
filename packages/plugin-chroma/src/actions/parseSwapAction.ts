@@ -32,6 +32,7 @@ When no from address or chain is directly specified, use the user's wallet data 
 If no chain is specified, use "base-sepolia" as the default.`;
 
 export const parseSwapAction: Action = {
+  suppressInitialMessage: true,
   name: 'PARSE_SWAP_INTENT',
   similes: ['SWAP_INTENT', 'CREATE_INTENT'],
   description: 'Parses user query and constructs an intent for a swap',

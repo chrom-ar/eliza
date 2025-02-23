@@ -24,6 +24,7 @@ Follow the instructions:
 4. Do not include decimals unless the user specifies them.`;
 
 export const parseYieldAction: Action = {
+  suppressInitialMessage: true,
   name: 'PARSE_YIELD_INTENT',
   similes: ['YIELD_INTENT'],
   description: 'Parses user query and constructs a yield intent',

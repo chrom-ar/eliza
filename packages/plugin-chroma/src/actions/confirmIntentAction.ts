@@ -6,6 +6,7 @@ import { simulateTxs } from '../utils/simulation';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
 export const confirmIntentAction: Action = {
+  suppressInitialMessage: true,
   name: 'CONFIRM_INTENT',
   similes: ['INTENT_CONFIRMATION', 'CONFIRM_SWAP'],
   description: 'Checks if user wants to confirm the intent and proceed with broadcasting',
@@ -61,7 +62,7 @@ export const confirmIntentAction: Action = {
           let memoryText = formatProposalText(proposal);
 
           // @ts-ignore
-          const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions)
+          const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction])
 
           if (error) {
             memoryText += `\nSimulation error: ${error}\n`

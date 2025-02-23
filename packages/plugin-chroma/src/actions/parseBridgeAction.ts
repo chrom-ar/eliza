@@ -64,6 +64,7 @@ Address Selection Rules:
 7. deadline: (optional) Transaction deadline timestamp`;
 
 export const parseBridgeAction: Action = {
+  suppressInitialMessage: true,
   name: 'PARSE_BRIDGE_INTENT',
   similes: ['BRIDGE_INTENT', 'CROSS_CHAIN_INTENT'],
   description: 'Parses user query and constructs a GaslessCrossChainIntent JSON for a bridge operation',

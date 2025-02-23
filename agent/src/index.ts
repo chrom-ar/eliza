@@ -954,19 +954,19 @@ export async function createAgent(
     //     );
     // }
 
-    let zilliqaPlugin: any | undefined;
+    // let zilliqaPlugin: any | undefined;
     // if (getSecret(character, "ZILLIQA_PRIVATE_KEY")) {
     //     zilliqaPlugin = await createZilliqaPlugin((secret) =>
     //         getSecret(character, secret)
     //     );
     // }
 
-    let zilliqaPlugin: any | undefined;
-    if (getSecret(character, "ZILLIQA_PRIVATE_KEY")) {
-        zilliqaPlugin = await createZilliqaPlugin((secret) =>
-            getSecret(character, secret)
-        );
-    }
+    // let zilliqaPlugin: any | undefined;
+    // if (getSecret(character, "ZILLIQA_PRIVATE_KEY")) {
+    //     zilliqaPlugin = await createZilliqaPlugin((secret) =>
+    //         getSecret(character, secret)
+    //     );
+    // }
 
     // Initialize Reclaim adapter if environment variables are present
     // let verifiableInferenceAdapter;

@@ -12,6 +12,7 @@ const EXTRA_BALANCES: Record<string, Record<string, string>> = {
 };
 
 export const getBalanceAction: Action = {
+  suppressInitialMessage: true,
   name: 'GET_BALANCE',
   similes: [
     'CHECK_BALANCE',

@@ -22,6 +22,7 @@ When no from address or chain is directly specified, use the user's wallet data 
 If no chain (source or destination) is specified, use "base-sepolia" as the default.`;
 
 export const parseTransferAction: Action = {
+  suppressInitialMessage: true,
   name: 'PARSE_TRANSFER_INTENT',
   similes: ['TRANSFER_INTENT', 'SEND_INTENT'],
   description: 'Parses user query and constructs an intent for a transfer',

@@ -36,7 +36,7 @@ export const walletProvider: Provider = {
     const cacheObj = await getWalletCache(runtime, message.userId);
 
     // 2. Get stored wallet if exists
-    const storedWallet = await getStoredWallet(runtime, message.roomId);
+    const storedWallet = await getStoredWallet(runtime, message.userId);
 
     if (storedWallet) {
       if (!cacheObj.addresses) {
