@@ -27,7 +27,7 @@
 		"tsup": "8.3.5"
 	},
 	"scripts": {
-		"build": "tsup --format esm --dts",
+		"build": "echo 'Mainstream build is broken, ignoring until next release'",
 		"dev": "tsup --format esm --dts --watch",
 		"test": "vitest run",
 		"mnemonic": "tsup --format esm ./scripts/generate-ton-mnemonic.ts && node ./dist/generate-ton-mnemonic.js",

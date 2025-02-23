@@ -496,9 +496,6 @@ importers:
       '@elizaos/plugin-thirdweb':
         specifier: workspace:*
         version: link:../packages/plugin-thirdweb
-      '@elizaos/plugin-ton':
-        specifier: workspace:*
-        version: link:../packages/plugin-ton
       '@elizaos/plugin-trikon':
         specifier: workspace:*
         version: link:../packages/plugin-trikon
