@@ -961,6 +961,13 @@ export async function createAgent(
     //     );
     // }
 
+    let zilliqaPlugin: any | undefined;
+    if (getSecret(character, "ZILLIQA_PRIVATE_KEY")) {
+        zilliqaPlugin = await createZilliqaPlugin((secret) =>
+            getSecret(character, secret)
+        );
+    }
+
     // Initialize Reclaim adapter if environment variables are present
     // let verifiableInferenceAdapter;
     // if (
@@ -1521,7 +1528,7 @@ const startAgents = async () => {
         elizaLogger.log(`Server started on alternate port ${serverPort}`);
     }
 
-    elizaLogger.log(
+    elizaLogger.info(
         "Run `pnpm start:client` to start the client and visit the outputted URL (http://localhost:5173) to chat with your agents. When running multiple agents, use client with different port `SERVER_PORT=3001 pnpm start:client`"
     );
 };

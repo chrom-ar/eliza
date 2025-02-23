@@ -155,7 +155,7 @@ export function parseJSONObjectFromText(
             return extractAttributes(parsingText);
         }
     } else {
-        const objectPattern = /{[\s\S]*?}/;
+        const objectPattern = /{[\s\S]*?}?/;
         const objectMatch = text.match(objectPattern);
 
         if (objectMatch) {

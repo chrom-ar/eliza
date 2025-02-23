@@ -17,6 +17,7 @@ import {
     nativeWalletProvider,
 } from "../providers/wallet";
 import { internal } from "@ton/ton";
+import { base64ToHex, sleep } from "../utils/util";
 
 export interface TransferContent extends Content {
     recipient: string;

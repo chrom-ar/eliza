@@ -496,7 +496,24 @@ export class TwitterInteractionClient {
                         return memories;
                     };
 
-                    const responseMessages = await callback(response);
+                    const action = this.runtime.actions.find((a) => a.name === response.action);
+                    const shouldSuppressInitialMessage = action?.suppressInitialMessage;
+
+                    let responseMessages = [];
+
+                    if (!shouldSuppressInitialMessage) {
+                        responseMessages = await callback(response);
+                    } else {
+                        responseMessages = [{
+                            id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
+                            userId: this.runtime.agentId,
+                            agentId: this.runtime.agentId,
+                            content: response,
+                            roomId: message.roomId,
+                            embedding: getEmbeddingZeroVector(),
+                            createdAt: Date.now(),
+                        }];
+                    }
 
                     state = (await this.runtime.updateRecentMessageState(
                         state
