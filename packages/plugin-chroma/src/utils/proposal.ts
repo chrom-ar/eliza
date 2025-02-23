@@ -5,9 +5,8 @@ export const PROPOSAL_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface Proposal {
   number: number;
-  transactions?: any[];
-  transaction?: any;
-  titles?: string[];
+  transactions: any[];
+  titles: string[];
   description?: string;
   calls?: string[];
   simulation?: any;

@@ -40,10 +40,11 @@ describe('EVMLiFiSwap', () => {
       };
 
       const result = await evmSwap.buildSwapTransaction(message);
-      expect(result).toHaveProperty('transaction');
-      expect(result.transaction).toHaveProperty('value');
-      expect(result.transaction).toHaveProperty('gasPrice');
-      expect(result.transaction).toHaveProperty('gasLimit');
+      expect(result).toHaveProperty('transactions');
+      expect(result.transactions.length).toBe(1);
+      expect(result.transactions[0]).toHaveProperty('value');
+      expect(result.transactions[0]).toHaveProperty('gasPrice');
+      expect(result.transactions[0]).toHaveProperty('gasLimit');
 
       // Verify the mock was called with correct parameters
       expect(getQuote).toHaveBeenCalledWith(expect.objectContaining({

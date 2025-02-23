@@ -48,13 +48,15 @@ export class EVMLiFiSwap implements SwapBuilder {
       const transactionRequest = quote.transactionRequest;
 
       return {
-        transaction: {
-          ...transactionRequest,
-          value: BigInt(transactionRequest.value).toString(),
-          gasPrice: BigInt(transactionRequest.gasPrice).toString(),
-          gasLimit: BigInt(transactionRequest.gasLimit).toString()
-        }
-    };
+        transactions: [
+          {
+            ...transactionRequest,
+            value: BigInt(transactionRequest.value).toString(),
+            gasPrice: BigInt(transactionRequest.gasPrice).toString(),
+            gasLimit: BigInt(transactionRequest.gasLimit).toString()
+          }
+        ]
+      };
 
     } catch (error) {
       console.error("Error in buildSwapTransaction:", error);

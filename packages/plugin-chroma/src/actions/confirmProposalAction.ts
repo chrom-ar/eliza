@@ -105,31 +105,22 @@ export const confirmProposalAction: Action = {
     let links = ''
 
     try {
-        // @ts-ignore
-      const transactions = proposal.transactions || []
-        // @ts-ignore
-      if (proposal.transaction) {
-        // @ts-ignore
-        transactions.push(proposal.transaction)
-      }
+        const transactions = proposal.transactions || [];
 
-      let i = 0
-      for (let transaction of transactions) {
-        // tx = await provider.sendTransaction(proposal.transaction);
-        // TMP: Default agent SDK fails with `provider.sendTransaction`
-        const tx = await sendTransaction(provider, transaction, true);
+        let i = 0
+        for (let transaction of transactions) {
+            // tx = await provider.sendTransaction(proposal.transaction);
+            // TMP: Default agent SDK fails with `provider.sendTransaction`
+            const tx = await sendTransaction(provider, transaction, true);
+            links += `- ${proposal.titles[i]}: ${tx.transactionLink}\n`
+            i += 1
+        }
 
-        // @ts-ignore
-        links += `- ${proposal.titles[i]}: ${tx.transactionLink}\n`
-        i += 1
-      }
+        // Clean the proposals
+        await deleteProposals(runtime, message.userId, message.roomId);
 
-      // Clean the proposals
-      await deleteProposals(runtime, message.userId, message.roomId);
-
-      // @ts-ignore
-      callback({ text: `Transactions completed! \n${links}` });
-      return false
+        callback({ text: `Transactions completed! \n${links}` });
+        return false
     } catch (error) {
       console.log(error)
       elizaLogger.error('Error sending transactions:', error);
