@@ -1,7 +1,7 @@
 import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/core';
 import { elizaLogger } from '@elizaos/core';
 
-import { getWalletAndProvider, createWallet } from '../utils';
+import { getWalletAndProvider, createWallet } from '../utils/cdp';
 import { getStoredWallet, storeWallet, setWalletCache } from '../utils/walletData';
 
 const contextTemplate = `# Recent Messages

@@ -12,7 +12,7 @@ import {
 } from '@elizaos/core';
 import { z } from 'zod';
 
-import { getWalletAndProvider, sendTransaction } from '../utils';
+import { getWalletAndProvider, sendTransaction } from '../utils/cdp';
 import { getStoredWallet } from '../utils/walletData';
 import { getProposals, deleteProposals } from '../utils/proposal';
 
