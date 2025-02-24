@@ -6,12 +6,12 @@ import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { formatUnits, parseUnits } from 'viem';
 import { GeneralMessage } from './transactionHelpers';
 
-type WormholeChain = 
-  | "Ethereum" | "Sepolia" 
-  | "Optimism" | "OptimismSepolia" 
-  | "Arbitrum" | "ArbitrumSepolia" 
-  | "Base" | "BaseSepolia" 
-  | "Polygon" | "PolygonSepolia" 
+type WormholeChain =
+  | "Ethereum" | "Sepolia"
+  | "Optimism" | "OptimismSepolia"
+  | "Arbitrum" | "ArbitrumSepolia"
+  | "Base" | "BaseSepolia"
+  | "Polygon" | "PolygonSepolia"
   | "Solana";
 
 export function convertToWormholeChain(chain: string): WormholeChain {
@@ -29,7 +29,7 @@ export function convertToWormholeChain(chain: string): WormholeChain {
     'polygon-sepolia': 'PolygonSepolia',
     'solana': 'Solana'
   };
-  
+
   const normalizedChain = chain.toLowerCase();
   return chainMap[normalizedChain] || 'Ethereum';
 }
@@ -63,12 +63,12 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
   );
 
   const processedTxs = [];
-  
+
   for await (const tx of unsignedTxs) {
     const processedTx = JSON.parse(JSON.stringify(tx, (_, value) =>
       typeof value === 'bigint' ? value.toString() : value
     ));
-    
+
     // We have also the following fields in the tx object:
     // "network": "Testnet",
     // "chain": "Sepolia",

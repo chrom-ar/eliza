@@ -61,7 +61,7 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
     calls: [
       `Transfer`,
     ],
-    transaction: tx
+    transactions: [tx]
   };
 }
 

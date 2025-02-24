@@ -27,15 +27,11 @@ export async function validateAndBuildBridge(message: GeneralMessage): Promise<o
   }
 
   const bridgeResult = await buildBridgeTransaction(message);
-  const [firstTx, ...remainingTxs] = bridgeResult;
-  const transactionData = remainingTxs.length === 0
-    ? { transaction: firstTx.transaction }
-    : { transactions: bridgeResult.map(tx => tx.transaction) };
 
   return {
     description: 'Bridge',
     titles: bridgeResult.map(tx => tx.description),
     calls: [`Wormhole CCTP Bridge`],
-    ...transactionData
+    transactions: bridgeResult.map(tx => tx.transaction)
   };
 }
