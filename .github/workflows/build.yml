@@ -11,6 +11,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
 
     - name: Configure AWS credentials
       id: aws-credentials
