@@ -23,6 +23,8 @@
         "@libp2p/bootstrap": "^11.0.16",
         "@libp2p/tcp": "^10.0.15",
         "@waku/sdk": "0.0.30-9f1d8ca.0",
+        "@wormhole-foundation/sdk-connect": "1.10.0",
+        "bignumber.js": "9.0.1",
         "bs58": "^6.0.0",
         "protobufjs": "^7.4.0",
         "tweetnacl": "^1.0.3"
