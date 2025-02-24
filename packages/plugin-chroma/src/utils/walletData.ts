@@ -6,6 +6,11 @@ export interface WalletData {
   chains?: string;
 }
 
+export interface WalletByChain {
+  evmAddresses?: string[];
+  solanaAddresses?: string[];
+}
+
 export interface WalletMemory {
   walletId: string;
   address: string;
@@ -23,6 +28,12 @@ export async function setWalletCache(runtime: IAgentRuntime, userId: string, dat
   await runtime.cacheManager.set(cacheKey, data);
 }
 
+export async function getWalletCacheByChain(runtime: IAgentRuntime, userId: string): Promise<WalletByChain> {
+  const cacheKey = path.join(runtime.agentId, userId, 'blockchain-data');
+  const cacheObj = await runtime.cacheManager.get<WalletData>(cacheKey);
+  return categorizeAddresses(cacheObj?.addresses || '');
+}
+
 export async function getStoredWallet(runtime: IAgentRuntime, userId: string): Promise<WalletMemory | null> {
   const cacheKey = path.join(runtime.agentId, userId, 'wallet-data');
   const walletData = await runtime.cacheManager.get<WalletMemory>(cacheKey);
@@ -34,7 +45,7 @@ export async function storeWallet(runtime: IAgentRuntime, memory: Memory, wallet
   await runtime.cacheManager.set(cacheKey, walletData);
 }
 
-export function categorizeAddresses(addresses: string): { evmAddresses: string[], solanaAddresses: string[] } {
+export function categorizeAddresses(addresses: string): WalletByChain {
   const addressList = addresses.split(',').map(addr => addr.trim());
   return {
     evmAddresses: addressList.filter(addr => addr.toLowerCase().startsWith('0x')),
