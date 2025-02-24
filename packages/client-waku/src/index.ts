@@ -6,6 +6,8 @@ import { WakuClient } from './client';
  * Implement the main interface for the agent's plugin 'Client'.
  */
 export const WakuClientInterface: Client = {
+  name: 'waku',
+
   async start(runtime: IAgentRuntime) {
     if (this.instance) {
       console.log("WAKU CON INSTANCE")
@@ -25,11 +27,7 @@ export const WakuClientInterface: Client = {
     this.instance = client;
 
     return client;
-  },
-
-  async stop(_runtime: IAgentRuntime) {
-    elizaLogger.warn('Waku client does not support stopping yet');
-  },
+  }
 };
 
 export default WakuClientInterface;
