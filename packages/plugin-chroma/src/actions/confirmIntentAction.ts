@@ -44,7 +44,13 @@ export const confirmIntentAction: Action = {
     let finalText = ''
     const expiration = Date.now() + 6000;
 
-    const walletAddr = (await getStoredWallet(runtime, message.userId)).address
+    let walletAddr = (await getStoredWallet(runtime, message.userId))?.address
+
+    if (!walletAddr) {
+      const cachedWallet = await getWalletCache(runtime, message.userId)?.address
+
+      walletAddr = cachedWallet || intent.fromAddress
+    }
 
     // Subscribe to the room to receive the proposals
     await waku.subscribe(
@@ -63,6 +69,7 @@ export const confirmIntentAction: Action = {
 
           // @ts-ignore
           const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction])
+
 
           if (error) {
             memoryText += `\nSimulation error: ${error}\n`
@@ -91,7 +98,7 @@ export const confirmIntentAction: Action = {
       message.roomId
     );
 
-    // Sleep 5 seconds to wait for responses
+    // Sleep 6 seconds to wait for responses
     const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : 6000;
     await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
