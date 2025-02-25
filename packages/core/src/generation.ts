@@ -1320,7 +1320,7 @@ export async function generateText({
                     response = secretAiResponse;
                 }
                 break;
-
+  
             case ModelProviderName.BEDROCK: {
                 elizaLogger.debug("Initializing Bedrock model.");
 
@@ -1449,9 +1449,7 @@ export function splitText(content: string, chunkSize: number, bleed: number): st
     while (start < content.length) {
         const end = Math.min(start + chunkSize, content.length);
         chunks.push(content.substring(start, end));
-
-        // Only apply bleed if we're not at the end of the content
-        start = end < content.length ? Math.max(end - bleed, start + 1) : end;
+        start = end - bleed; // Apply overlap
     }
 
     return chunks;
@@ -2319,9 +2317,10 @@ async function handleOpenAI({
     provider,
     runtime,
 }: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
+    const endpoint =
+        runtime.character.modelEndpointOverride || getEndpoint(provider);
     const baseURL =
-        getCloudflareGatewayBaseURL(runtime, "openai") ||
-        models.openai.endpoint;
+        getCloudflareGatewayBaseURL(runtime, "openai") || endpoint;
     const openai = createOpenAI({ apiKey, baseURL });
     return await aiGenerateObject({
         model: openai.languageModel(model),
