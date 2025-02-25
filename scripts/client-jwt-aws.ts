@@ -1,4 +1,4 @@
-/* 
+/*
 This is a CLI for AWS Cognito user management.
 It allows you to create a new user account and get an access token for an existing user.
 
@@ -8,7 +8,7 @@ npm install @aws-sdk/client-cognito-identity-provider
 Set the following environment variables:
 AWS_COGNITO_EMAIL // your email
 AWS_COGNITO_PASSWORD // your password
-AWS_COGNITO_CLIENT_ID // Protocol client_id 
+AWS_COGNITO_CLIENT_ID // Protocol client_id
 AWS_COGNITO_USER_POOL_ID // Protocol user_pool_id
 AWS_COGNITO_REGION // Protocol region
 
@@ -39,7 +39,7 @@ const rl = readline.createInterface({
 
 
 async function signUp() {
-    return client.send(
+    return await client.send(
         new SignUpCommand({
             ClientId: clientId,
             Username: email,
@@ -56,7 +56,7 @@ async function signUp() {
 }
 
 async function confirmSignUp(confirmationCode: string) {
-    return client.send(
+    return await client.send(
         new ConfirmSignUpCommand({
             ClientId: clientId,
             ConfirmationCode: confirmationCode,
@@ -67,7 +67,7 @@ async function confirmSignUp(confirmationCode: string) {
 }
 
 async function initiateAuth() {
-    return client.send(new InitiateAuthCommand({
+    return await client.send(new InitiateAuthCommand({
         AuthFlow: "USER_PASSWORD_AUTH",
         ClientId: clientId,
         UserPoolId: userPoolId,

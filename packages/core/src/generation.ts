@@ -4,7 +4,6 @@ import { createMistral } from "@ai-sdk/mistral";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
 import { bedrock } from "@ai-sdk/amazon-bedrock";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import {
     generateObject as aiGenerateObject,
     generateText as aiGenerateText,
@@ -16,7 +15,7 @@ import { Buffer } from "buffer";
 import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
 import { encodingForModel, type TiktokenModel } from "js-tiktoken";
-import { AutoTokenizer } from "@huggingface/transformers";
+// import { AutoTokenizer } from "@huggingface/transformers";
 import Together from "together-ai";
 import type { ZodSchema } from "zod";
 import { elizaLogger } from "./index.ts";
@@ -43,9 +42,9 @@ import {
     ModelProviderName,
     ServiceType,
     type ActionResponse,
-    type IVerifiableInferenceAdapter,
-    type VerifiableInferenceOptions,
-    type VerifiableInferenceResult,
+    // type IVerifiableInferenceAdapter,
+    // type VerifiableInferenceOptions,
+    // type VerifiableInferenceResult,
     //VerifiableInferenceProvider,
     type TelemetrySettings,
     TokenizerType,
@@ -54,6 +53,9 @@ import { fal } from "@fal-ai/client";
 
 import BigNumber from "bignumber.js";
 import { createPublicClient, http } from "viem";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 type Tool = CoreTool<any, any>;
 type StepResult = AIStepResult<any>;
@@ -96,9 +98,9 @@ export async function trimTokens(
     }
 
     // Choose the truncation method based on tokenizer type
-    if (tokenizerType === TokenizerType.Auto) {
-        return truncateAuto(tokenizerModel, context, maxTokens);
-    }
+    // if (tokenizerType === TokenizerType.Auto) {
+    //     return truncateAuto(tokenizerModel, context, maxTokens);
+    // }
 
     if (tokenizerType === TokenizerType.TikToken) {
         return truncateTiktoken(
@@ -112,31 +114,31 @@ export async function trimTokens(
     return truncateTiktoken("gpt-4o", context, maxTokens);
 }
 
-async function truncateAuto(
-    modelPath: string,
-    context: string,
-    maxTokens: number
-) {
-    try {
-        const tokenizer = await AutoTokenizer.from_pretrained(modelPath);
-        const tokens = tokenizer.encode(context);
+// async function truncateAuto(
+//     modelPath: string,
+//     context: string,
+//     maxTokens: number
+// ) {
+//     try {
+//         const tokenizer = await AutoTokenizer.from_pretrained(modelPath);
+//         const tokens = tokenizer.encode(context);
 
-        // If already within limits, return unchanged
-        if (tokens.length <= maxTokens) {
-            return context;
-        }
+//         // If already within limits, return unchanged
+//         if (tokens.length <= maxTokens) {
+//             return context;
+//         }
 
-        // Keep the most recent tokens by slicing from the end
-        const truncatedTokens = tokens.slice(-maxTokens);
+//         // Keep the most recent tokens by slicing from the end
+//         const truncatedTokens = tokens.slice(-maxTokens);
 
-        // Decode back to text - js-tiktoken decode() returns a string directly
-        return tokenizer.decode(truncatedTokens);
-    } catch (error) {
-        elizaLogger.error("Error in trimTokens:", error);
-        // Return truncated string if tokenization fails
-        return context.slice(-maxTokens * 4); // Rough estimate of 4 chars per token
-    }
-}
+//         // Decode back to text - js-tiktoken decode() returns a string directly
+//         return tokenizer.decode(truncatedTokens);
+//     } catch (error) {
+//         elizaLogger.error("Error in trimTokens:", error);
+//         // Return truncated string if tokenization fails
+//         return context.slice(-maxTokens * 4); // Rough estimate of 4 chars per token
+//     }
+// }
 
 async function truncateTiktoken(
     model: TiktokenModel,
@@ -347,8 +349,8 @@ export async function generateText({
     maxSteps = 1,
     stop,
     customSystemPrompt,
-    verifiableInference = process.env.VERIFIABLE_INFERENCE_ENABLED === "true",
-    verifiableInferenceOptions,
+    // verifiableInference = process.env.VERIFIABLE_INFERENCE_ENABLED === "true",
+    // verifiableInferenceOptions,
 }: {
     runtime: IAgentRuntime;
     context: string;
@@ -358,9 +360,9 @@ export async function generateText({
     maxSteps?: number;
     stop?: string[];
     customSystemPrompt?: string;
-    verifiableInference?: boolean;
-    verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
-    verifiableInferenceOptions?: VerifiableInferenceOptions;
+    // verifiableInference?: boolean;
+    // verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
+    // verifiableInferenceOptions?: VerifiableInferenceOptions;
 }): Promise<string> {
     if (!context) {
         console.error("generateText context is empty");
@@ -372,36 +374,36 @@ export async function generateText({
     elizaLogger.info("Generating text with options:", {
         modelProvider: runtime.modelProvider,
         model: modelClass,
-        verifiableInference,
+        // verifiableInference,
     });
     elizaLogger.log("Using provider:", runtime.modelProvider);
     // If verifiable inference is requested and adapter is provided, use it
-    if (verifiableInference && runtime.verifiableInferenceAdapter) {
-        elizaLogger.log(
-            "Using verifiable inference adapter:",
-            runtime.verifiableInferenceAdapter
-        );
-        try {
-            const result: VerifiableInferenceResult =
-                await runtime.verifiableInferenceAdapter.generateText(
-                    context,
-                    modelClass,
-                    verifiableInferenceOptions
-                );
-            elizaLogger.log("Verifiable inference result:", result);
-            // Verify the proof
-            const isValid =
-                await runtime.verifiableInferenceAdapter.verifyProof(result);
-            if (!isValid) {
-                throw new Error("Failed to verify inference proof");
-            }
+    // if (verifiableInference && runtime.verifiableInferenceAdapter) {
+    //     elizaLogger.log(
+    //         "Using verifiable inference adapter:",
+    //         runtime.verifiableInferenceAdapter
+    //     );
+    //     try {
+    //         const result: VerifiableInferenceResult =
+    //             await runtime.verifiableInferenceAdapter.generateText(
+    //                 context,
+    //                 modelClass,
+    //                 verifiableInferenceOptions
+    //             );
+    //         elizaLogger.log("Verifiable inference result:", result);
+    //         // Verify the proof
+    //         const isValid =
+    //             await runtime.verifiableInferenceAdapter.verifyProof(result);
+    //         if (!isValid) {
+    //             throw new Error("Failed to verify inference proof");
+    //         }
 
-            return result.text;
-        } catch (error) {
-            elizaLogger.error("Error in verifiable inference:", error);
-            throw error;
-        }
-    }
+    //         return result.text;
+    //     } catch (error) {
+    //         elizaLogger.error("Error in verifiable inference:", error);
+    //         throw error;
+    //     }
+    // }
 
     const provider = runtime.modelProvider;
     elizaLogger.debug("Provider settings:", {
@@ -535,7 +537,8 @@ export async function generateText({
             case ModelProviderName.TOGETHER:
             case ModelProviderName.NINETEEN_AI:
             case ModelProviderName.AKASH_CHAT_API:
-            case ModelProviderName.LMSTUDIO: {
+            case ModelProviderName.LMSTUDIO:
+            case ModelProviderName.NEARAI: {
                 elizaLogger.debug(
                     "Initializing OpenAI model with Cloudflare check"
                 );
@@ -953,7 +956,7 @@ export async function generateText({
                         experimental_telemetry: experimental_telemetry,
                     });
 
-                    response = ollamaResponse;
+                    response = ollamaResponse.replace(/<think>[\s\S]*?<\/think>\s*\n*/g, '');
                 }
                 elizaLogger.debug("Received response from Ollama model.");
                 break;
@@ -1290,6 +1293,34 @@ export async function generateText({
                 break;
             }
 
+            case ModelProviderName.SECRETAI:
+                {
+                    elizaLogger.debug("Initializing SecretAI model.");
+
+                    const secretAiProvider = createOllama({
+                        baseURL: getEndpoint(provider) + "/api",
+                        fetch: runtime.fetch,
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${apiKey}`,
+                        }
+                    });
+                    const secretAi = secretAiProvider(model);
+
+                    const { text: secretAiResponse } = await aiGenerateText({
+                        model: secretAi,
+                        prompt: context,
+                        tools: tools,
+                        onStepFinish: onStepFinish,
+                        temperature: temperature,
+                        maxSteps: maxSteps,
+                        maxTokens: max_response_length,
+                    });
+
+                    response = secretAiResponse;
+                }
+                break;
+
             case ModelProviderName.BEDROCK: {
                 elizaLogger.debug("Initializing Bedrock model.");
 
@@ -1394,23 +1425,34 @@ export async function generateShouldRespond({
  */
 export async function splitChunks(
     content: string,
-    chunkSize = 512,
-    bleed = 20
+    chunkSize = 1500,
+    bleed = 100
 ): Promise<string[]> {
     elizaLogger.debug(`[splitChunks] Starting text split`);
 
-    const textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: Number(chunkSize),
-        chunkOverlap: Number(bleed),
-    });
+    const chunks = splitText(content, chunkSize, bleed);
 
-    const chunks = await textSplitter.splitText(content);
     elizaLogger.debug(`[splitChunks] Split complete:`, {
         numberOfChunks: chunks.length,
         averageChunkSize:
             chunks.reduce((acc, chunk) => acc + chunk.length, 0) /
             chunks.length,
     });
+
+    return chunks;
+}
+
+export function splitText(content: string, chunkSize: number, bleed: number): string[] {
+    const chunks: string[] = [];
+    let start = 0;
+
+    while (start < content.length) {
+        const end = Math.min(start + chunkSize, content.length);
+        chunks.push(content.substring(start, end));
+
+        // Only apply bleed if we're not at the end of the content
+        start = end < content.length ? Math.max(end - bleed, start + 1) : end;
+    }
 
     return chunks;
 }
@@ -1695,6 +1737,17 @@ export const generateImage = async (
                           return runtime.getSetting("VENICE_API_KEY");
                       case ModelProviderName.LIVEPEER:
                           return runtime.getSetting("LIVEPEER_GATEWAY_URL");
+                      case ModelProviderName.SECRETAI:
+                          return runtime.getSetting("SECRET_AI_API_KEY");
+                      case ModelProviderName.NEARAI:
+                          try {
+                            // Read auth config from ~/.nearai/config.json if it exists
+                            const config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.nearai/config.json'), 'utf8'));
+                            return JSON.stringify(config?.auth);
+                          } catch (e) {
+                            elizaLogger.warn(`Error loading NEAR AI config. The environment variable NEARAI_API_KEY will be used. ${e}`);
+                          }
+                          return runtime.getSetting("NEARAI_API_KEY");
                       default:
                           // If no specific match, try the fallback chain
                           return (
@@ -2069,9 +2122,9 @@ export interface GenerationOptions {
     stop?: string[];
     mode?: "auto" | "json" | "tool";
     experimental_providerMetadata?: Record<string, unknown>;
-    verifiableInference?: boolean;
-    verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
-    verifiableInferenceOptions?: VerifiableInferenceOptions;
+    // verifiableInference?: boolean;
+    // verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
+    // verifiableInferenceOptions?: VerifiableInferenceOptions;
 }
 
 /**
@@ -2103,9 +2156,9 @@ export const generateObject = async ({
     schemaDescription,
     stop,
     mode = "json",
-    verifiableInference = false,
-    verifiableInferenceAdapter,
-    verifiableInferenceOptions,
+    // verifiableInference = false,
+    // verifiableInferenceAdapter,
+    // verifiableInferenceOptions,
 }: GenerationOptions): Promise<GenerateObjectResult<unknown>> => {
     if (!context) {
         const errorMessage = "generateObject context is empty";
@@ -2149,9 +2202,9 @@ export const generateObject = async ({
             runtime,
             context,
             modelClass,
-            verifiableInference,
-            verifiableInferenceAdapter,
-            verifiableInferenceOptions,
+            // verifiableInference,
+            // verifiableInferenceAdapter,
+            // verifiableInferenceOptions,
         });
 
         return response;
@@ -2177,9 +2230,9 @@ interface ProviderOptions {
     modelOptions: ModelSettings;
     modelClass: ModelClass;
     context: string;
-    verifiableInference?: boolean;
-    verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
-    verifiableInferenceOptions?: VerifiableInferenceOptions;
+    // verifiableInference?: boolean;
+    // verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
+    // verifiableInferenceOptions?: VerifiableInferenceOptions;
 }
 
 /**
@@ -2238,8 +2291,10 @@ export async function handleProvider(
             return await handleDeepSeek(options);
         case ModelProviderName.LIVEPEER:
             return await handleLivepeer(options);
-        case ModelProviderName.BEDROCK:
-            return await handleBedrock(options);
+        case ModelProviderName.SECRETAI:
+            return await handleSecretAi(options);
+        case ModelProviderName.NEARAI:
+            return await handleNearAi(options);
         default: {
             const errorMessage = `Unsupported provider: ${provider}`;
             elizaLogger.error(errorMessage);
@@ -2579,6 +2634,68 @@ async function handleLivepeer({
 
     return await aiGenerateObject({
         model: livepeerClient.languageModel(model),
+        schema,
+        schemaName,
+        schemaDescription,
+        mode,
+        ...modelOptions,
+    });
+}
+
+/**
+ * Handles object generation for Secret AI models.
+ *
+ * @param {ProviderOptions} options - Options specific to Secret AI.
+ * @returns {Promise<GenerateObjectResult<unknown>>} - A promise that resolves to generated objects.
+ */
+async function handleSecretAi({
+    model,
+    apiKey,
+    schema,
+    schemaName,
+    schemaDescription,
+    mode = "json",
+    modelOptions,
+    provider,
+}: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
+    const secretAiProvider = createOllama({
+        baseURL: getEndpoint(provider) + "/api",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        }
+    });
+    const secretAi = secretAiProvider(model);
+    return await aiGenerateObject({
+        model: secretAi,
+        schema,
+        schemaName,
+        schemaDescription,
+        mode,
+        ...modelOptions,
+    });
+}
+
+/**
+ * Handles object generation for NEAR AI models.
+ *
+ * @param {ProviderOptions} options - Options specific to NEAR AI.
+ * @returns {Promise<GenerateObjectResult<unknown>>} - A promise that resolves to generated objects.
+ */
+async function handleNearAi({
+    model,
+    apiKey,
+    schema,
+    schemaName,
+    schemaDescription,
+    mode = "json",
+    modelOptions,
+}: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
+    const nearai = createOpenAI({ apiKey, baseURL: models.nearai.endpoint });
+    // Require structured output if schema is provided
+    const settings = schema ? { structuredOutputs: true } : undefined;
+    return await aiGenerateObject({
+        model: nearai.languageModel(model, settings),
         schema,
         schemaName,
         schemaDescription,
