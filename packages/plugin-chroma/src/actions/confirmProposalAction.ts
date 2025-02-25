@@ -13,7 +13,7 @@ import {
 import { z } from 'zod';
 
 import { getWalletAndProvider, sendTransaction } from '../utils/cdp';
-import { getStoredWallet } from '../utils/walletData';
+import { getDefaultWallet } from '../utils/walletData';
 import { getProposals, deleteProposals } from '../utils/proposal';
 
 const contextTemplate = `# Recent Messages
@@ -81,23 +81,15 @@ export const confirmProposalAction: Action = {
       return false;
     }
 
-    // Check if user already has a wallet
-    const existingWallet = await getStoredWallet(runtime, message.userId);
+    // Check if user has a wallet
+    const existingWallet = await getDefaultWallet(runtime, message.userId);
 
-    if (!existingWallet) {
-      callback({ text: 'Sorry, We need a wallet to continue. Do you want me to create a wallet?' });
+    if (!existingWallet || !existingWallet.canSign) {
+      callback({ text: 'You need a wallet to execute this transaction. Would you like me to create one for you?' });
       return false;
     }
 
-    let wallet, provider;
-    try {
-      [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
-    } catch (error) {
-      console.log(error)
-      elizaLogger.error('Error importing existing wallet:', error);
-      callback({ text: 'Sorry, there was an error importing your wallet. Please try again.' });
-      return false;
-    }
+    const [_wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
 
     await deleteProposals(runtime, message.userId, message.roomId);
 
@@ -111,7 +103,7 @@ export const confirmProposalAction: Action = {
         for (let transaction of transactions) {
             // tx = await provider.sendTransaction(proposal.transaction);
             // TMP: Default agent SDK fails with `provider.sendTransaction`
-            const tx = await sendTransaction(provider, transaction, true);
+            const tx = await sendTransaction(provider, transaction, true) as { transactionLink: string };
             links += `- ${proposal.titles[i]}: ${tx.transactionLink}\n`
             i += 1
         }

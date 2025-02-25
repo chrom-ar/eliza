@@ -96,8 +96,8 @@ export const parseBridgeAction: Action = {
     }
 
     const { amount, fromToken, fromChain, recipientChain } = intentData;
-    const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}. Would you like to confirm t
-his bridge operation?`;
+    const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}.
+Would you like to confirm this bridge operation?`;
 
     const intentManager = new MemoryManager({
       runtime,

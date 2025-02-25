@@ -2,7 +2,7 @@ import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/
 import { elizaLogger } from '@elizaos/core';
 
 import { getWalletAndProvider, getBalanceFor } from '../utils/cdp';
-import { getStoredWallet } from '../utils/walletData';
+import { getDefaultWallet } from '../utils/walletData';
 
 // For showcase purposes
 const EXTRA_BALANCES: Record<string, Record<string, string>> = {
@@ -38,9 +38,9 @@ export const getBalanceAction: Action = {
   handler: async (runtime: IAgentRuntime, message: Memory, _state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     try {
       // Get user's wallet from cache
-      const existingWallet = await getStoredWallet(runtime, message.userId);
+      const existingWallet = await getDefaultWallet(runtime, message.userId);
 
-      if (!existingWallet) {
+      if (!existingWallet || !existingWallet.canSign) {
         callback({
           text: "You don't have a wallet yet. Would you like me to create a new wallet for you?",
           needsWallet: true
@@ -48,7 +48,6 @@ export const getBalanceAction: Action = {
         return true;
       }
 
-      // Fetch the wallet
       const [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
       const walletAddress = (await wallet.getDefaultAddress()).getId();
       const balances = await wallet.listBalances();

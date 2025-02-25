@@ -1,7 +1,7 @@
 import { Evaluator, IAgentRuntime, Memory, ModelClass } from '@elizaos/core';
 import { generateObject } from '@elizaos/core';
 import { z } from 'zod';
-import * as path from 'path';
+import { getAllWallets, addWallet, WalletType } from '../utils/walletData';
 
 /**
  * An evaluator that tries to parse a user's message for wallet data
@@ -10,65 +10,44 @@ import * as path from 'path';
 export const walletEvaluator: Evaluator = {
   name: 'GET_WALLET_DATA',
   similes: ['EXTRACT_WALLET_DATA'],
-  description: 'Collect wallet address and chains from the user, storing in cache',
+  description: 'Collect wallet addresses and chains from the user message',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
-    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
-    const dataInCache = await runtime.cacheManager.get<{
-      addresses?: string;
-      chains?: string;
-    }>(cacheKey);
+    const wallets = await getAllWallets(runtime, message.userId);
 
-    if (!dataInCache) {
-      // This call should be made by the framework, but for some reason it's not working
-      // So we're calling it manually here
-      await walletEvaluator.handler(runtime, message);
-      return true;
-    }
-
-    const hasAddresses = Boolean(dataInCache.addresses);
-    const hasChains = Boolean(dataInCache.chains);
-
-    if (hasAddresses && hasChains) {
+    // If we already have wallet data, don't need to extract more
+    if (wallets.length > 0) {
       return false;
     }
 
-    // Again, this call should be made by the framework, but for some reason it's not working
-    // So we're calling it manually here
+    // No wallets found, try to extract from message
     await walletEvaluator.handler(runtime, message);
     return true;
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory) => {
-    // 1. Build cache key
-    const cacheKey = path.join(runtime.agentId, message.userId, 'blockchain-data');
-
-    // 2. Retrieve old data
-    let cached = await runtime.cacheManager.get<{
-      addresses?: string;
-      chains?: string;
-    }>(cacheKey);
-
-    if (!cached) {
-      cached = { addresses: undefined, chains: undefined };
-    }
-
-    // 3. Define schema for wallet data extraction
-    const walletSchema = z.object({
-      addresses: z.string().nullable(),
-      chains: z.string().nullable()
+    const walletExtractionSchema = z.object({
+      wallets: z.array(z.object({
+        address: z.string(),
+        chains: z.array(z.string()),
+      }))
     });
 
     const prompt = `
-    Extract wallet address and preferred chains from this message, if any.
-    Return null if no addresses or chains are found.
+    Extract wallet addresses and their associated blockchain networks from this message.
 
-    - If the user presents more than one address, return them as one string, comma-separated values.
-    - If the user presents more than one chain, return them as one string, comma-separated values.
-    - For addresses, include both EVM (0x...) and Solana addresses.
-    - If there is a Solana address (no 0x starting), include then Solana chain, even if no explicit chain is mentioned.
-    - Do not return any other text, actions or comments.
-    - Do not return arrays or objects, just strings.
+    Guidelines:
+    - For each wallet address found, identify which blockchain networks/chains it belongs to
+    - EVM addresses start with "0x" and can be used on Ethereum, Polygon, BSC, Arbitrum, Optimism, etc.
+    - Solana addresses don't start with "0x" and are used on the Solana blockchain
+    - If no specific chains are mentioned for an address, use the following defaults:
+      * For EVM addresses (0x...): ["ethereum", "sepolia", "base", "base-sepolia"]
+      * For Solana addresses: ["solana"]
+    - Return an empty array if no wallet addresses are found
+
+    Format the response as an array of wallet objects, each with:
+    - address: The wallet address string
+    - chains: Array of blockchain networks this address is used on
 
     User message:
     \`\`\`
@@ -76,34 +55,39 @@ export const walletEvaluator: Evaluator = {
     \`\`\`
     `;
 
-    // 4. Extract wallet info using AI
-    const extractedData = (await generateObject({
+    // Extract wallet info using AI
+    const extractionResult = await generateObject({
       runtime,
       modelClass: ModelClass.MEDIUM,
-      schema: walletSchema,
+      schema: walletExtractionSchema,
       context: prompt
-    })).object as z.infer<typeof walletSchema>;
+    });
 
-    // 5. Update cache with new data if found
-    if (extractedData.addresses) {
-      cached.addresses = extractedData.addresses;
+    const extractedData = extractionResult.object as z.infer<typeof walletExtractionSchema>;
+    let success = false;
+
+    // Add each extracted wallet
+    if (extractedData.wallets && extractedData.wallets.length > 0) {
+      for (const wallet of extractedData.wallets) {
+        await addWallet(runtime, message.userId, {
+          address: wallet.address,
+          chains: wallet.chains,
+          canSign: false
+        });
+        success = true;
+      }
     }
 
-    if (extractedData.chains) {
-      cached.chains = extractedData.chains;
-    }
-
-    // 6. Update the cache
-    await runtime.cacheManager.set(cacheKey, cached);
-
-    // 7. Return result
+    // Return result
     const resultObj = {
-      success: true,
+      success,
       data: {
-        addresses: cached.addresses ?? undefined,
-        chains: cached.chains ?? undefined,
+        walletsAdded: extractedData.wallets?.length || 0,
+        wallets: extractedData.wallets || []
       },
-      message: 'Updated wallet info in cache',
+      message: success
+        ? `Added ${extractedData.wallets.length} wallet(s) to storage`
+        : 'No wallet data extracted',
     };
 
     return JSON.stringify(resultObj);
@@ -111,28 +95,28 @@ export const walletEvaluator: Evaluator = {
 
   examples: [
     {
-      context: 'User wants to share wallet data quickly',
+      context: 'User shares a single wallet address with chains',
       messages: [
         {
           user: 'Alice',
           content: {
-            text: 'My address is 0xABc1234 and the chains: Ethereum, BSC',
+            text: 'My address is 0xABc1234 and I use it on Ethereum and BSC',
           },
         },
       ],
-      outcome: '{"success":true,"data":{"addresses":"0xABc1234","chains":"Ethereum,BSC"},"message":"Updated wallet info in cache"}',
+      outcome: '{"success":true,"data":{"walletsAdded":1,"wallets":[{"address":"0xABc1234","chains":["ethereum","bsc"]}]},"message":"Added 1 wallet(s) to storage"}',
     },
     {
-      context: 'User wants to share wallet data quickly',
+      context: 'User shares multiple wallet addresses',
       messages: [
         {
           user: 'Alice',
           content: {
-            text: 'My address is 0xABc1234 and the chains: Polygon and yjAgent123 in Solana',
+            text: 'I have 0xABc1234 on Polygon and also yjAgent123 for Solana',
           },
         },
       ],
-      outcome: '{"success":true,"data":{"addresses":"0xABc1234,yjAgent123","chains":"Polygon,Solana"},"message":"Updated wallet info in cache"}',
+      outcome: '{"success":true,"data":{"walletsAdded":2,"wallets":[{"address":"0xABc1234","chains":["polygon"]},{"address":"yjAgent123","chains":["solana"]}]},"message":"Added 2 wallet(s) to storage"}',
     },
   ],
 };
