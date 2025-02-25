@@ -1,6 +1,6 @@
 import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, composeContext, generateObject, MemoryManager, elizaLogger } from '@elizaos/core';
 import { z } from 'zod';
-import { getStoredWallet } from '../utils/walletData';
+import { getDefaultWallet } from '../utils/walletData';
 
 // Define the schema for transfer intent
 const yieldSchema = z.object({
@@ -60,7 +60,7 @@ export const parseYieldAction: Action = {
     }
 
     // Check if user already has a wallet
-    const existingWallet = await getStoredWallet(runtime, message.userId);
+    const existingWallet = await getDefaultWallet(runtime, message.userId);
 
     if (!existingWallet) {
       callback({ text: 'We need a wallet to continue. Do you want me to create a wallet?' });

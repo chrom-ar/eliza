@@ -2,7 +2,7 @@ import { Action, Memory, IAgentRuntime, HandlerCallback, State } from '@elizaos/
 import { elizaLogger } from '@elizaos/core';
 
 import { getWalletAndProvider, createWallet } from '../utils/cdp';
-import { getStoredWallet, storeWallet, setWalletCache } from '../utils/walletData';
+import { getDefaultWallet, addWallet } from '../utils/walletData';
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -27,10 +27,10 @@ export const createWalletAction: Action = {
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
     try {
       // Check if user already has a wallet
-      const existingWallet = await getStoredWallet(runtime, message.userId);
+      const existingWallet = await getDefaultWallet(runtime, message.userId);
 
       let wallet;
-      if (existingWallet) {
+      if (existingWallet && existingWallet.canSign) {
         // Wallet exists, try to import it
         try {
           [wallet] = await getWalletAndProvider(runtime, existingWallet.walletId);
@@ -59,7 +59,7 @@ export const createWalletAction: Action = {
       wallet = await createWallet(runtime);
       const walletId = wallet.getId();
       const walletAddress = (await wallet.getDefaultAddress()).id;
-      const networkId = wallet.getNetworkId()
+      const networkId = wallet.getNetworkId();
 
       try {
         // Fund the wallet TMP only testnet
@@ -68,17 +68,12 @@ export const createWalletAction: Action = {
         console.log(error)
       }
 
-      // Store wallet data
-      await storeWallet(runtime, message, {
-        walletId,
+      // Store wallet data using the simplified API with walletId
+      await addWallet(runtime, message.userId, {
         address: walletAddress,
-        network: networkId
-      });
-
-      // Update wallet cache
-      await setWalletCache(runtime, message.userId, {
-        addresses: walletAddress,
-        chains: networkId
+        chains: [networkId],
+        canSign: true,
+        walletId
       });
 
       callback({

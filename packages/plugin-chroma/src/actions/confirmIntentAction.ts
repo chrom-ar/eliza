@@ -1,7 +1,7 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
 import { WakuClient } from '../lib/waku-client';
 
-import { getStoredWallet, getWalletCacheByChain } from '../utils/walletData';
+import { getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
@@ -44,15 +44,7 @@ export const confirmIntentAction: Action = {
     let finalText = ''
     const expiration = Date.now() + 6000;
 
-    let walletAddr = (await getStoredWallet(runtime, message.userId))?.address
-
-    if (!walletAddr) {
-      const cachedWallet = (await getWalletCacheByChain(runtime, message.userId))?.evmAddresses?.[0]
-
-      // Let's prefer the intent's fromAddress if it exists
-      // @ts-ignore
-      walletAddr = intent?.fromAddress || cachedWallet
-    }
+    const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
 
     // Subscribe to the room to receive the proposals
     await waku.subscribe(
