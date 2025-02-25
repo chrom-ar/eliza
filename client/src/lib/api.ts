@@ -1,6 +1,38 @@
 import type { UUID, Character } from "@elizaos/core";
+import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
 
 const BASE_URL = import.meta.env.VITE_API_SERVER_URL || `http://localhost:${import.meta.env.VITE_SERVER_PORT}`;
+
+const getJwtToken = async () => {
+    let token = localStorage.getItem("jwtToken");
+    const tokenExp = localStorage.getItem("jwtTokenExp");
+    if (!token || !tokenExp || Date.now() > parseInt(tokenExp)) {
+        const email = process.env.AWS_COGNITO_EMAIL;
+        const password = process.env.AWS_COGNITO_PASSWORD;
+        // Protol data:
+        const clientId = process.env.AWS_COGNITO_CLIENT_ID;
+        const userPoolId = process.env.AWS_COGNITO_USER_POOL_ID;
+        const region = process.env.AWS_COGNITO_REGION;
+
+        const client = new CognitoIdentityProviderClient({ region });
+        const response = await client.send(new InitiateAuthCommand({
+            AuthFlow: "USER_PASSWORD_AUTH",
+            ClientId: clientId,
+            UserPoolId: userPoolId,
+            AuthParameters: {
+                USERNAME: email!,
+                PASSWORD: password!,
+            },
+        }))
+
+        if (response.AuthenticationResult?.AccessToken) {
+            token = response.AuthenticationResult!.AccessToken!
+            localStorage.setItem("jwtToken", token);
+            localStorage.setItem("jwtTokenExp", (Date.now() + response.AuthenticationResult!.ExpiresIn! * 1000).toString());
+        }
+    }
+    return token;
+}
 
 const fetcher = async ({
     url,
@@ -24,6 +56,8 @@ const fetcher = async ({
     };
 
     if (method === "POST") {
+        // @ts-ignore
+        body.append("jwtToken", await getJwtToken());
         if (body instanceof FormData) {
             if (options.headers && typeof options.headers === 'object') {
                 // Create new headers object without Content-Type
@@ -58,7 +92,7 @@ const fetcher = async ({
 
             throw new Error(errorMessage);
         }
-            
+
         return resp.json();
     });
 };
@@ -71,7 +105,7 @@ export const apiClient = {
     ) => {
         const formData = new FormData();
         formData.append("text", message);
-        formData.append("user", "user");
+        // formData.append("user", "user");
 
         if (selectedFile) {
             formData.append("file", selectedFile);

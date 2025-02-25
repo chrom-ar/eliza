@@ -27,6 +27,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 import OpenAI from "openai";
+import { tryJWTWithoutError } from "./jwt.ts";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -191,13 +192,15 @@ export class DirectClient {
 
         this.app.post(
             "/:agentId/message",
+            tryJWTWithoutError, 
             upload.single("file"),
             async (req: express.Request, res: express.Response) => {
                 const agentId = req.params.agentId;
+
                 const roomId = stringToUuid(
-                    req.body.roomId ?? "default-room-" + agentId
+                    req.jwtUserId ?? req.body.roomId ?? "default-room-" + agentId
                 );
-                const userId = stringToUuid(req.body.userId ?? "user");
+                const userId = stringToUuid(req.jwtUserId ?? req.params.userId ?? "user");
 
                 let runtime = this.agents.get(agentId);
 
