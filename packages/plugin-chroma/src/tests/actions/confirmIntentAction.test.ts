@@ -42,8 +42,22 @@ vi.mock('../../lib/waku-client', () => ({
 }));
 
 vi.mock('../../utils/walletData', () => ({
-    getStoredWallet: vi.fn().mockResolvedValue({ address: '0x123', walletId: '0123-456', network: 'base-sepolia' }),
-    storeWallet: vi.fn()
+    getDefaultWallet: vi.fn().mockResolvedValue({
+        address: '0x123',
+        chains: ['base-sepolia'],
+        default: true,
+        canSign: true,
+        walletId: '0123-456'
+    }),
+    getWalletsByType: vi.fn().mockResolvedValue([
+        {
+            address: '0x123',
+            chains: ['base-sepolia'],
+            default: true,
+            canSign: true,
+            walletId: '0123-456'
+        }
+    ])
 }));
 
 vi.mock('@elizaos/core', async (importOriginal) => {

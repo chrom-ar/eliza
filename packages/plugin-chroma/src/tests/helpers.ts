@@ -6,7 +6,7 @@ import {
     IAgentRuntime,
 } from '@elizaos/core';
 
-import { SqliteDatabaseAdapter, loadVecExtensions } from "@elizaos/adapter-sqlite";
+import { SqliteDatabaseAdapter, loadVecExtensions } from "@elizaos-plugins/adapter-sqlite";
 import Sqlite3 from "better-sqlite3";
 
 export const createRuntime = async (): Promise<IAgentRuntime> => {
@@ -27,6 +27,22 @@ export const createRuntime = async (): Promise<IAgentRuntime> => {
         evaluators: [],
         providers: [],
         cacheManager: new CacheManager(new MemoryCacheAdapter()),
+        character: {
+            name: "TestCharacter",
+            modelProvider: ModelProviderName.OLLAMA,
+            bio: "Test character for unit tests",
+            lore: [],
+            messageExamples: [],
+            postExamples: [],
+            topics: [],
+            adjectives: [],
+            plugins: [],
+            style: {
+                all: [],
+                chat: [],
+                post: [],
+            },
+        },
     });
 
     await mockRuntime.initialize()

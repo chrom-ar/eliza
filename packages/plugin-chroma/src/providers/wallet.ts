@@ -1,6 +1,6 @@
 import { Provider, IAgentRuntime, Memory, State } from '@elizaos/core';
 import Handlebars from 'handlebars';
-import { getWalletCache, categorizeAddresses, getStoredWallet } from '../utils/walletData';
+import { getAllWallets, getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 
 /**
  * This template is an example.
@@ -23,6 +23,7 @@ const allDataCollectedTemplate = Handlebars.compile(`
 - EVM addresses: {{evmAddresses}}
 - Solana ONLY addresses: {{solanaAddresses}}
 - Preferred chains: {{chains}}
+- Default wallet: {{defaultWallet}} ({{defaultWalletType}})
 
 Use this when you need to know the user's wallet data and no other context is given.`);
 
@@ -32,80 +33,46 @@ export const walletProvider: Provider = {
    * including instructions if data is missing.
    */
   get: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
-    // 1. Get wallet data from cache
-    const cacheObj = await getWalletCache(runtime, message.userId);
+    // Get all wallets
+    const wallets = await getAllWallets(runtime, message.userId);
+    const defaultWallet = await getDefaultWallet(runtime, message.userId);
 
-    // 2. Get stored wallet if exists
-    const storedWallet = await getStoredWallet(runtime, message.userId);
+    // If no wallets found, provide instructions
+    if (wallets.length === 0) {
+      return `
+We have no wallet data for this user yet.
 
-    if (storedWallet) {
-      if (!cacheObj.addresses) {
-        cacheObj.addresses = storedWallet.address;
-      } else if (!cacheObj.addresses.includes(storedWallet.address)) {
-        cacheObj.addresses = `${cacheObj.addresses},${storedWallet.address}`;
-      }
-
-      if (!cacheObj.chains) {
-        cacheObj.chains = storedWallet.network;
-      } else if (!cacheObj.chains.includes(storedWallet.network)) {
-        cacheObj.chains = `${cacheObj.chains},${storedWallet.network}`;
-      }
+Instructions for collecting missing data:
+- Ask the user to share their blockchain wallet addresses. The user may have multiple addresses across different chains.
+- Ask the user which blockchain networks they primarily interact with. Examples include Ethereum, BSC, Polygon, or Solana.
+- If the user asks for a wallet to be created, then omit the previous questions.
+`.trim();
     }
 
-    // 3. Check which data is missing
-    const hasAddresses = Boolean(cacheObj.addresses);
-    const hasChains = Boolean(cacheObj.chains);
+    // Categorize addresses by type
+    const evmAddresses = (await getWalletsByType(runtime, message.userId, 'evm'))
+      .map(wallet => wallet.address);
 
-    // 4. If all data is available, present final info
-    if (hasAddresses && hasChains) {
-      const { evmAddresses, solanaAddresses } = categorizeAddresses(cacheObj.addresses!);
+    const solanaAddresses = (await getWalletsByType(runtime, message.userId, 'solana'))
+      .map(wallet => wallet.address);
 
-      return allDataCollectedTemplate({
-        evmAddresses: evmAddresses.length ? evmAddresses.join(', ') : 'None',
-        solanaAddresses: solanaAddresses.length ? solanaAddresses.join(', ') : 'None',
-        chains: cacheObj.chains!
-      }).trim();
-    }
+    // Collect all unique chains
+    const allChains = new Set<string>();
 
-    // 5. Build partial summary
-    let context: Record<string, string>;
-    if (hasAddresses) {
-      const { evmAddresses, solanaAddresses } = categorizeAddresses(cacheObj.addresses!);
-      context = {
-        evmAddresses: evmAddresses.length ? evmAddresses.join(', ') : 'None',
-        solanaAddresses: solanaAddresses.length ? solanaAddresses.join(', ') : 'None',
-        chains: cacheObj.chains ?? 'None'
-      };
-    } else {
-      context = {
-        evmAddresses: 'None',
-        solanaAddresses: 'None',
-        chains: cacheObj.chains ?? 'None'
-      };
-    }
+    wallets.forEach(wallet => {
+      wallet.chains.forEach(chain => allChains.add(chain));
+    });
 
-    const partialSummary = summaryTemplate(context);
+    const chainsStr = Array.from(allChains).join(', ');
+    const defaultWalletType = defaultWallet ? getWalletType(defaultWallet) : 'none';
 
-    // 6. Build instructions for missing info
-    const missingParts: string[] = [];
-    if (!hasAddresses) {
-      missingParts.push(
-        '- Ask the user to share their blockchain wallet addresses. The user may have multiple addresses across different chains.',
-        '- If the user asks for a wallet to be created, then ommit the previous question.'
-      );
-    }
-    if (!hasChains) {
-      missingParts.push(
-        '- Ask the user which blockchain networks they primarily interact with. Examples include Ethereum, BSC, Polygon, or Solana.',
-        '- If the user asks for a wallet to be created, then ommit the previous question.'
-      );
-    }
-
-    // 7. Return the compiled text with instructions header
-    const instructions = missingParts.length > 0
-      ? `\nInstructions for collecting missing data:\n${missingParts.join('\n')}`
-      : '';
-
-    return `${partialSummary.trim()}${instructions}`;
+    // Present the wallet information
+    return allDataCollectedTemplate({
+      evmAddresses: evmAddresses.length ? evmAddresses.join(', ') : 'None',
+      solanaAddresses: solanaAddresses.length ? solanaAddresses.join(', ') : 'None',
+      chains: chainsStr || 'None',
+      defaultWallet: defaultWallet ? defaultWallet.address : 'None',
+      defaultWalletType
+    }).trim();
   },
 };

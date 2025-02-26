@@ -1320,7 +1320,7 @@ export async function generateText({
                     response = secretAiResponse;
                 }
                 break;
-  
+
             case ModelProviderName.BEDROCK: {
                 elizaLogger.debug("Initializing Bedrock model.");
 
@@ -1449,7 +1449,8 @@ export function splitText(content: string, chunkSize: number, bleed: number): st
     while (start < content.length) {
         const end = Math.min(start + chunkSize, content.length);
         chunks.push(content.substring(start, end));
-        start = end - bleed; // Apply overlap
+        // Only apply bleed if we're not at the end of the content
+        start = end < content.length ? Math.max(end - bleed, start + 1) : end;
     }
 
     return chunks;
