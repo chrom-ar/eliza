@@ -8,26 +8,39 @@ const BASE_URL =
 console.log({ BASE_URL });
 
 const getJwtToken = async () => {
+    console.log('api.ts:10');
     let token = localStorage.getItem("jwtToken");
+    console.log('api.ts:12');
     const tokenExp = localStorage.getItem("jwtTokenExp");
+    console.log('api.ts:14');
     if (!token || token != '' ||  !tokenExp || Date.now() > parseInt(tokenExp)) {
-        const email = process.env.AWS_COGNITO_EMAIL;
-        const password = process.env.AWS_COGNITO_PASSWORD;
+        console.log('api.ts:16');
+        const email    = import.meta.env.VITE_AWS_COGNITO_EMAIL;
+        const password = import.meta.env.VITE_AWS_COGNITO_PASSWORD;
         // Protol data:
-        const clientId = process.env.AWS_COGNITO_CLIENT_ID;
-        // const userPoolId = process.env.AWS_COGNITO_USER_POOL_ID;
-        const region = process.env.AWS_COGNITO_REGION;
+        const clientId = import.meta.env.VITE_AWS_COGNITO_CLIENT_ID;
+        const userPoolId = import.meta.env.VITE_AWS_COGNITO_USER_POOL_ID;
+        const region   = import.meta.env.VITE_AWS_COGNITO_REGION;
+        console.log('api.ts:23', { email, password, clientId, userPoolId, region });
 
-        const client = new CognitoIdentityProviderClient({ region });
+            // @ts-ignore
+        const client = new CognitoIdentityProviderClient({ Region: region , region });
+        console.log('api.ts:26');
+        try {
         const response = await client.send(new InitiateAuthCommand({
             AuthFlow: "USER_PASSWORD_AUTH",
             ClientId: clientId,
-            // UserPoolId: userPoolId,
+            // @ts-ignore
+            Region: region,
+            // @ts-ignore
+            UserPoolId: userPoolId,
             AuthParameters: {
                 USERNAME: email!,
                 PASSWORD: password!,
             },
         }))
+
+        console.log('api.ts:36');
 
         if (response.AuthenticationResult?.AccessToken) {
             token = response.AuthenticationResult!.AccessToken!
@@ -36,8 +49,11 @@ const getJwtToken = async () => {
         } else {
             console.log("BOMBITA: ", response)
         }
+        }catch (e) {
+            console.error("BOOOOM: ", e);
+        }
     }
-    return token;
+    return token ? `Bearer ${token}` : "";
 }
 
 const fetcher = async ({
@@ -62,8 +78,10 @@ const fetcher = async ({
     };
 
     if (method === "POST") {
+
+        console.log('api.ts:65', "hasta aca anda...");
         // @ts-ignore
-        body.append("jwtToken", await getJwtToken());
+        options.headers["Authorization"] = await getJwtToken();
         if (body instanceof FormData) {
             if (options.headers && typeof options.headers === "object") {
                 // Create new headers object without Content-Type
