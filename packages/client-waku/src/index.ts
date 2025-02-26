@@ -6,7 +6,7 @@ import { WakuClient } from './client';
  * Implement the main interface for the agent's plugin 'Client'.
  */
 export const WakuClientInterface: Client = {
-  name: 'WakuClient',
+  name: 'waku',
 
   async start(runtime: IAgentRuntime) {
     if (this.instance)
