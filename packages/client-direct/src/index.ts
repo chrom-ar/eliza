@@ -28,6 +28,7 @@ import * as path from "path";
 import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
+import { tryJWTWithoutError } from "./jwt.ts";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -192,13 +193,11 @@ export class DirectClient {
 
         this.app.post(
             "/:agentId/message",
+            tryJWTWithoutError,
+            // TODO: Here we should enforce JWT or at least a random roomId/userId
             upload.single("file"),
             async (req: express.Request, res: express.Response) => {
                 const agentId = req.params.agentId;
-                const roomId = stringToUuid(
-                    req.body.roomId ?? "default-room-" + agentId
-                );
-                const userId = stringToUuid(req.body.userId ?? "user");
 
                 let runtime = this.agents.get(agentId);
 
@@ -215,6 +214,11 @@ export class DirectClient {
                     res.status(404).send("Agent not found");
                     return;
                 }
+
+                const roomId = stringToUuid(
+                    req['jwtUserId'] ?? req.body.roomId ?? "default-room-" + agentId
+                );
+                const userId = stringToUuid(req['jwtUserId'] ?? req.params.userId ?? "user");
 
                 await runtime.ensureConnection(
                     userId,
