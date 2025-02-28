@@ -88,7 +88,7 @@ vi.mock('../../utils/simulation', async (importOriginal) => {
     }
 });
 
-vi.mock('../../utils/evaluate_risk', async (importOriginal) => {
+vi.mock('../../utils/evaluateRisk', async (importOriginal) => {
     // const actual = await importOriginal();
     return {
         evaluateRisk: vi.fn().mockImplementation((r, w, txs) => {

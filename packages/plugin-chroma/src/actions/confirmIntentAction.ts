@@ -3,7 +3,7 @@ import { WakuClient } from '../lib/waku-client';
 
 import { getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
-import { evaluateRisk } from '../utils/evaluate_risk';
+import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
 export const confirmIntentAction: Action = {
