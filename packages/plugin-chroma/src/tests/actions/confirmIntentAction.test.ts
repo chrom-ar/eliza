@@ -211,7 +211,7 @@ describe('Confirm Intent Action', async () => {
             });
         });
 
-        it.only('should handle intent confirmation with pending intent', async () => {
+        it('should handle intent confirmation with pending intent', async () => {
             const message: Memory = {
                 id: '123' as UUID,
                 content: { text: 'confirm' },
