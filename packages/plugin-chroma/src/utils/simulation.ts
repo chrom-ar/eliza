@@ -109,7 +109,7 @@ const buildSummary = (simulations: any[]) => {
       }
     })
 
-    return { summary, link}
+    return { summary, link, ...simulationResult }
   })}
 };
 

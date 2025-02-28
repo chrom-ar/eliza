@@ -64,6 +64,7 @@ export const createWalletAction: Action = {
       try {
         // Fund the wallet TMP only testnet
         await (await wallet.faucet()).wait();
+        await (await wallet.faucet('usdc')).wait();
       } catch (error) {
         console.log(error)
       }
