@@ -3,6 +3,7 @@ import { WakuClient } from '../lib/waku-client';
 
 import { getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
+import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
 export const confirmIntentAction: Action = {
@@ -62,23 +63,32 @@ export const confirmIntentAction: Action = {
           let memoryText = formatProposalText(proposal);
 
           // @ts-ignore
-          const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction])
+          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction]) as any;
 
-
-          if (error) {
-            memoryText += `\nSimulation error: ${error}\n`
+          if (simulate.error) {
+            memoryText += `\nSimulation error: ${simulate.error}\n`
           } else {
             memoryText += `\nSimulation:\n`
-            for (let index in results) {
+            for (let index in simulate.results) {
+              const result = simulate.results[index]
               memoryText += `Tx #${parseInt(index) + 1}:\n`
-              memoryText += (results[index].error || results[index].summary.join("\n")) + "\n"
-              memoryText += `Link: ${results[index].link}\n`
+              memoryText += (result.error || result.summary.join("\n")) + "\n"
+              memoryText += `Link: ${result.link}\n`
             }
           }
 
+          const riskScore = await evaluateRisk(
+            runtime,
+            walletAddr,
+            proposal.transactions,
+            simulate
+          ) as any;
+
+          memoryText += riskScore.summary + "\n" // riskScore already humanized
+
           finalText += memoryText
 
-          proposals.push({ proposalNumber: counter, simulation: results, ...proposal });
+          proposals.push({ proposalNumber: counter, simulation: simulate.results, riskScore: riskScore.results, ...proposal });
         } catch (e) {
           console.error("Error inside subscription:", e)
         }

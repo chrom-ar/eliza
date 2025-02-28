@@ -10,8 +10,6 @@ describe('swapToken', () => {
       "F6HctpX9kbp6t1kdq82HVQRYpUGgJXMd4zGpzuuwdZCd",
     );
 
-    console.log(swapData)
-
     expect(swapData).toHaveProperty('quoteResponse');
     expect(swapData).toHaveProperty('serializedTransaction');
   });
