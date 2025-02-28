@@ -35,7 +35,7 @@ export const simulateTxs = async (runtime: IAgentRuntime, wallet: string, transa
   )
 
   if (!response.ok)
-    return { error: `Failed to simulate transaction${txs.length > 1 ? 's' : ''}` }
+    return { error: 'Failed to simulate' }
 
 
   const result = await response.json()

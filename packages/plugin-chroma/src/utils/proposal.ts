@@ -48,10 +48,13 @@ export async function deleteProposals(runtime: IAgentRuntime, userId: string, ro
   await runtime.cacheManager.delete(cacheKey);
 }
 
-export function formatProposalText(proposal: Proposal): string {
-  let text = `Proposal #${proposal.number}: ${proposal.description}.\nActions:\n`;
+export function formatProposalText(proposal: Proposal): object {
+  const title = `Proposal #${proposal.number}: ${proposal.description}.\nActions:\n`;
+  const actions = []
+
   for (let index in proposal.calls || []) {
-    text += `- ${parseInt(index) + 1}: ${proposal.calls[index]}\n`;
+    actions.push(`${parseInt(index) + 1}) ${proposal.calls[index]}\n`);
   }
-  return text;
+
+  return { title, actions };
 }

@@ -52,7 +52,6 @@ export const parseYieldAction: Action = {
       schemaName: 'YieldIntent',
       context
     })).object as z.infer<typeof yieldSchema>;
-    console.log('intentData', intentData)
 
     if (Object.keys(intentData).length === 0) {
       callback(message.content);

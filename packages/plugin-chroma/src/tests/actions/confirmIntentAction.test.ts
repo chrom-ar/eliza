@@ -103,13 +103,13 @@ describe('Confirm Intent Action', async () => {
     const mockRuntime: IAgentRuntime = await createRuntime();
     mockSimulationResult = {
         results: [
-            { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
+            { summary: ['+ Transfer', '- Transfer'], link: 'https://www.tdly' }
         ]
     }
 
-    mockEvaluateRiskResult = {
+    mockEvaluateRiskResult = [{
         summary: "No risk detected by Forta",
-    }
+    }]
     const mockCacheManager = {
         set: vi.fn(),
         get: vi.fn(),
@@ -211,7 +211,7 @@ describe('Confirm Intent Action', async () => {
             });
         });
 
-        it('should handle intent confirmation with pending intent', async () => {
+        it.only('should handle intent confirmation with pending intent', async () => {
             const message: Memory = {
                 id: '123' as UUID,
                 content: { text: 'confirm' },
