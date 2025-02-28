@@ -60,35 +60,37 @@ export const confirmIntentAction: Action = {
           counter += 1;
           const proposal = receivedMessage.body.proposal;
           proposal.number = counter;
-          let memoryText = formatProposalText(proposal);
+          const propTexts = formatProposalText(proposal) as any;
 
           // @ts-ignore
           const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction]) as any;
-
-          if (simulate.error) {
-            memoryText += `\nSimulation error: ${simulate.error}\n`
-          } else {
-            memoryText += `\nSimulation:\n`
-            for (let index in simulate.results) {
-              const result = simulate.results[index]
-              memoryText += `Tx #${parseInt(index) + 1}:\n`
-              memoryText += (result.error || result.summary.join("\n")) + "\n"
-              memoryText += `Link: ${result.link}\n`
-            }
-          }
 
           const riskScore = await evaluateRisk(
             runtime,
             walletAddr,
             proposal.transactions,
             simulate
-          ) as any;
+          ) as any[];
 
-          memoryText += riskScore.summary + "\n" // riskScore already humanized
+          let memoryText = propTexts.title; // Actions title
+
+          for (let i in propTexts.actions) {
+            memoryText += propTexts.actions[i]; // Action description
+
+            memoryText += (riskScore[i].error || riskScore[i].summary)
+
+            if (simulate.error) {
+              memoryText += `Simulation error: ${simulate.error}\n\n`
+            } else {
+              const result = simulate.results[i] // Simulate description
+              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n"
+              memoryText += `Link: ${result.link}\n\n`
+            }
+          }
 
           finalText += memoryText
 
-          proposals.push({ proposalNumber: counter, simulation: simulate.results, riskScore: riskScore.results, ...proposal });
+          proposals.push({ proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
         } catch (e) {
           console.error("Error inside subscription:", e)
         }

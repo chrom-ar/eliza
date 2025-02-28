@@ -103,13 +103,13 @@ describe('Confirm Intent Action', async () => {
     const mockRuntime: IAgentRuntime = await createRuntime();
     mockSimulationResult = {
         results: [
-            { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
+            { summary: ['+ Transfer', '- Transfer'], link: 'https://www.tdly' }
         ]
     }
 
-    mockEvaluateRiskResult = {
+    mockEvaluateRiskResult = [{
         summary: "No risk detected by Forta",
-    }
+    }]
     const mockCacheManager = {
         set: vi.fn(),
         get: vi.fn(),
