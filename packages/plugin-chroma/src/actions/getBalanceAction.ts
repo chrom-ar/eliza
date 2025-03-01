@@ -98,7 +98,7 @@ export const getBalanceAction: Action = {
         // Use extracted network if available, otherwise default to the first -sepolia chain
         // TODO: Change this when going live
         if (extractedNetwork) {
-          networkId = extractedNetwork;
+          networkId = extractedNetwork.toLowerCase();
         } else {
           networkId = existingWallet.chains.find(chain => chain.toLowerCase().includes('-sepolia')) || existingWallet.chains[0];
         }
