@@ -27,7 +27,22 @@ export default defineConfig(({ mode }) => {
             ),
             "import.meta.env.VITE_SERVER_BASE_URL": JSON.stringify(
                 env.SERVER_BASE_URL
-            )
+            ),
+            "import.meta.env.VITE_AWS_COGNITO_EMAIL": JSON.stringify(
+                env.AWS_COGNITO_EMAIL
+            ),
+            "import.meta.env.VITE_AWS_COGNITO_PASSWORD": JSON.stringify(
+                env.AWS_COGNITO_PASSWORD
+            ),
+            "import.meta.env.VITE_AWS_COGNITO_CLIENT_ID": JSON.stringify(
+                env.AWS_COGNITO_CLIENT_ID
+            ),
+            "import.meta.env.VITE_AWS_COGNITO_USER_POOL_ID": JSON.stringify(
+                env.AWS_COGNITO_USER_POOL_ID
+            ),
+            "import.meta.env.VITE_AWS_COGNITO_REGION": JSON.stringify(
+                env.AWS_COGNITO_REGION
+            ),
         },
         server: {
             // TODO: make this configurable with env variable
