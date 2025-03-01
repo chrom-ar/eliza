@@ -86,8 +86,6 @@ export const parseWithdrawAction: Action = {
     const { amount, fromToken, fromChain, fromAddress } = intentData;
     const responseText = `I've created a withdraw intent for ${amount} ${fromToken} from ${fromAddress} on ${fromChain}. \n\n Confirm the intent to proceed with the withdrawal?`
 
-    await callback({ text: responseText });
-
     const intentManager = new MemoryManager({
       runtime,
       tableName: 'intents'
