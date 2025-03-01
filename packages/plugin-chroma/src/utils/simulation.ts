@@ -1,5 +1,6 @@
 // import fetch from 'node-fetch'
 import { IAgentRuntime } from '@elizaos/core';
+import { TOKENS, TOKEN_DECIMALS, ZERO_ADDRESS } from './addresses';
 
 const request = async (runtime: IAgentRuntime, method: string, path: string, body?: string): Promise<any> => {
   const url = `https://api.tenderly.co/api/v1/account/${runtime.getSetting('TENDERLY_ACCOUNT')}/project/${runtime.getSetting('TENDERLY_PROJECT')}/${path}`
@@ -34,9 +35,9 @@ export const simulateTxs = async (runtime: IAgentRuntime, wallet: string, transa
     })
   )
 
-  if (!response.ok)
+  if (!response.ok) {
     return { error: 'Failed to simulate' }
-
+  }
 
   const result = await response.json()
 
@@ -113,11 +114,21 @@ const buildSummary = (simulations: any[]) => {
   })}
 };
 
-// base-sepolia tokens
-const KNOWN_TOKENS = {
-  "0x036cbd53842c5426634e7929541ec2318f3dcf7e": { symbol: 'USDC', decimals: 6 },
-  "0xf53b60f4006cab2b3c4688ce41fd5362427a2a66": { symbol: 'aUSDC', decimals: 6 },
-}
+// Build KNOWN_TOKENS from centralized address data
+// Maps lowercase token addresses to their metadata (symbol and decimals)
+const KNOWN_TOKENS: Record<string, { symbol: string, decimals: number }> = {};
+
+// Populate from the network-specific token addresses
+Object.entries(TOKENS).forEach(([network, tokens]) => {
+  Object.entries(tokens).forEach(([symbol, address]) => {
+    if (address !== ZERO_ADDRESS) {
+      KNOWN_TOKENS[address.toLowerCase()] = {
+        symbol,
+        decimals: TOKEN_DECIMALS[network][symbol]
+      };
+    }
+  });
+});
 
 const humanizeAmount = (change: any) => {
   const contractAddress = change.token_info.contract_address?.toLowerCase();

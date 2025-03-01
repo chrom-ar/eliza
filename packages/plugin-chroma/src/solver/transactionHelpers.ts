@@ -7,6 +7,7 @@ import { validateAndBuildTransfer } from './transfer';
 import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
 import { validateAndBuildBridge } from './bridge';
+import { validateAndBuildWithdraw } from './withdraw';
 
 
 /**
@@ -22,6 +23,9 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       break;
     case "YIELD":
       result = await validateAndBuildYield(message);
+      break;
+    case "WITHDRAW":
+      result = await validateAndBuildWithdraw(message);
       break;
     case "SWAP":
       result = await validateAndBuildSwap(message);

@@ -15,6 +15,8 @@ export interface GeneralMessage {
   };
 }
 
+type Token = "ETH" | "USDC" | "SOL";
+
 export const ZERO_ADDRESS = '0x' + '0'.repeat(40);
 
 export const TOKENS = {
@@ -30,10 +32,17 @@ export const TOKENS = {
     "ETH": ZERO_ADDRESS,
     "USDC": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
   },
-
+  "ARB-SEPOLIA": {
+    "ETH": ZERO_ADDRESS,
+    "USDC": "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+  },
+  "OPT-SEPOLIA": {
+    "ETH": ZERO_ADDRESS,
+    "USDC": "0x5fd84259d66cd46123540766be93dfe6d43130d7",
+  },
 }
 
-export const TOKEN_DECIMALS = {
+export const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
   "ETHEREUM": {
     "ETH": 18,
     "USDC": 6
@@ -46,19 +55,32 @@ export const TOKEN_DECIMALS = {
     "ETH": 18,
     "USDC": 6
   },
-
+  "ARB-SEPOLIA": {
+    "ETH": 18,
+    "USDC": 6
+  },
+  "OPT-SEPOLIA": {
+    "ETH": 18,
+    "USDC": 6
+  },
 }
 
 // TMP just for simplicity
 export const AAVE_POOL = {
+  "ARB-SEPOLIA": {
+    "USDC": "0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff"
+  },
   "BASE-SEPOLIA": {
     "USDC": "0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b"
   },
+  "OPT-SEPOLIA": {
+    "USDC": "0xb50201558B00496A145fE76f7424749556E326D8"
+  }
 }
 
 
 // TODO: remove sepolia
-export const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE", "BASE-SEPOLIA"];
+export const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE", "BASE-SEPOLIA", "ARBITRUM", "ARB-SEPOLIA", "OPTIMISM", "OPT-SEPOLIA"];
 
 export const AVAILABLE_TYPES = ["TRANSFER", "YIELD"];
 

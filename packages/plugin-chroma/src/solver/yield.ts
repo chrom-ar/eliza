@@ -30,7 +30,6 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
   const tokenAddr   = TOKENS[fromChain][fromToken];
   const tokenAmount = parseUnits(amount, TOKEN_DECIMALS[fromChain][fromToken]).toString();
 
-  // Aave v3 contract addresses for Base Sepolia
   // Encode supply transaction
   const abi = [
     {
