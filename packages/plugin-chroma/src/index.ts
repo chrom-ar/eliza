@@ -13,22 +13,24 @@ import {
   parseBridgeAction,
   parseSwapAction,
   parseTransferAction,
+  parseWithdrawAction,
   parseYieldAction,
 } from './actions';
 
 const actions = [
   cancelIntentAction,
   confirmIntentAction,
+  getBalanceAction,
   parseBridgeAction,
   parseSwapAction,
   parseTransferAction,
+  parseWithdrawAction,
   parseYieldAction,
 ]
 
 // NOTE: Maybe there's a better way to filter actions
 if (process.env.CHROMA_CDP_API_KEY_NAME) {
   actions.push(createWalletAction);
-  actions.push(getBalanceAction);
   actions.push(confirmProposalAction);
 }
 

@@ -3,18 +3,6 @@ import Handlebars from 'handlebars';
 import { getAllWallets, getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 
 /**
- * This template is an example.
- * We embed placeholders for address and chains,
- * so the code can fill them in at runtime.
- */
-const summaryTemplate = Handlebars.compile(`
-We have the following user wallet data so far:
-- EVM addresses: {{evmAddresses}}
-- Solana addresses: {{solanaAddresses}}
-- Preferred chains: {{chains}}
-`);
-
-/**
  * The final message if all data is collected
  */
 const allDataCollectedTemplate = Handlebars.compile(`

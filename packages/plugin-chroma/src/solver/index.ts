@@ -6,6 +6,7 @@ import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { EVMLiFiSwap, convertToChainKey } from './lifiEvmSwap';
 import { buildBridgeTransaction } from './wormholeBridge';
 import { validateAndBuildYield } from './yield';
+import { validateAndBuildWithdraw } from './withdraw';
 
 export {
   validateAndBuildProposal,
@@ -15,6 +16,7 @@ export {
   convertToChainKey,
   buildBridgeTransaction,
   validateAndBuildYield,
+  validateAndBuildWithdraw,
 };
 
 export const buildResponse = async (event: any, config: object) => {
