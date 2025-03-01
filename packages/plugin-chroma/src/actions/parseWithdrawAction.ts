@@ -2,13 +2,13 @@ import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, comp
 import { z } from 'zod';
 import { getDefaultWallet } from '../utils/walletData';
 
-// Define the schema for transfer intent
-const yieldSchema = z.object({
-  type: z.literal('YIELD'),
+// Define the schema for withdrawal intent
+const withdrawSchema = z.object({
+  type: z.literal('WITHDRAW'),
   amount: z.string(),
   fromToken: z.string(),
-  recipientAddress: z.string(),
-  fromChain: z.string().nullable()
+  fromAddress: z.string(),
+  fromChain: z.string().nullable(),
 });
 
 const contextTemplate = `# Recent Messages
@@ -18,7 +18,7 @@ const contextTemplate = `# Recent Messages
 {{providers}}
 
 Follow the instructions:
-1. Extract yield intent information from the message.
+1. Extract withdrawal intent information from the message.
 2. For network/chain extraction:
    - You MUST extract the exact network/chain if mentioned by the user in their message
    - If no network is mentioned at all, set fromChain to null
@@ -27,19 +27,21 @@ Follow the instructions:
 4. Do not include decimals unless the user specifies them.
 5. Use the "compact" format for the chain, so "Optimism Sepolia" becomes "opt-sepolia".`;
 
-export const parseYieldAction: Action = {
+export const parseWithdrawAction: Action = {
   suppressInitialMessage: true,
-  name: 'PARSE_YIELD_INTENT',
-  similes: ['YIELD_INTENT'],
-  description: 'Parses user query and constructs a yield intent',
+  name: 'PARSE_WITHDRAW_INTENT',
+  similes: ['WITHDRAW_INTENT'],
+  description: 'Parses user query and constructs a withdrawal intent',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
 
-    return text.includes('yield') ||
-      text.includes('deposit') ||
-      text.includes('invest') ||
-      ((text.includes('to') || text.includes('address')) && /eth|usdc|usdt/i.test(text));
+    return text.includes('withdraw') ||
+      text.includes('remove') ||
+      text.includes('redeem') ||
+      text.includes('take out') ||
+      text.includes('pull out') ||
+      (text.includes('aave') && (text.includes('get') || text.includes('retrieve')));
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State | undefined, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
@@ -48,14 +50,14 @@ export const parseYieldAction: Action = {
       template: contextTemplate
     });
 
-    // Extract transfer info using schema validation
+    // Extract withdrawal info using schema validation
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
-      schema: yieldSchema,
-      schemaName: 'YieldIntent',
+      schema: withdrawSchema,
+      schemaName: 'WithdrawIntent',
       context
-    })).object as z.infer<typeof yieldSchema>;
+    })).object as z.infer<typeof withdrawSchema>;
     console.log('intentData', intentData)
 
     if (Object.keys(intentData).length === 0) {
@@ -76,12 +78,15 @@ export const parseYieldAction: Action = {
       return false;
     }
 
-    intentData.recipientAddress = existingWallet.address; // model kinda sucks putting the wallet
+    intentData.fromAddress = existingWallet.address; // Ensure we use the user's wallet address
+    // We also need recipientAddress and recipientChain for the GeneralMessage format
+    const recipientAddress = existingWallet.address;
+    const recipientChain = intentData.fromChain;
 
-    const { amount, fromToken, fromChain, recipientAddress } = intentData;
-    const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Confirm the intent to receive the best quotas?`
+    const { amount, fromToken, fromChain, fromAddress } = intentData;
+    const responseText = `I've created a withdraw intent for ${amount} ${fromToken} from ${fromAddress} on ${fromChain}. \n\n Confirm the intent to proceed with the withdrawal?`
 
-    await callback({ text: responseText }); // this doesn't work (?)
+    await callback({ text: responseText });
 
     const intentManager = new MemoryManager({
       runtime,
@@ -101,7 +106,9 @@ export const parseYieldAction: Action = {
         source: message.content?.source,
         intent: {
           ...intentData,
-          type: 'YIELD'
+          recipientAddress,
+          recipientChain,
+          type: 'WITHDRAW'
         }
       }
     };
@@ -109,7 +116,7 @@ export const parseYieldAction: Action = {
     await intentManager.createMemory(newMemory);
     await callback(newMemory.content);
 
-    elizaLogger.info('Yield intent created', intentData);
+    elizaLogger.info('Withdraw intent created', intentData);
     return true;
   },
 
@@ -117,38 +124,38 @@ export const parseYieldAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'I want a yield interest strategy with 1 ETH' }
+        content: { text: 'I want to withdraw 1 ETH from my Aave deposit' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Building your yield intent...',
-          action: 'PARSE_YIELD_INTENT'
+          text: 'Building your withdrawal intent...',
+          action: 'PARSE_WITHDRAW_INTENT'
         }
       }
     ],
     [
       {
         user: '{{user1}}',
-        content: { text: 'I want an interest strategy with 100 USDC' }
+        content: { text: 'I need to remove 100 USDC from my deposits' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Building your yield intent...',
-          action: 'PARSE_YIELD_INTENT'
+          text: 'Building your withdrawal intent...',
+          action: 'PARSE_WITHDRAW_INTENT'
         }
       }
     ],
     [
       {
         user: '{{user1}}',
-        content: { text: 'Hey {{user2}}, how do I invest in crypto?' }
+        content: { text: 'Hey {{user2}}, how do I get my funds back from Aave?' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'I can help you to deposit in a yield strategy. Just let me know how much and what token you want to deposit.'
+          text: 'I can help you withdraw your deposits from Aave. Just let me know how much and which token you want to withdraw.'
         }
       }
     ]
