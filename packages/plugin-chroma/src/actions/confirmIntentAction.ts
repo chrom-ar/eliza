@@ -3,6 +3,7 @@ import { WakuClient } from '../lib/waku-client';
 
 import { getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
+import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
 export const confirmIntentAction: Action = {
@@ -59,26 +60,37 @@ export const confirmIntentAction: Action = {
           counter += 1;
           const proposal = receivedMessage.body.proposal;
           proposal.number = counter;
-          let memoryText = formatProposalText(proposal);
+          const propTexts = formatProposalText(proposal) as any;
 
           // @ts-ignore
-          const { error, results } = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction])
+          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction]) as any;
 
+          const riskScore = await evaluateRisk(
+            runtime,
+            walletAddr,
+            proposal.transactions,
+            simulate
+          ) as any[];
 
-          if (error) {
-            memoryText += `\nSimulation error: ${error}\n`
-          } else {
-            memoryText += `\nSimulation:\n`
-            for (let index in results) {
-              memoryText += `Tx #${parseInt(index) + 1}:\n`
-              memoryText += (results[index].error || results[index].summary.join("\n")) + "\n"
-              memoryText += `Link: ${results[index].link}\n`
+          let memoryText = propTexts.title; // Actions title
+
+          for (let i in propTexts.actions) {
+            memoryText += propTexts.actions[i]; // Action description
+
+            memoryText += (riskScore[i].error || riskScore[i].summary)
+
+            if (simulate.error) {
+              memoryText += `Simulation error: ${simulate.error}\n\n`
+            } else {
+              const result = simulate.results[i] // Simulate description
+              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n"
+              memoryText += `Link: ${result.link}\n\n`
             }
           }
 
           finalText += memoryText
 
-          proposals.push({ proposalNumber: counter, simulation: results, ...proposal });
+          proposals.push({ proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
         } catch (e) {
           console.error("Error inside subscription:", e)
         }

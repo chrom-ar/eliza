@@ -14,6 +14,7 @@ import { WakuClient } from '../../lib/waku-client';
 
 let mockMemoryManager: Partial<MemoryManager>;
 let mockSimulationResult: Partial<object>;
+let mockEvaluateRiskResult: Partial<object>;
 
 // Mock the WakuClient
 vi.mock('../../lib/waku-client', () => ({
@@ -87,14 +88,28 @@ vi.mock('../../utils/simulation', async (importOriginal) => {
     }
 });
 
+vi.mock('../../utils/evaluateRisk', async (importOriginal) => {
+    // const actual = await importOriginal();
+    return {
+        evaluateRisk: vi.fn().mockImplementation((r, w, txs) => {
+            return mockEvaluateRiskResult
+        })
+    }
+});
+
+
 
 describe('Confirm Intent Action', async () => {
     const mockRuntime: IAgentRuntime = await createRuntime();
     mockSimulationResult = {
         results: [
-            { summary: ['+ Transfer', '- Transfer', 'Link: https://www.tdly'], link: 'https://www.tdly' }
+            { summary: ['+ Transfer', '- Transfer'], link: 'https://www.tdly' }
         ]
     }
+
+    mockEvaluateRiskResult = [{
+        summary: "No risk detected by Forta",
+    }]
     const mockCacheManager = {
         set: vi.fn(),
         get: vi.fn(),
