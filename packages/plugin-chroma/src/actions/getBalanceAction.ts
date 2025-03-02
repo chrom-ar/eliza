@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { getWalletAndProvider, getBalanceFor } from '../utils/cdp';
 import { getDefaultWallet } from '../utils/walletData';
-import { getBalances } from '../utils/balance';
+import { getBalances, TokenBalance } from '../utils/balance';
 
 // Network extraction prompt template
 const networkExtractionPrompt = Handlebars.compile(`
@@ -64,7 +64,7 @@ export const getBalanceAction: Action = {
       }
 
       let walletAddress;
-      let networkId;
+      let networkId: string | string[];
       let balanceText = '';
 
       // Handle case with just an address (no CDP wallet)
@@ -95,20 +95,39 @@ export const getBalanceAction: Action = {
           return true;
         }
 
-        // Use extracted network if available, otherwise default to the first -sepolia chain
-        // TODO: Change this when going live
+        // Use extracted network if available, otherwise use all chains from the stored wallet preferences
         if (extractedNetwork) {
           networkId = extractedNetwork.toLowerCase();
+          balanceText = `Wallet Address: ${walletAddress}\nNetwork: ${networkId}\n`;
+
+          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC']);
+
+          for (const balance of tokenBalances) {
+            balanceText += `- ${balance.balance} ${balance.symbol}\n`;
+          }
         } else {
-          networkId = existingWallet.chains.find(chain => chain.toLowerCase().includes('-sepolia')) || existingWallet.chains[0];
-        }
+          // Use all chains in the wallet
+          networkId = existingWallet.chains;
+          balanceText = `Wallet Address: ${walletAddress}\nChecking balances across all networks:\n`;
 
-        balanceText = `Wallet Address: ${walletAddress}\nNetwork: ${networkId}\n`;
+          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC']);
 
-        const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC']);
+          // Group balances by network
+          const networkBalances: Record<string, TokenBalance[]> = {};
+          for (const balance of tokenBalances) {
+            if (!networkBalances[balance.network]) {
+              networkBalances[balance.network] = [];
+            }
+            networkBalances[balance.network].push(balance);
+          }
 
-        for (const balance of tokenBalances) {
-          balanceText += `- ${balance.balance} ${balance.symbol}\n`;
+          // Display balances by network
+          for (const [network, balances] of Object.entries(networkBalances)) {
+            balanceText += `\nNetwork: ${network}\n`;
+            for (const balance of balances) {
+              balanceText += `- ${balance.balance} ${balance.symbol}\n`;
+            }
+          }
         }
       } else {
         const [wallet, provider] = await getWalletAndProvider(runtime, existingWallet.walletId);
