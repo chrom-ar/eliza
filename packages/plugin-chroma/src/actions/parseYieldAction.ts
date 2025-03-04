@@ -100,8 +100,6 @@ export const parseYieldAction: Action = {
     const { amount, fromToken, fromChain, recipientAddress } = intentData;
     const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Confirm the intent to receive the best quotas?`
 
-    await callback({ text: responseText }); // this doesn't work (?)
-
     const intentManager = new MemoryManager({
       runtime,
       tableName: 'intents'
