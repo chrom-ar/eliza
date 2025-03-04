@@ -156,7 +156,7 @@ describe('Parse Yield Action', async () => {
             expect(await parseYieldAction.validate(mockRuntime, message)).toBe(true);
         });
 
-        it('should validate messages containing "to" and crypto tokens', async () => {
+        it('should not validate messages containing "to" and crypto tokens', async () => {
             const message: Memory = {
                 id: '123' as UUID,
                 content: { text: 'I want to send 1 ETH to an address' },
@@ -164,7 +164,7 @@ describe('Parse Yield Action', async () => {
                 agentId: '123' as UUID,
                 roomId: '123' as UUID
             };
-            expect(await parseYieldAction.validate(mockRuntime, message)).toBe(true);
+            expect(await parseYieldAction.validate(mockRuntime, message)).toBe(false);
         });
 
         it('should not validate messages without yield-related keywords or tokens', async () => {
