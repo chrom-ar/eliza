@@ -9,7 +9,7 @@ const transferSchema = z.object({
   fromAddress: z.string(),
   fromChain: z.string().default('base-sepolia'),
   recipientAddress: z.string()
-});
+}) as z.ZodType<any>;
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}

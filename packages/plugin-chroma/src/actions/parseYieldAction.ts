@@ -9,7 +9,7 @@ const yieldSchema = z.object({
   fromToken: z.string(),
   recipientAddress: z.string(),
   fromChain: z.string().nullable()
-});
+}) as z.ZodType<any>;
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
