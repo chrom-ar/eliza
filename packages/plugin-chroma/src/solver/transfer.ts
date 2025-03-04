@@ -21,6 +21,7 @@ import {
   TOKEN_DECIMALS,
   ZERO_ADDRESS,
   isEvmChain,
+  getChainId,
 } from "./helpers";
 
 export async function validateAndBuildTransfer(message: GeneralMessage): Promise<object> {
@@ -69,6 +70,7 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
 function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
   const tokenAddr = TOKENS[fromChain][fromToken];
   const tokenAmount = parseUnits(amount, TOKEN_DECIMALS[fromChain][fromToken]).toString();
+  const chainId = getChainId(fromChain);
 
   const erc20Abi = [
     {
@@ -87,12 +89,14 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   if (tokenAddr == ZERO_ADDRESS) {
     return {
       to: recipientAddress,
-      value: tokenAmount
+      value: tokenAmount,
+      chainId
     };
   } else {
     return {
       to: tokenAddr,
       value: 0,
+      chainId,
       data: encodeFunctionData({abi: erc20Abi, functionName: "transfer", args: [recipientAddress, tokenAmount]})
     };
   }

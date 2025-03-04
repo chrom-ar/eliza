@@ -52,11 +52,7 @@ function buildTokenAddressMap(networks: string[]): TokenAddressMap {
   return addressMap;
 }
 
-function formatBalance(rawBalance: bigint, decimals: number, humanReadable: boolean): string {
-  if (!humanReadable) {
-    return rawBalance.toString();
-  }
-
+function formatBalance(rawBalance: bigint, decimals: number): string {
   if (rawBalance === BigInt(0)) {
     return '0.' + '0'.repeat(humanDecimals);
   }
@@ -133,8 +129,7 @@ async function fetchBalancesFromAlchemy(
 export async function getBalances(
   address: string,
   networks: string | string[],
-  tokenSymbols: string[] = ["USDC"],
-  humanReadable: boolean = true
+  tokenSymbols: string[] = ["USDC"]
 ): Promise<TokenBalance[]> {
   const networkList = Array.isArray(networks) ? networks : [networks];
 
@@ -168,7 +163,7 @@ export async function getBalances(
         balances.push({
           token: tokenAddress,
           symbol: tokenDetails.symbol,
-          balance: formatBalance(rawBalance, decimals, humanReadable),
+          balance: formatBalance(rawBalance, decimals),
           rawBalance,
           decimals,
           network

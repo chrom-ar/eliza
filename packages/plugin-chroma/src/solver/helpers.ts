@@ -1,5 +1,25 @@
 import * as chains from 'viem/chains';
 
+const networkAliases: Record<string, string> = {
+  // Ethereum
+  'eth': 'mainnet',
+  'ethereum': 'mainnet',
+
+  // Base
+  'base': 'base',
+  'base-sepolia': 'baseSepolia',
+
+  // Arbitrum
+  'arb': 'arbitrum',
+  'arbitrum': 'arbitrum',
+  'arb-sepolia': 'arbitrumSepolia',
+
+  // Optimism
+  'opt': 'optimism',
+  'optimism': 'optimism',
+  'opt-sepolia': 'optimismSepolia'
+};
+
 export interface GeneralMessage {
   timestamp: number;
   roomId: string;
@@ -78,7 +98,6 @@ export const AAVE_POOL = {
   }
 }
 
-
 // TODO: remove sepolia
 export const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE", "BASE-SEPOLIA", "ARBITRUM", "ARB-SEPOLIA", "OPTIMISM", "OPT-SEPOLIA"];
 
@@ -89,14 +108,15 @@ export function isEvmChain(chain: string): boolean {
 }
 
 export const getChainId = (network: string) => {
-  network = network.toLowerCase();
-
-  let chainId = chains[network]?.id
+  const normalizedNetwork = network.toLowerCase();
+  const standardNetwork = networkAliases[normalizedNetwork] || normalizedNetwork;
+  // Since our data came from a model, we need to check all possible combinations
+  const chainId = (chains[standardNetwork] || chains[normalizedNetwork] || chains[network])?.id
 
   if (!chainId) {
     for (let k in chains) {
       // chains has to be "get" to obtain the network
-      if (chains[k].network === network) {
+      if (chains[k].network === standardNetwork) {
         return chains[k].id
       }
     }

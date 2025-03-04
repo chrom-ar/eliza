@@ -1,13 +1,17 @@
 import { IAgentRuntime } from '@elizaos/core';
-import * as fs from 'fs';
 
 export const evaluateRisk = async (runtime: IAgentRuntime, wallet: string, _transactions: any[], simulation: any) => {
 
-  let results = {}
-  let promisses = []
+  const results = {};
+  const promisses = [];
+
+  if (!simulation.results || simulation.results.length === 0) {
+    console.log('No results from simulation', simulation);
+    return results;
+  }
 
   simulation.results.map((simResult: any, i) => {
-    let addresses = []
+    const addresses = [];
     simResult.transaction.call_trace.map((trace: any) => {
       addresses.push(trace.to, trace.from, trace.address);
     });
@@ -37,7 +41,7 @@ export const evaluateRisk = async (runtime: IAgentRuntime, wallet: string, _tran
     )
   })
 
-  await Promise.all(promisses)
+  await Promise.all(promisses);
 
-  return results
+  return results;
 }

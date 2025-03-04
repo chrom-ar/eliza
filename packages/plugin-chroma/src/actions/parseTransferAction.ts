@@ -30,6 +30,17 @@ export const parseTransferAction: Action = {
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
 
+    // First check if this is a yield/deposit/invest intent - if so, don't handle it here
+    if (text.includes('yield') ||
+        text.includes('deposit') ||
+        text.includes('invest') ||
+        text.includes('earning') ||
+        text.includes('interest') ||
+        text.includes('strategy')) {
+      return false;
+    }
+
+    // Then check if it's a transfer intent
     return text.includes('transfer') ||
            text.includes('send') ||
            ((text.includes('to') || text.includes('address')) && /eth|sol|btc|usdc|usdt/i.test(text));
