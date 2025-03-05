@@ -2,14 +2,14 @@ import { Action, Memory, IAgentRuntime, HandlerCallback, State, ModelClass, comp
 import { z } from 'zod';
 import { getDefaultWallet } from '../utils/walletData';
 
-// Define the schema for transfer intent
+// Define the schema for yield intent
 const yieldSchema = z.object({
   type: z.literal('YIELD'),
   amount: z.string(),
   fromToken: z.string(),
   recipientAddress: z.string(),
   fromChain: z.string().nullable()
-});
+}) as z.ZodType<any>;
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -36,10 +36,30 @@ export const parseYieldAction: Action = {
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
 
-    return text.includes('yield') ||
+    // Check for explicit yield-related keywords
+    const hasYieldKeywords = text.includes('yield') ||
       text.includes('deposit') ||
       text.includes('invest') ||
-      ((text.includes('to') || text.includes('address')) && /eth|usdc|usdt/i.test(text));
+      text.includes('earning') ||
+      text.includes('interest') ||
+      text.includes('strategy');
+
+    // If there are yield keywords or more ambiguous phrases that suggest yield rather than transfer
+    if (hasYieldKeywords) {
+      return true;
+    }
+
+    // Specifically capture "deposit X into Y" patterns but not simple transfer patterns
+    if (text.includes('deposit') && /eth|usdc|usdt/i.test(text)) {
+      return true;
+    }
+
+    // Avoid triggering on messages that are clearly transfer intents
+    if (text.includes('transfer') || text.includes('send to')) {
+      return false;
+    }
+
+    return false;
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State | undefined, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
@@ -79,8 +99,6 @@ export const parseYieldAction: Action = {
 
     const { amount, fromToken, fromChain, recipientAddress } = intentData;
     const responseText = `I've created a yield intent for ${amount} ${fromToken} to ${recipientAddress} on ${fromChain}. \n\n Confirm the intent to receive the best quotas?`
-
-    await callback({ text: responseText }); // this doesn't work (?)
 
     const intentManager = new MemoryManager({
       runtime,

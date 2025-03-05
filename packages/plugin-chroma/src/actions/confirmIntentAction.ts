@@ -1,10 +1,12 @@
-import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback, stringToUuid, getEmbeddingZeroVector } from '@elizaos/core';
+import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback } from '@elizaos/core';
 import { WakuClient } from '../lib/waku-client';
 
-import { getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
+import { getDefaultWallet } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
 import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
+
+const TIMEOUT = 10000;
 
 export const confirmIntentAction: Action = {
   suppressInitialMessage: true,
@@ -38,13 +40,12 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
+    let counter = 0;
+    let finalText = '';
+
     const waku = await WakuClient.new(runtime);
-
-    let counter = 0
-    let proposals = []
-    let finalText = ''
-    const expiration = Date.now() + 6000;
-
+    const proposals = [];
+    const expiration = Date.now() + TIMEOUT;
     const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
 
     // Subscribe to the room to receive the proposals
@@ -63,7 +64,7 @@ export const confirmIntentAction: Action = {
           const propTexts = formatProposalText(proposal) as any;
 
           // @ts-ignore
-          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions || [proposals.transaction]) as any;
+          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions) as any;
 
           const riskScore = await evaluateRisk(
             runtime,
@@ -77,22 +78,26 @@ export const confirmIntentAction: Action = {
           for (let i in propTexts.actions) {
             memoryText += propTexts.actions[i]; // Action description
 
-            memoryText += (riskScore[i].error || riskScore[i].summary)
+            if (riskScore[i]) {
+              memoryText += riskScore[i].error || riskScore[i].summary;
+            } else {
+              memoryText += "No risk score available\n\n";
+            }
 
             if (simulate.error) {
-              memoryText += `Simulation error: ${simulate.error}\n\n`
+              memoryText += `Simulation error: ${simulate.error}\n\n`;
             } else {
-              const result = simulate.results[i] // Simulate description
-              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n"
-              memoryText += `Link: ${result.link}\n\n`
+              const result = simulate.results[i]; // Simulate description
+              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n";
+              memoryText += `Link: ${result.link}\n\n`;
             }
           }
 
-          finalText += memoryText
+          finalText += memoryText;
 
           proposals.push({ proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
         } catch (e) {
-          console.error("Error inside subscription:", e)
+          console.error("Error inside subscription:", e);
         }
       }
     )
@@ -104,8 +109,8 @@ export const confirmIntentAction: Action = {
       message.roomId
     );
 
-    // Sleep 6 seconds to wait for responses
-    const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : 6000;
+    // Sleep 10 seconds to wait for responses
+    const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
     await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
     if (proposals.length == 0) {

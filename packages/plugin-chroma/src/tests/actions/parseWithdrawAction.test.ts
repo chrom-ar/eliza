@@ -186,7 +186,7 @@ describe('Parse Withdraw Action', async () => {
             await parseWithdrawAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('1');
             expect(callbackArg.intent.fromToken).toBe('ETH');
@@ -209,7 +209,7 @@ describe('Parse Withdraw Action', async () => {
             await parseWithdrawAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('1');
             expect(callbackArg.intent.fromToken).toBe('ETH');
@@ -232,7 +232,7 @@ describe('Parse Withdraw Action', async () => {
             await parseWithdrawAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('100');
             expect(callbackArg.intent.fromToken).toBe('USDC');
@@ -255,7 +255,7 @@ describe('Parse Withdraw Action', async () => {
             await parseWithdrawAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('50');
             expect(callbackArg.intent.fromToken).toBe('USDT');
@@ -279,7 +279,7 @@ describe('Parse Withdraw Action', async () => {
 
             expect(getDefaultWallet).toHaveBeenCalledWith(mockRuntime, message.userId);
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent.fromAddress).toBe(mockWallet.address);
             expect(callbackArg.intent.recipientAddress).toBe(mockWallet.address);
         });

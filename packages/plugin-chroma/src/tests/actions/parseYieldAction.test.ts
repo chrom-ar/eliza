@@ -156,7 +156,7 @@ describe('Parse Yield Action', async () => {
             expect(await parseYieldAction.validate(mockRuntime, message)).toBe(true);
         });
 
-        it('should validate messages containing "to" and crypto tokens', async () => {
+        it('should not validate messages containing "to" and crypto tokens', async () => {
             const message: Memory = {
                 id: '123' as UUID,
                 content: { text: 'I want to send 1 ETH to an address' },
@@ -164,7 +164,7 @@ describe('Parse Yield Action', async () => {
                 agentId: '123' as UUID,
                 roomId: '123' as UUID
             };
-            expect(await parseYieldAction.validate(mockRuntime, message)).toBe(true);
+            expect(await parseYieldAction.validate(mockRuntime, message)).toBe(false);
         });
 
         it('should not validate messages without yield-related keywords or tokens', async () => {
@@ -200,7 +200,7 @@ describe('Parse Yield Action', async () => {
             await parseYieldAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('1');
             expect(callbackArg.intent.fromToken).toBe('ETH');
@@ -222,7 +222,7 @@ describe('Parse Yield Action', async () => {
             await parseYieldAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('1');
             expect(callbackArg.intent.fromToken).toBe('ETH');
@@ -244,7 +244,7 @@ describe('Parse Yield Action', async () => {
             await parseYieldAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('100');
             expect(callbackArg.intent.fromToken).toBe('USDC');
@@ -266,7 +266,7 @@ describe('Parse Yield Action', async () => {
             await parseYieldAction.handler(mockRuntime, message, state, {}, mockCallback as HandlerCallback);
 
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent).toBeDefined();
             expect(callbackArg.intent.amount).toBe('50');
             expect(callbackArg.intent.fromToken).toBe('USDT');
@@ -289,7 +289,7 @@ describe('Parse Yield Action', async () => {
 
             expect(getDefaultWallet).toHaveBeenCalledWith(mockRuntime, message.userId);
             expect(mockCallback).toHaveBeenCalled();
-            const callbackArg = mockCallback.mock.calls[1][0]; // Second call contains the intent
+            const callbackArg = mockCallback.mock.calls[0][0];
             expect(callbackArg.intent.recipientAddress).toBe(mockWallet.address);
         });
     });
