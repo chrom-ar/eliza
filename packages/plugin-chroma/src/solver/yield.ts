@@ -1,11 +1,11 @@
-import { encodeFunctionData, parseUnits } from 'viem';
+import { encodeFunctionData } from 'viem';
 
 import {
   AAVE_POOL,
   GeneralMessage,
-  TOKENS,
-  TOKEN_DECIMALS,
   getChainId,
+  getTokenAddress,
+  getTokenAmount
 } from "./helpers";
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {
@@ -15,6 +15,7 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
       fromChain,
       fromToken,
       recipientAddress,
+      description,
     }
   } = message;
 
@@ -24,11 +25,12 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     return null;
   }
 
-  fromChain = fromChain.toUpperCase();
-  fromToken = fromToken.toUpperCase();
+  const tokenAddr = getTokenAddress(fromChain, fromToken);
+  const tokenAmount = getTokenAmount(amount, fromChain, fromToken);
 
-  const tokenAddr   = TOKENS[fromChain][fromToken];
-  const tokenAmount = parseUnits(amount, TOKEN_DECIMALS[fromChain][fromToken]).toString();
+  if (!tokenAddr || !tokenAmount) {
+    throw new Error(`Invalid token address or amount for chain ${fromChain} and token ${fromToken}`);
+  }
 
   // Encode supply transaction
   const abi = [
@@ -52,12 +54,11 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     },
   ]
 
-  const aavePool = AAVE_POOL[fromChain][fromToken];
-
   const chainId = getChainId(fromChain);
+  const aavePool = AAVE_POOL[chainId][fromToken];
 
   return {
-    description: `Deposit ${fromToken} in Aave V3 on ${fromChain}`,
+    description: `Deposit ${fromToken} in Aave V3 on ${fromChain}${description ? ` (from previous instructions: "${description}")` : ''}`,
     titles: [
       'Approve', 'Supply'
     ],

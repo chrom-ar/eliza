@@ -134,7 +134,7 @@ export const parseYieldAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'I want a yield interest strategy with 1 ETH' }
+        content: { text: 'I want a to deposit 1 ETH in a yield strategy' }
       },
       {
         user: '{{user2}}',
