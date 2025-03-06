@@ -17,11 +17,12 @@ import {
 
 import {
   GeneralMessage,
-  TOKENS,
-  TOKEN_DECIMALS,
   ZERO_ADDRESS,
-  isEvmChain,
   getChainId,
+  isEvmChain,
+  getTokenAddress,
+  getTokenAmount,
+  getTokenDecimals,
 } from "./helpers";
 
 export async function validateAndBuildTransfer(message: GeneralMessage): Promise<object> {
@@ -68,8 +69,13 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
 
 
 function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): object {
-  const tokenAddr = TOKENS[fromChain][fromToken];
-  const tokenAmount = parseUnits(amount, TOKEN_DECIMALS[fromChain][fromToken]).toString();
+  const tokenAddr = getTokenAddress(fromChain, fromToken);
+  const tokenAmount = getTokenAmount(amount, fromChain, fromToken);
+
+  if (!tokenAddr || !tokenAmount) {
+    throw new Error(`Invalid token address or amount for chain ${fromChain} and token ${fromToken}`);
+  }
+
   const chainId = getChainId(fromChain);
 
   const erc20Abi = [
@@ -104,16 +110,23 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
 
 
 async function _buildSolTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): Promise<object> {
-  const tokenAddr   = TOKENS[fromChain][fromToken];
-  const decimals    = TOKEN_DECIMALS[fromChain][fromToken]
+  const tokenAddr = getTokenAddress(fromChain, fromToken);
+  const solToken = getTokenAddress("SOLANA", "SOL");
+
+  if (!tokenAddr || !solToken) {
+    throw new Error(`Invalid token address for chain ${fromChain} and token ${fromToken}`);
+  }
+
+
+  const decimals = getTokenDecimals(fromChain, fromToken);
   const tokenAmount = parseUnits(amount, decimals);
-  const from        = new PublicKey(fromAddress);
-  const recipient   = new PublicKey(recipientAddress);
+  const from = new PublicKey(fromAddress);
+  const recipient = new PublicKey(recipientAddress);
 
   const instructions = [];
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed"); // TODO: Use config for env
 
-  if (tokenAddr == TOKENS["SOLANA"]["SOL"]) {
+  if (tokenAddr === solToken) {
     instructions.push(SystemProgram.transfer({
       fromPubkey: from,
       toPubkey:   recipient,

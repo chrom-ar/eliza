@@ -46,18 +46,6 @@ export const TOKEN_DECIMALS: Record<string, Record<string, number>> = {
   },
 };
 
-export const AAVE_POOL = {
-  "ARB-SEPOLIA": {
-    "USDC": "0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff"
-  },
-  "BASE-SEPOLIA": {
-    "USDC": "0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b"
-  },
-  "OPT-SEPOLIA": {
-    "USDC": "0xb50201558B00496A145fE76f7424749556E326D8"
-  }
-};
-
 export const ERC20_ABI = [
   {
     "constant": true,
