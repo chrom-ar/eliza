@@ -1,5 +1,6 @@
 import { elizaLogger } from '@elizaos/core';
 import { TOKENS, TOKEN_DECIMALS, ZERO_ADDRESS } from './addresses';
+import { getAlchemyChainName } from './chain';
 
 export interface TokenBalance {
   token: string;
@@ -81,9 +82,7 @@ async function fetchBalancesFromAlchemy(
   address: string,
   networks: string[]
 ): Promise<AlchemyBalanceResponse | null> {
-  const normalizedNetworks = networks.map(network =>
-    network.toLowerCase().replace('_', '-')
-  );
+  const normalizedNetworks = networks.map(network => getAlchemyChainName(network));
 
   const requestBody = {
     addresses: [

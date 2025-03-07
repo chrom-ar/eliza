@@ -11,20 +11,34 @@ const networkAliases: Record<string, string> = {
   // Base
   'base': 'base',
   'base-mainnet': 'base',
+  'base-ethereum': 'base',
   'base-sepolia': 'baseSepolia',
 
   // Arbitrum
   'arb': 'arbitrum',
   'arbitrum': 'arbitrum',
   'arb-mainnet': 'arbitrum',
+  'arb-ethereum': 'arbitrum',
   'arb-sepolia': 'arbitrumSepolia',
 
   // Optimism
   'opt': 'optimism',
   'optimism': 'optimism',
   'opt-mainnet': 'optimism',
+  'opt-ethereum': 'optimism',
   'opt-sepolia': 'optimismSepolia'
 };
+
+const ENVIRONMENTS: Record<string, 'Mainnet' | 'Testnet' | 'Devnet'> = {
+  [chains.mainnet.id]: 'Mainnet',
+  [chains.base.id]: 'Mainnet',
+  [chains.arbitrum.id]: 'Mainnet',
+  [chains.optimism.id]: 'Mainnet',
+  [chains.sepolia.id]: 'Testnet',
+  [chains.baseSepolia.id]: 'Testnet',
+  [chains.arbitrumSepolia.id]: 'Testnet',
+  [chains.optimismSepolia.id]: 'Testnet',
+}
 
 export interface GeneralMessage {
   timestamp: number;
@@ -46,6 +60,17 @@ type Token = "ETH" | "USDC" | "SOL";
 
 export const ZERO_ADDRESS = '0x' + '0'.repeat(40);
 
+const CHAIN_NAMES = {
+  [chains.mainnet.id]: "ethereum",
+  [chains.base.id]: "base",
+  [chains.arbitrum.id]: "arbitrum",
+  [chains.optimism.id]: "optimism",
+  [chains.sepolia.id]: "sepolia",
+  [chains.baseSepolia.id]: "base-sepolia",
+  [chains.arbitrumSepolia.id]: "arbitrum-sepolia",
+  [chains.optimismSepolia.id]: "optimism-sepolia",
+}
+
 const TOKENS = {
   "SOLANA": {
     "SOL": "So11111111111111111111111111111111111111112",
@@ -65,7 +90,14 @@ const TOKENS = {
   },
   [chains.optimism.id]: {
     "ETH": ZERO_ADDRESS,
-    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+    "OP": "0x4200000000000000000000000000000000000042",
+    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", // We use the same address for USDC and USDC.E, but we shouldn't
+    "USDC.E": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+    "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+  },
+  [chains.sepolia.id]: {
+    "ETH": ZERO_ADDRESS,
+    "USDC": "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
   },
   [chains.baseSepolia.id]: {
     "ETH": ZERO_ADDRESS,
@@ -84,35 +116,42 @@ const TOKENS = {
 const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
   "SOLANA": {
     "SOL": 9,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.mainnet.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.base.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.arbitrum.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.optimism.id]: {
     "ETH": 18,
-    "USDC": 6
+    "OP": 18,
+    "USDC": 6,
+    "USDC.E": 6,
+    "USDT": 6,
+  },
+  [chains.sepolia.id]: {
+    "ETH": 18,
+    "USDC": 6,
   },
   [chains.baseSepolia.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.arbitrumSepolia.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
   [chains.optimismSepolia.id]: {
     "ETH": 18,
-    "USDC": 6
+    "USDC": 6,
   },
 }
 
@@ -130,6 +169,9 @@ export const AAVE_POOL = {
   [chains.optimism.id]: {
     "USDC": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
   },
+  [chains.sepolia.id]: {
+    "USDC": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+  },
   [chains.arbitrumSepolia.id]: {
     "USDC": "0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff",
   },
@@ -141,11 +183,20 @@ export const AAVE_POOL = {
   }
 }
 
-// TODO: remove sepolia
-const EVM_CHAINS = ["ETHEREUM", "SEPOLIA", "BASE", "BASE-SEPOLIA", "ARBITRUM", "ARB-SEPOLIA", "OPTIMISM", "OPT-SEPOLIA"];
+// TODO: remove sepolias
+const EVM_CHAIN_IDS = [
+  chains.mainnet.id,
+  chains.base.id,
+  chains.arbitrum.id,
+  chains.optimism.id,
+  chains.sepolia.id,
+  chains.baseSepolia.id,
+  chains.arbitrumSepolia.id,
+  chains.optimismSepolia.id,
+];
 
 export function isEvmChain(chain: string): boolean {
-  return EVM_CHAINS.includes(chain.toUpperCase());
+  return EVM_CHAIN_IDS.includes(getChainId(chain));
 }
 
 export const getChainId = (network: string) => {
@@ -171,6 +222,18 @@ export const getChainId = (network: string) => {
   }
 
   return chainId
+}
+
+export function getChainName(chain: string): string | null {
+  const chainId = getChainId(chain);
+
+  return CHAIN_NAMES[chainId] || null;
+}
+
+export function getEnvironment(chain: string): 'Mainnet' | 'Testnet' | 'Devnet' | null {
+  const chainId = getChainId(chain);
+
+  return ENVIRONMENTS[chainId] || null;
 }
 
 export function getTokenAddress(chain: string, token: string): string | null {

@@ -4,34 +4,32 @@ import evm from '@wormhole-foundation/sdk/evm';
 import solana from '@wormhole-foundation/sdk/solana';
 import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { formatUnits, parseUnits } from 'viem';
-import { GeneralMessage } from './transactionHelpers';
+import * as chains from 'viem/chains';
+import { GeneralMessage, getEnvironment, getChainId } from './helpers';
 
 type WormholeChain =
   | "Ethereum" | "Sepolia"
   | "Optimism" | "OptimismSepolia"
   | "Arbitrum" | "ArbitrumSepolia"
   | "Base" | "BaseSepolia"
-  | "Polygon" | "PolygonSepolia"
+  | "Polygon"
   | "Solana";
 
 export function convertToWormholeChain(chain: string): WormholeChain {
   const chainMap: { [key: string]: WormholeChain } = {
-    'ethereum': 'Ethereum',
-    'ethereum-sepolia': 'Sepolia',
-    'sepolia': 'Sepolia',
-    'optimism': 'Optimism',
-    'optimism-sepolia': 'OptimismSepolia',
-    'arbitrum': 'Arbitrum',
-    'arbitrum-sepolia': 'ArbitrumSepolia',
-    'base': 'Base',
-    'base-sepolia': 'BaseSepolia',
-    'polygon': 'Polygon',
-    'polygon-sepolia': 'PolygonSepolia',
-    'solana': 'Solana'
+    [chains.mainnet.id]: 'Ethereum',
+    [chains.sepolia.id]: 'Sepolia',
+    [chains.optimism.id]: 'Optimism',
+    [chains.optimismSepolia.id]: 'OptimismSepolia',
+    [chains.arbitrum.id]: 'Arbitrum',
+    [chains.arbitrumSepolia.id]: 'ArbitrumSepolia',
+    [chains.base.id]: 'Base',
+    [chains.baseSepolia.id]: 'BaseSepolia',
+    [chains.polygon.id]: 'Polygon',
+    "SOLANA": 'Solana',
   };
 
-  const normalizedChain = chain.toLowerCase();
-  return chainMap[normalizedChain] || 'Ethereum';
+  return chainMap[chain] || 'Ethereum';
 }
 
 export async function buildBridgeTransaction(message: GeneralMessage) {
@@ -45,10 +43,11 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
     }
   } = message;
 
-  const wh = await wormhole("Testnet", [evm, solana]);
+  const environment = getEnvironment(fromChain);
+  const wh = await wormhole(environment, [evm, solana]);
 
-  const sourceChain = wh.getChain(convertToWormholeChain(fromChain));
-  const destinationChain = wh.getChain(convertToWormholeChain(recipientChain));
+  const sourceChain = wh.getChain(convertToWormholeChain(getChainId(fromChain)));
+  const destinationChain = wh.getChain(convertToWormholeChain(getChainId(recipientChain)));
 
   const automaticCircleBridge = await sourceChain.getAutomaticCircleBridge();
   const relayerFee = await automaticCircleBridge.getRelayerFee(destinationChain.chain);
