@@ -1,5 +1,6 @@
-import { encodeFunctionData, parseUnits } from 'viem';
+import { encodeFunctionData } from 'viem';
 
+import { AAVE_V3_WITHDRAW_ABI } from './utils/abis';
 import {
   AAVE_POOL,
   GeneralMessage,
@@ -32,19 +33,6 @@ export async function validateAndBuildWithdraw(message: GeneralMessage): Promise
     throw new Error(`Invalid token address or amount for chain ${fromChain} and token ${fromToken}`);
   }
 
-  // Encode withdraw transaction
-  const abi = [
-    {
-      name: 'withdraw',
-      type: 'function',
-      inputs: [
-        { name: 'asset', type: 'address' },
-        { name: 'amount', type: 'uint256' },
-        { name: 'to', type: 'address' }
-      ]
-    },
-  ];
-
   const chainId = getChainId(fromChain);
   const aavePool = AAVE_POOL[chainId][fromToken];
 
@@ -57,11 +45,11 @@ export async function validateAndBuildWithdraw(message: GeneralMessage): Promise
       `Withdraw ${amount}${fromToken} from AavePool. ${fromAddress} will receive the tokens`
     ],
     transactions: [
-      { // withdraw
+      {
         chainId,
         to: aavePool,
         value: 0,
-        data: encodeFunctionData({abi, functionName: "withdraw", args: [tokenAddr, tokenAmount, fromAddress]})
+        data: encodeFunctionData({abi: AAVE_V3_WITHDRAW_ABI, functionName: "withdraw", args: [tokenAddr, tokenAmount, fromAddress]})
       }
     ]
   };

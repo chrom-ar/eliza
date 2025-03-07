@@ -1,12 +1,13 @@
 import { encodeFunctionData } from 'viem';
 
+import { AAVE_V3_SUPPLY_ABI, APPROVE_ABI } from './utils/abis';
 import {
   AAVE_POOL,
   GeneralMessage,
   getChainId,
   getTokenAddress,
   getTokenAmount
-} from "./helpers";
+} from './helpers';
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {
   let {
@@ -32,28 +33,6 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     throw new Error(`Invalid token address or amount for chain ${fromChain} and token ${fromToken}`);
   }
 
-  // Encode supply transaction
-  const abi = [
-    {
-      name: 'approve',
-      type: 'function',
-      inputs: [
-        { name: 'spender', type: 'address' },
-        { name: 'amount', type: 'uint256' }
-      ]
-    },
-    {
-      name: 'supply',
-      type: 'function',
-      inputs: [
-        { name: 'asset', type: 'address' },
-        { name: 'amount', type: 'uint256' },
-        { name: 'onBehalfOf', type: 'address' },
-        { name: 'referralCode', type: 'uint16' }
-      ]
-    },
-  ]
-
   const chainId = getChainId(fromChain);
   const aavePool = AAVE_POOL[chainId][fromToken];
 
@@ -67,17 +46,16 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
       `Supply ${amount}${fromToken} in AavePool. ${recipientAddress} will receive the a${fromToken} tokens`
     ],
     transactions: [
-      { // approve
+      {
         chainId,
         to: tokenAddr,
         value: 0,
-        data: encodeFunctionData({abi, functionName: "approve", args: [aavePool, tokenAmount]})
-      },
-      { // supply
+        data: encodeFunctionData({abi: APPROVE_ABI, functionName: "approve", args: [aavePool, tokenAmount]})
+      }, {
         chainId,
         to: aavePool,
         value: 0,
-        data: encodeFunctionData({abi, functionName: "supply", args: [tokenAddr, tokenAmount, recipientAddress, 0]})
+        data: encodeFunctionData({abi: AAVE_V3_SUPPLY_ABI, functionName: "supply", args: [tokenAddr, tokenAmount, recipientAddress, 0]})
       }
     ]
   }
