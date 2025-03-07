@@ -91,7 +91,7 @@ const TOKENS = {
   [chains.optimism.id]: {
     "ETH": ZERO_ADDRESS,
     "OP": "0x4200000000000000000000000000000000000042",
-    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", // We use the same address for USDC and USDC.E, but we shuoldn't
+    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", // We use the same address for USDC and USDC.E, but we shouldn't
     "USDC.E": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
     "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
   },
