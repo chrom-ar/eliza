@@ -100,7 +100,7 @@ export const getBalanceAction: Action = {
           networkId = extractedNetwork.toLowerCase();
           balanceText = `Wallet Address: ${walletAddress}\nNetwork: ${networkId}\n`;
 
-          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC']);
+          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC', 'crvUSDC']);
 
           for (const balance of tokenBalances) {
             balanceText += `- ${balance.balance} ${balance.symbol}\n`;
@@ -110,7 +110,7 @@ export const getBalanceAction: Action = {
           networkId = existingWallet.chains;
           balanceText = `Wallet Address: ${walletAddress}\nChecking balances across all networks:\n`;
 
-          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC']);
+          const tokenBalances = await getBalances(walletAddress, networkId, ['USDC', 'aUSDC', 'crvUSDC']);
 
           // Group balances by network
           const networkBalances: Record<string, TokenBalance[]> = {};

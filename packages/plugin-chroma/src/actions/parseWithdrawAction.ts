@@ -9,7 +9,11 @@ const withdrawSchema = z.object({
   fromToken: z.string(),
   fromAddress: z.string(),
   fromChain: z.string().nullable(),
+  protocol: z.string().nullable(),
 });
+
+// Type for the schema to avoid type errors
+type WithdrawSchema = z.infer<typeof withdrawSchema>;
 
 const contextTemplate = `# Recent Messages
 {{recentMessages}}
@@ -23,9 +27,13 @@ Follow the instructions:
    - You MUST extract the exact network/chain if mentioned by the user in their message
    - If no network is mentioned at all, set fromChain to null
    - Never make up a default value
-3. When extracting the amount, make sure to include the decimals and do not put any other text but the number.
-4. Do not include decimals unless the user specifies them.
-5. Use the "compact" format for the chain, so "Optimism Sepolia" becomes "opt-sepolia".`;
+3. For protocol extraction:
+   - You MUST extract the exact protocol if mentioned by the user in their message (e.g., Aave, Compound, Uniswap)
+   - If no protocol is mentioned at all, set protocol to null
+   - Never make up a default value
+4. When extracting the amount, make sure to include the decimals and do not put any other text but the number.
+5. Do not include decimals unless the user specifies them.
+6. Use the "compact" format for the chain, so "Optimism Sepolia" becomes "opt-sepolia".`;
 
 export const parseWithdrawAction: Action = {
   suppressInitialMessage: true,
@@ -54,10 +62,10 @@ export const parseWithdrawAction: Action = {
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
-      schema: withdrawSchema,
+      schema: withdrawSchema as z.ZodType<any>,
       schemaName: 'WithdrawIntent',
       context
-    })).object as z.infer<typeof withdrawSchema>;
+    })).object as WithdrawSchema;
     console.log('intentData', intentData)
 
     if (Object.keys(intentData).length === 0) {
@@ -83,8 +91,8 @@ export const parseWithdrawAction: Action = {
     const recipientAddress = existingWallet.address;
     const recipientChain = intentData.fromChain;
 
-    const { amount, fromToken, fromChain, fromAddress } = intentData;
-    const responseText = `I've created a withdraw intent for ${amount} ${fromToken} from ${fromAddress} on ${fromChain}. \n\n Confirm the intent to proceed with the withdrawal?`
+    const { amount, fromToken, fromChain, fromAddress, protocol } = intentData;
+    const responseText = `I've created a withdraw intent for ${amount} ${fromToken} from ${fromAddress} on ${fromChain}${protocol ? ` using ${protocol}` : ''}. \n\n Confirm the intent to proceed with the withdrawal?`
 
     const intentManager = new MemoryManager({
       runtime,

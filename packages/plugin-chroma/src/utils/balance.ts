@@ -131,20 +131,18 @@ export async function getBalances(
   tokenSymbols: string[] = ["USDC"]
 ): Promise<TokenBalance[]> {
   const networkList = Array.isArray(networks) ? networks : [networks];
+  const normalizedNetworks = networkList.map(network => getAlchemyChainName(network));
 
   try {
-    const data = await fetchBalancesFromAlchemy(address, networkList);
+    const data = await fetchBalancesFromAlchemy(address, normalizedNetworks);
 
     if (!data) {
       elizaLogger.error(`No data returned from Alchemy for ${address}`);
       return [];
     }
 
-    const tokenAddressMap = buildTokenAddressMap(networkList);
+    const tokenAddressMap = buildTokenAddressMap(normalizedNetworks);
     const balances: TokenBalance[] = [];
-    const normalizedNetworks = networkList.map(network =>
-      network.toLowerCase().replace('_', '-')
-    );
 
     if (data.data && data.data.tokens) {
       for (const tokenData of data.data.tokens) {
