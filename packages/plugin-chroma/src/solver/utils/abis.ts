@@ -33,3 +33,26 @@ export const AAVE_V3_WITHDRAW_ABI = [
     ]
   },
 ];
+
+export const CURVE_ADD_LIQUIDITY_ABI = [
+  {
+    name: 'add_liquidity',
+    type: 'function',
+    inputs: [
+      { name: 'token_amounts', type: 'uint256[]' },
+      { name: 'min_mint_amount', type: 'uint256' }
+    ]
+  }
+];
+
+export const CURVE_REMOVE_LIQUIDITY_ONE_COIN_ABI = [
+  {
+    name: 'remove_liquidity_one_coin',
+    type: 'function',
+    inputs: [
+      { name: 'burn_amount', type: 'uint256' },
+      { name: 'coin_index', type: 'int128' },
+      { name: 'min_amount', type: 'uint256' }
+    ]
+  }
+];

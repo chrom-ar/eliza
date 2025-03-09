@@ -52,6 +52,7 @@ export interface GeneralMessage {
     recipientAddress: string;
     recipientChain: string;
     description?: string;
+    protocol?: string; // Optional for yield operations
     type: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP';
   };
 }
@@ -79,21 +80,25 @@ const TOKENS = {
   [chains.mainnet.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "CRVUSDC": "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E", // Not quite, but it should work
   },
   [chains.base.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "CRVUSDC": "0xf6C5F01C7F3148891ad0e19DF78743D31E390D1f", // 4pool, but should work
   },
   [chains.arbitrum.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    "CRVUSDC": "0xec090cf6DD891D2d014beA6edAda6e05E025D93d",
   },
   [chains.optimism.id]: {
     "ETH": ZERO_ADDRESS,
     "OP": "0x4200000000000000000000000000000000000042",
-    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", // We use the same address for USDC and USDC.E, but we shouldn't
+    "USDC": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     "USDC.E": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
     "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    "CRVUSDC": "0x03771e24b7C9172d163Bf447490B142a15be3485", //crvUSD/USDC
   },
   [chains.sepolia.id]: {
     "ETH": ZERO_ADDRESS,
@@ -121,14 +126,17 @@ const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
   [chains.mainnet.id]: {
     "ETH": 18,
     "USDC": 6,
+    "CRVUSDC": 18,
   },
   [chains.base.id]: {
     "ETH": 18,
     "USDC": 6,
+    "CRVUSDC": 18,
   },
   [chains.arbitrum.id]: {
     "ETH": 18,
     "USDC": 6,
+    "CRVUSDC": 18,
   },
   [chains.optimism.id]: {
     "ETH": 18,
@@ -136,6 +144,7 @@ const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
     "USDC": 6,
     "USDC.E": 6,
     "USDT": 6,
+    "CRVUSDC": 18,
   },
   [chains.sepolia.id]: {
     "ETH": 18,
@@ -168,6 +177,7 @@ export const AAVE_POOL = {
   },
   [chains.optimism.id]: {
     "USDC": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "USDC.E": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
   },
   [chains.sepolia.id]: {
     "USDC": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
@@ -182,6 +192,38 @@ export const AAVE_POOL = {
     "USDC": "0xb50201558B00496A145fE76f7424749556E326D8",
   }
 }
+
+export const CURVE_POOLS = {
+  [chains.mainnet.id]: {
+    "USDC": {
+      pool: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+      index: 0,
+      coins_count: 4,
+    },
+  },
+  [chains.arbitrum.id]: {
+    "USDC": {
+      pool: "0xec090cf6DD891D2d014beA6edAda6e05E025D93d",
+      index: 1,
+      coins_count: 2,
+    },
+  },
+  [chains.base.id]: {
+    "USDC": {
+      pool: "0xf6C5F01C7F3148891ad0e19DF78743D31E390D1f",
+      index: 0,
+      coins_count: 2,
+    },
+  },
+  [chains.optimism.id]: {
+    "USDC": {
+      pool: "0x03771e24b7C9172d163Bf447490B142a15be3485",
+      index: 1,
+      coins_count: 2,
+    },
+  },
+}
+
 
 // TODO: remove sepolias
 const EVM_CHAIN_IDS = [
