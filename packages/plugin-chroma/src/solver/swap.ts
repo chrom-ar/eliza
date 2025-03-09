@@ -4,7 +4,7 @@ import {
 } from "./helpers";
 
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
-import { EVMLiFiSwap } from './lifiEvmSwap';
+import { buildSwapTransaction } from './lifiEvmSwap';
 
 
 export async function validateAndBuildSwap(message: GeneralMessage): Promise<object> {
@@ -45,8 +45,7 @@ async function _buildSwap(message: GeneralMessage): Promise<object> {
   } = message;
 
   if (isEvmChain(fromChain)) {
-    const evmSwap = new EVMLiFiSwap();
-    return evmSwap.buildSwapTransaction(message);
+    return buildSwapTransaction(message);
   } else if (fromChain.toUpperCase() === "SOLANA") {
     const {
       body: {
