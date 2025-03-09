@@ -91,12 +91,6 @@ export const parseYieldAction: Action = {
     if (!intentData.fromChain) {
       intentData.fromChain = "base-sepolia";
     }
-
-    // Set default protocol if not extracted
-    if (!intentData.protocol) {
-      intentData.protocol = "aave";
-    }
-
     // Check if user already has a wallet
     const existingWallet = await getDefaultWallet(runtime, message.userId);
 

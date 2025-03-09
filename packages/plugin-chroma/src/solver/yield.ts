@@ -10,7 +10,9 @@ import {
   getTokenAmount
 } from './helpers';
 
-function buildYieldTransactions({
+const protocols = { aave: 'Aave V3', curve: 'Curve' };
+
+function buildYieldTransaction({
   protocol,
   chainId,
   tokenAddr,
@@ -18,7 +20,7 @@ function buildYieldTransactions({
   recipientAddress,
   fromToken,
 }) {
-  if (!protocol || protocol.toLowerCase() === 'aave') {
+  if (!protocol || protocols.aave === protocol) {
     const aavePool = AAVE_POOL[chainId]?.[fromToken];
 
     if (!aavePool) {
@@ -26,18 +28,16 @@ function buildYieldTransactions({
     }
 
     return {
-      protocolName: 'Aave V3',
-      title: 'Supply',
-      call: `Supply ${tokenAmount}${fromToken} in AavePool. ${recipientAddress} will receive the a${fromToken} tokens`,
-      targetAddress: aavePool,
-      transaction: {
-        chainId,
-        to: aavePool,
-        value: 0,
-        data: encodeFunctionData({abi: AAVE_V3_SUPPLY_ABI, functionName: "supply", args: [tokenAddr, tokenAmount, recipientAddress, 0]})
-      }
+      chainId,
+      to: aavePool,
+      value: 0,
+      data: encodeFunctionData({
+        abi: AAVE_V3_SUPPLY_ABI,
+        functionName: "supply",
+        args: [tokenAddr, tokenAmount, recipientAddress, 0]
+      }),
     };
-  } else if (protocol.toLowerCase() === 'curve') {
+  } else if (protocols.curve === protocol) {
     const curvePool = CURVE_POOLS[chainId]?.[fromToken];
 
     if (!curvePool) {
@@ -45,24 +45,17 @@ function buildYieldTransactions({
     }
 
     const amounts = Array(curvePool.coins_count).fill('0');
-
     amounts[curvePool.index] = tokenAmount;
 
     return {
-      protocolName: 'Curve',
-      title: 'Add Liquidity',
-      call: `Add ${tokenAmount}${fromToken} liquidity to Curve pool. ${recipientAddress} will receive the LP tokens`,
-      targetAddress: curvePool.pool,
-      transaction: {
-        chainId,
-        to: curvePool.pool,
-        value: 0,
-        data: encodeFunctionData({
-          abi: CURVE_ADD_LIQUIDITY_ABI,
-          functionName: "add_liquidity",
-          args: [amounts, 0] // TODO: add slippage protection
-        })
-      }
+      chainId,
+      to: curvePool.pool,
+      value: 0,
+      data: encodeFunctionData({
+        abi: CURVE_ADD_LIQUIDITY_ABI,
+        functionName: "add_liquidity",
+        args: [amounts, 0] // TODO: add slippage protection
+      }),
     };
   }
 
@@ -94,32 +87,34 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
   }
 
   const chainId = getChainId(fromChain);
-  const protocolTx = buildYieldTransactions({
-    protocol,
+  const protocolName = protocols[(protocol || 'aave').toLowerCase()] || protocol;
+
+  const transaction = buildYieldTransaction({
+    protocol: protocolName,
     chainId,
     tokenAddr,
     tokenAmount,
     recipientAddress,
-    fromToken: fromToken.toUpperCase()
+    fromToken: fromToken.toUpperCase(),
   });
 
   return {
-    description: `Deposit ${fromToken} in ${protocolTx.protocolName} on ${fromChain}${description ? ` (from previous instructions: "${description}")` : ''}`,
+    description: `Deposit ${fromToken} in ${protocolName} on ${fromChain}${description ? ` (from previous instructions: "${description}")` : ''}`,
     titles: [
-      'Approve', protocolTx.title
+      'Approve', 'Deposit'
     ],
     calls: [
-      `Approve ${amount}${fromToken} to be deposited in ${protocolTx.protocolName}`,
-      protocolTx.call
+      `Approve ${amount}${fromToken} to be deposited in ${protocolName}`,
+      `Deposit ${tokenAmount}${fromToken} in ${protocolName}`
     ],
     transactions: [
       {
         chainId,
         to: tokenAddr,
         value: 0,
-        data: encodeFunctionData({abi: APPROVE_ABI, functionName: "approve", args: [protocolTx.targetAddress, tokenAmount]})
+        data: encodeFunctionData({abi: APPROVE_ABI, functionName: "approve", args: [transaction.to, tokenAmount]})
       },
-      protocolTx.transaction
-    ]
-  }
+      transaction,
+    ],
+  };
 }
