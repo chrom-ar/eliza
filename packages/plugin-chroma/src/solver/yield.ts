@@ -75,7 +75,7 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
   } = message;
 
   if (!amount || !fromChain || !fromToken) {
-    console.log('missing fields');
+    console.log('missing yield fields', { amount, fromChain, fromToken });
     return null;
   }
 

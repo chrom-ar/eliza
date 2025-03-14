@@ -19,7 +19,7 @@ export async function validateAndBuildSwap(message: GeneralMessage): Promise<obj
   } = message;
 
   if (!amount || !fromToken || !toToken || !fromAddress || !fromChain) {
-    console.log('missing fields');
+    console.log('missing swap fields', { amount, fromToken, toToken, fromAddress, fromChain });
     return null;
   }
 

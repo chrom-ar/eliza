@@ -37,7 +37,7 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
   } = message;
   // Check for missing fields (simple example)
   if (!amount || !fromChain || !fromToken || !recipientAddress) {
-    console.log('missing fields');
+    console.log('missing transfer fields', { amount, fromChain, fromToken, recipientAddress });
     return null;
   }
 

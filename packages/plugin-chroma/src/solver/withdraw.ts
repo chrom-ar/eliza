@@ -73,7 +73,7 @@ export async function validateAndBuildWithdraw(message: GeneralMessage): Promise
   } = message;
 
   if (!amount || !fromChain || !fromToken) {
-    console.log('missing fields');
+    console.log('missing withdraw fields', { amount, fromChain, fromToken });
     return null;
   }
 

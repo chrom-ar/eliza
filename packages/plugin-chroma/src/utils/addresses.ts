@@ -22,7 +22,11 @@ export const TOKENS = {
   "OPT-MAINNET": {
     "ETH": ZERO_ADDRESS,
     "USDC": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
     "aUSDC": "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5",
+    "aUSDT": "0x6ab707Aca953eDAeFBc4fD23bA73294241490620",
+    "aDAI": "0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE",
     "crvUSDC": "0x03771e24b7C9172d163Bf447490B142a15be3485", //crvUSD/USDC
   },
   "BASE-SEPOLIA": {
@@ -64,7 +68,11 @@ export const TOKEN_DECIMALS: Record<string, Record<string, number>> = {
   "OPT-MAINNET": {
     "ETH": 18,
     "USDC": 6,
+    "USDT": 6,
+    "DAI": 18,
     "aUSDC": 6,
+    "aUSDT": 6,
+    "aDAI": 18,
     "crvUSDC": 18,
   },
   "BASE-SEPOLIA": {
