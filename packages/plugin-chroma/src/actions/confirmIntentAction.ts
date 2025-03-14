@@ -6,7 +6,7 @@ import { simulateTxs } from '../utils/simulation';
 import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
-const TIMEOUT = 10000;
+const TIMEOUT = 15000;
 
 export const confirmIntentAction: Action = {
   suppressInitialMessage: true,

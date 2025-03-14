@@ -96,8 +96,9 @@ const TOKENS = {
     "ETH": ZERO_ADDRESS,
     "OP": "0x4200000000000000000000000000000000000042",
     "USDC": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    "USDC.E": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
     "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
+    "USDC.E": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
     "CRVUSDC": "0x03771e24b7C9172d163Bf447490B142a15be3485", //crvUSD/USDC
   },
   [chains.sepolia.id]: {
@@ -142,8 +143,9 @@ const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
     "ETH": 18,
     "OP": 18,
     "USDC": 6,
-    "USDC.E": 6,
     "USDT": 6,
+    "DAI": 18,
+    "USDC.E": 6,
     "CRVUSDC": 18,
   },
   [chains.sepolia.id]: {
@@ -177,6 +179,8 @@ export const AAVE_POOL = {
   },
   [chains.optimism.id]: {
     "USDC": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "USDT": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "DAI": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
     "USDC.E": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
   },
   [chains.sepolia.id]: {

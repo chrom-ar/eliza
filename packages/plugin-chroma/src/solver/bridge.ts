@@ -17,12 +17,12 @@ export async function validateAndBuildBridge(message: GeneralMessage): Promise<o
   } = message;
 
   if (!amount || !fromToken || !fromAddress || !fromChain) {
-    console.log('missing fields');
+    console.log('missing bridge fields', { amount, fromToken, fromAddress, fromChain });
     return null;
   }
 
   if (!recipientAddress || !recipientChain) {
-    console.log('recipientAddress and recipientChain are required for bridge operations');
+    console.log('missing recipientAddress or recipientChain', { recipientAddress, recipientChain });
     return null;
   }
 
