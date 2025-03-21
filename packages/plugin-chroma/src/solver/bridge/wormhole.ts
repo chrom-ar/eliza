@@ -5,7 +5,7 @@ import solana from '@wormhole-foundation/sdk/solana';
 import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { formatUnits, parseUnits } from 'viem';
 import * as chains from 'viem/chains';
-import { GeneralMessage, getEnvironment, getChainId } from './helpers';
+import { GeneralMessage, getEnvironment, getChainId } from '../helpers';
 
 type WormholeChain =
   | "Ethereum" | "Sepolia"

@@ -4,6 +4,7 @@ import { confirmProposalAction } from './confirmProposalAction';
 import { createWalletAction } from './createWalletAction';
 import { getBalanceAction } from './getBalanceAction';
 import { parseBridgeAction } from './parseBridgeAction';
+import { parseClaimAction } from './parseClaimAction';
 import { parseSwapAction } from './parseSwapAction';
 import { parseTransferAction } from './parseTransferAction';
 import { parseYieldAction } from './parseYieldAction';
@@ -16,6 +17,7 @@ export {
   createWalletAction,
   getBalanceAction,
   parseBridgeAction,
+  parseClaimAction,
   parseSwapAction,
   parseTransferAction,
   parseYieldAction,

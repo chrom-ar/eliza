@@ -19,6 +19,11 @@ export const TOKENS = {
     "aUSDC": "0x724dc807b04555b71ed48a6896b6F41593b8C637",
     "crvUSDC": "0xec090cf6DD891D2d014beA6edAda6e05E025D93d",
   },
+  "AVAX-MAINNET": {
+    "USDC": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    "USDT": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
+    "DAI": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
+  },
   "OPT-MAINNET": {
     "ETH": ZERO_ADDRESS,
     "USDC": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
@@ -65,6 +70,11 @@ export const TOKEN_DECIMALS: Record<string, Record<string, number>> = {
     "aUSDC": 6,
     "crvUSDC": 18,
   },
+  "AVAX-MAINNET": {
+    "USDC": 6,
+    "USDT": 6,
+    "DAI": 18,
+  },
   "OPT-MAINNET": {
     "ETH": 18,
     "USDC": 6,
@@ -91,53 +101,3 @@ export const TOKEN_DECIMALS: Record<string, Record<string, number>> = {
     "aUSDC": 6,
   },
 };
-
-export const ERC20_ABI = [
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_owner",
-        "type": "address"
-      }
-    ],
-    "name": "balanceOf",
-    "outputs": [
-      {
-        "name": "balance",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [
-      {
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  }
-];

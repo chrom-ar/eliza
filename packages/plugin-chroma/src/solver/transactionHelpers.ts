@@ -1,13 +1,13 @@
 import { privateKeyToAccount } from 'viem/accounts';
-import * as chains from 'viem/chains'
 
 import { GeneralMessage } from './helpers';
 
 import { validateAndBuildTransfer } from './transfer';
 import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
-import { validateAndBuildBridge } from './bridge';
+import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
+import { validateAndBuildBestYield } from './bestYield';
 
 
 /**
@@ -33,9 +33,19 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
     case "BRIDGE":
       result = await validateAndBuildBridge(message);
       break;
+    case "CLAIM":
+      result = await validateAndBuildClaim(message);
+      break;
+    case "BEST_YIELD":
+      result = await validateAndBuildBestYield(message);
+      break;
     default:
       console.log('invalid type', message.body.type);
-      return null
+      return null;
+  }
+
+  if (!result) {
+    return null;
   }
 
   return {
