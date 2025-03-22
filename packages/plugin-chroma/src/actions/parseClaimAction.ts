@@ -11,13 +11,10 @@ import {
   MemoryManager,
 } from '@elizaos/core';
 
-const bridgeSchema = z.object({
-  amount: z.string(),
-  fromToken: z.string(),
-  fromAddress: z.string(),
+const claimSchema = z.object({
   fromChain: z.string(),
-  recipientAddress: z.string(),
   recipientChain: z.string(),
+  transactionHash: z.string(),
   deadline: z.number().optional()
 });
 
@@ -27,7 +24,7 @@ const contextTemplate = `# Recent Messages
 # User Wallet Data
 {{providers}}
 
-Extract bridge intent information from the user's message to facilitate USDC transfers between chains.
+Extract claim intent information from the user's message to facilitate cross-chain claim operations.
 
 ## Available User Data
 The User Wallet Data section above contains:
@@ -35,8 +32,8 @@ The User Wallet Data section above contains:
 - List of user's Solana addresses (Base58 format)
 - List of user's preferred chains
 
-## Bridge Requirements
-Token: ONLY USDC is supported for bridging operations
+## Claim Requirements
+Token: ONLY USDC claims are supported
 
 Chain Rules:
 1. Default source and destination chain is "ethereum" if not specified
@@ -47,32 +44,23 @@ Chain Rules:
    - Valid testnet chains: "sepolia", "optimism-sepolia", "arbitrum-sepolia", "base-sepolia", "polygon-sepolia"
    - Testnets and mainnet chains cannot be mixed in the same transaction
 
-Address Selection Rules:
-1. If address not specified in message:
-   - For EVM chains: Use user's 0x... address from wallet data
-   - For Solana: Use user's Base58 address from wallet data
-2. If multiple addresses available, select the one matching the chain type
-
 ## Required Output Fields
-1. amount: (number) USDC quantity to bridge
-2. fromToken: Must be "USDC"
-3. fromChain: Source chain name (use rules above)
-4. fromAddress: Source wallet address (use rules above)
-5. recipientChain: Destination chain name (use rules above)
-6. recipientAddress: Destination wallet address (use rules above)
-7. deadline: (optional) Transaction deadline timestamp`;
+1. fromChain: Source chain name (use rules above)
+2. recipientChain: Destination chain name (use rules above)
+3. transactionHash: The transaction hash to claim from
+4. deadline: (optional) Transaction deadline timestamp`;
 
-export const parseBridgeAction: Action = {
+export const parseClaimAction: Action = {
   suppressInitialMessage: true,
-  name: 'PARSE_BRIDGE_INTENT',
-  similes: ['BRIDGE_INTENT', 'CROSS_CHAIN_INTENT'],
-  description: 'Parses user query and constructs a GaslessCrossChainIntent JSON for a bridge operation',
+  name: 'PARSE_CLAIM_INTENT',
+  similes: ['CLAIM_INTENT', 'CROSS_CHAIN_CLAIM'],
+  description: 'Parses user query and constructs a GaslessCrossChainClaim JSON for a claim operation',
 
   validate: async (runtime: IAgentRuntime, message: Memory): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
-    return text.includes('bridge') ||
-           ((text.includes('from') && text.includes('to')) &&
-            (text.includes('chain') || text.includes('network') || /sepolia|optimism|arbitrum|base|polygon/i.test(text)));
+    return text.includes('claim') ||
+           ((text.includes('transaction') || text.includes('tx')) && 
+            (text.includes('hash') || /0x[a-f0-9]{64}/i.test(text)));
   },
 
   handler: async (runtime: IAgentRuntime, message: Memory, state: State, _options: { [key: string]: unknown; }, callback: HandlerCallback): Promise<boolean> => {
@@ -84,19 +72,19 @@ export const parseBridgeAction: Action = {
     const intentData = (await generateObject({
       runtime,
       modelClass: ModelClass.SMALL,
-      schema: bridgeSchema,
-      schemaName: 'BridgeIntent',
+      schema: claimSchema,
+      schemaName: 'ClaimIntent',
       context
-    })).object as z.infer<typeof bridgeSchema>;
+    })).object as z.infer<typeof claimSchema>;
 
     if (Object.keys(intentData).length === 0) {
       callback(message.content);
       return true;
     }
 
-    const { amount, fromToken, fromChain, recipientChain } = intentData;
-    const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}.
-Would you like to confirm this bridge operation?`;
+    const { fromChain, recipientChain, transactionHash } = intentData;
+    const responseText = `I've created a claim intent for transaction ${transactionHash} from ${fromChain} to ${recipientChain}.
+Would you like to confirm this claim operation?`;
 
     const intentManager = new MemoryManager({
       runtime,
@@ -116,7 +104,7 @@ Would you like to confirm this bridge operation?`;
         source: message.content?.source,
         intent: {
           ...intentData,
-          type: 'BRIDGE'
+          type: 'CLAIM'
         }
       }
     });
@@ -131,51 +119,38 @@ Would you like to confirm this bridge operation?`;
     [
       {
         user: '{{user1}}',
-        content: { text: 'Bridge 1 USDC from Sepolia to Optimism Sepolia' }
+        content: { text: 'I want to claim the transaction 0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef made on Base Sepolia for Optimism Sepolia' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Building your bridge intent...',
-          action: 'PARSE_BRIDGE_INTENT'
+          text: 'Building your claim intent...',
+          action: 'PARSE_CLAIM_INTENT'
         }
       }
     ],
     [
       {
         user: '{{user1}}',
-        content: { text: 'Can you send 100 USDC from Base to Arbitrum?' }
+        content: { text: 'Can you claim my transaction hash 0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 from Base to Arbitrum?' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Building your bridge intent...',
-          action: 'PARSE_BRIDGE_INTENT'
+          text: 'Building your claim intent...',
+          action: 'PARSE_CLAIM_INTENT'
         }
       }
     ],
     [
       {
         user: '{{user1}}',
-        content: { text: 'Transfer 50 USDC across chains from Polygon to Base' }
+        content: { text: 'Hey {{user2}}, how do I claim my cross-chain transaction?' }
       },
       {
         user: '{{user2}}',
         content: {
-          text: 'Building your bridge intent...',
-          action: 'PARSE_BRIDGE_INTENT'
-        }
-      }
-    ],
-    [
-      {
-        user: '{{user1}}',
-        content: { text: 'Hey {{user2}}, how do I move my USDC between networks?' }
-      },
-      {
-        user: '{{user2}}',
-        content: {
-          text: 'I can help you bridge USDC between different networks. Just let me know how much USDC you want to bridge and between which networks.'
+          text: 'I can help you claim your cross-chain transaction. Just provide me with the transaction hash and the chains involved (source and destination).'
         }
       }
     ]

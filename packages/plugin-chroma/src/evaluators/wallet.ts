@@ -39,6 +39,7 @@ export const walletEvaluator: Evaluator = {
     Guidelines:
     - For each wallet address found, identify which blockchain networks/chains it belongs to
     - If several chains are mentioned for an address, add all of them to the chains array, do not pick and choose
+    - Include all networks that the user mentions, even if they are not in the list of default networks
     - EVM addresses start with "0x" and can be used on Ethereum, Polygon, BSC, Arbitrum, Optimism, etc.
     - Solana addresses don't start with "0x" and are used on the Solana blockchain
     - If the user do not mention sepolia or testnet, then use the mainnet for the chains, that is mostly just the name of the chain

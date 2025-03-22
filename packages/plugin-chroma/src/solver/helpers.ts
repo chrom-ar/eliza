@@ -21,6 +21,14 @@ const networkAliases: Record<string, string> = {
   'arb-ethereum': 'arbitrum',
   'arb-sepolia': 'arbitrumSepolia',
 
+  // Avalanche
+  'avax': 'avalanche',
+  'avalanche': 'avalanche',
+  'avax-mainnet': 'avalanche',
+  'avax-ethereum': 'avalanche',
+  'avax-sepolia': 'avalancheFuji',
+  'avax-fuji': 'avalancheFuji',
+
   // Optimism
   'opt': 'optimism',
   'optimism': 'optimism',
@@ -33,11 +41,13 @@ const ENVIRONMENTS: Record<string, 'Mainnet' | 'Testnet' | 'Devnet'> = {
   [chains.mainnet.id]: 'Mainnet',
   [chains.base.id]: 'Mainnet',
   [chains.arbitrum.id]: 'Mainnet',
+  [chains.avalanche.id]: 'Mainnet',
   [chains.optimism.id]: 'Mainnet',
   [chains.sepolia.id]: 'Testnet',
   [chains.baseSepolia.id]: 'Testnet',
   [chains.arbitrumSepolia.id]: 'Testnet',
   [chains.optimismSepolia.id]: 'Testnet',
+  [chains.avalancheFuji.id]: 'Testnet',
 }
 
 export interface GeneralMessage {
@@ -53,7 +63,8 @@ export interface GeneralMessage {
     recipientChain: string;
     description?: string;
     protocol?: string; // Optional for yield operations
-    type: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP';
+    transactionHash?: string; // Optional for claim operations
+    type: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP' | 'CLAIM';
   };
 }
 
@@ -65,11 +76,13 @@ const CHAIN_NAMES = {
   [chains.mainnet.id]: "ethereum",
   [chains.base.id]: "base",
   [chains.arbitrum.id]: "arbitrum",
+  [chains.avalanche.id]: "avalanche",
   [chains.optimism.id]: "optimism",
   [chains.sepolia.id]: "sepolia",
   [chains.baseSepolia.id]: "base-sepolia",
   [chains.arbitrumSepolia.id]: "arbitrum-sepolia",
   [chains.optimismSepolia.id]: "optimism-sepolia",
+  [chains.avalancheFuji.id]: "avalanche-fuji",
 }
 
 const TOKENS = {
@@ -85,12 +98,20 @@ const TOKENS = {
   [chains.base.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "USDT": "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2", // Check, not used on Aave
+    "DAI": "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb", // Check, not used on Aave
     "CRVUSDC": "0xf6C5F01C7F3148891ad0e19DF78743D31E390D1f", // 4pool, but should work
   },
   [chains.arbitrum.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     "CRVUSDC": "0xec090cf6DD891D2d014beA6edAda6e05E025D93d",
+  },
+  [chains.avalanche.id]: {
+    "USDC": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    "USDT": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
+    "DAI": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
+    "DAI.E": "0xd586E7F844cEa2F87f50152665BCbc2C279D8d70",
   },
   [chains.optimism.id]: {
     "ETH": ZERO_ADDRESS,
@@ -139,6 +160,11 @@ const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
     "USDC": 6,
     "CRVUSDC": 18,
   },
+  [chains.avalanche.id]: {
+    "USDC": 6,
+    "USDT": 6,
+    "DAI": 18,
+  },
   [chains.optimism.id]: {
     "ETH": 18,
     "OP": 18,
@@ -173,6 +199,11 @@ export const AAVE_POOL = {
   },
   [chains.arbitrum.id]: {
     "USDC": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+  },
+  [chains.avalanche.id]: {
+    "USDC": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "USDT": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "DAI": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
   },
   [chains.base.id]: {
     "USDC": "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
@@ -234,6 +265,7 @@ const EVM_CHAIN_IDS = [
   chains.mainnet.id,
   chains.base.id,
   chains.arbitrum.id,
+  chains.avalanche.id,
   chains.optimism.id,
   chains.sepolia.id,
   chains.baseSepolia.id,
@@ -292,7 +324,7 @@ export function getTokenAddress(chain: string, token: string): string | null {
   }
 
   if (!TOKENS[chainId][normalizedToken]) {
-    console.log(`Error: Token ${normalizedToken} not found for chain ${chainId}`);
+    console.log(`Error: Token ${normalizedToken} not found for chain ${chainId} (${chain})`);
     return null;
   }
 
@@ -322,7 +354,7 @@ export function getTokenAmount(amount: string, chain: string, token: string): st
   const tokenDecimals = getTokenDecimals(chain, token);
 
   if (!tokenDecimals) {
-    console.log(`Error: Token ${normalizedToken} not found for chain ${chainId}`);
+    console.log(`Error: Token decimals for ${normalizedToken} not found for chain ${chainId}`);
     return null;
   }
 

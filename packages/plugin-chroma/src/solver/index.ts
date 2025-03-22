@@ -4,7 +4,7 @@ import {
 } from './transactionHelpers';
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
-import { buildBridgeTransaction } from './wormholeBridge';
+import { buildBridgeTransaction } from './bridge/wormhole';
 import { validateAndBuildYield } from './yield';
 import { validateAndBuildWithdraw } from './withdraw';
 

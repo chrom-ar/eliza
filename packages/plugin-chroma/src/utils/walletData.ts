@@ -1,4 +1,4 @@
-import { IAgentRuntime, Memory } from '@elizaos/core';
+import { IAgentRuntime } from '@elizaos/core';
 import * as path from 'path';
 
 export type WalletType = 'evm' | 'solana' | 'unknown';
@@ -19,7 +19,7 @@ export function getWalletType(wallet: Wallet): WalletType {
     return 'evm';
   }
 
-  const evmChainIdentifiers = ['eth', 'base', 'evm', 'polygon', 'arbitrum', 'optimism', 'sepolia'];
+  const evmChainIdentifiers = ['eth', 'base', 'evm', 'polygon', 'arbitrum', 'avalanche', 'optimism', 'sepolia'];
   const solanaChainIdentifiers = ['solana'];
 
   for (const chain of wallet.chains) {

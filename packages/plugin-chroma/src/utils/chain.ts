@@ -20,6 +20,14 @@ const networkAliases: Record<string, string> = {
   'arb-ethereum': 'arbitrum',
   'arb-sepolia': 'arbitrumSepolia',
 
+  // Avalanche
+  'avax': 'avalanche',
+  'avalanche': 'avalanche',
+  'avax-mainnet': 'avalanche',
+  'avax-ethereum': 'avalanche',
+  'avax-sepolia': 'avalancheFuji',
+  'avax-fuji': 'avalancheFuji',
+
   // Optimism
   'opt': 'optimism',
   'optimism': 'optimism',
@@ -32,11 +40,13 @@ const ALCHEMY_CHAIN_NAMES = {
   [chains.mainnet.id]: "eth-mainnet",
   [chains.base.id]: "base-mainnet",
   [chains.arbitrum.id]: "arb-mainnet",
+  [chains.avalanche.id]: "avax-mainnet",
   [chains.optimism.id]: "opt-mainnet",
   [chains.sepolia.id]: "eth-sepolia",
   [chains.baseSepolia.id]: "base-sepolia",
   [chains.arbitrumSepolia.id]: "arb-sepolia",
   [chains.optimismSepolia.id]: "opt-sepolia",
+  [chains.avalancheFuji.id]: "avax-fuji",
 }
 
 export const getChainId = (network: string) => {
