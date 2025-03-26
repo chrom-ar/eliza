@@ -6,6 +6,7 @@ import {
   utf8ToBytes,
   Protocols,
   LightNode,
+  HealthStatusChangeEvents,
 } from '@waku/sdk';
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
@@ -83,12 +84,17 @@ export class WakuClient extends EventEmitter {
           throw new Error('[WakuBase] Could not find remote peer after max attempts');
         }
 
-        await sleep(500)
+        await sleep(500);
       }
     }
 
-    await sleep(2000)
-    console.log("WakuNode", this.wakuNode.health.getHealthStatus(), this.wakuNode.health.getProtocolStatus(Protocols.LightPush), this.wakuNode.health.getProtocolStatus(Protocols.Filter))
+    this.wakuNode.health.addEventListener(HealthStatusChangeEvents.StatusChange, (event: any) => {
+      elizaLogger.info(`Health status changed to: ${event.detail}`);
+    });
+
+    await sleep(2000);
+
+    elizaLogger.info("WakuNode Status", this.wakuNode.health.toString());
 
     elizaLogger.success('[WakuBase] Connected to Waku');
   }
