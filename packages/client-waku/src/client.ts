@@ -87,8 +87,8 @@ export class WakuClient extends EventEmitter {
       }
     }
 
-    await sleep(2000)
-    console.log("WakuNode", this.wakuNode.health.getHealthStatus(), this.wakuNode.health.getProtocolStatus(Protocols.LightPush), this.wakuNode.health.getProtocolStatus(Protocols.Filter))
+    // await sleep(2000)
+    // console.log("WakuNode", this.wakuNode.health.getHealthStatus(), this.wakuNode.health.getProtocolStatus(Protocols.LightPush), this.wakuNode.health.getProtocolStatus(Protocols.Filter))
 
     elizaLogger.success('[WakuBase] Connected to Waku');
   }
@@ -104,12 +104,11 @@ export class WakuClient extends EventEmitter {
       }
     }
 
+
     const subscribedTopic = this.buildFullTopic(topic);
 
     // @ts-ignore
     const { error, subscription } = await this.wakuNode.filter.createSubscription({
-      // forceUseAllPeers: true,
-      maxAttempts: 10,
       contentTopics: [subscribedTopic]
     });
 
@@ -173,7 +172,7 @@ export class WakuClient extends EventEmitter {
 
   async sendMessage(body: object, topic: string, roomId: string): Promise<void> {
     topic = this.buildFullTopic(topic);
-    elizaLogger.info(`[WakuBase] Sending message to topic ${topic} =>`, body);
+    elizaLogger.info(`[WakuBase] Sending message to topic ${topic}`);
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),

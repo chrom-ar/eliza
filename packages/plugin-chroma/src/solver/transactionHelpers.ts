@@ -1,5 +1,3 @@
-import { privateKeyToAccount } from 'viem/accounts';
-
 import { GeneralMessage } from './helpers';
 
 import { validateAndBuildTransfer } from './transfer';
@@ -7,7 +5,11 @@ import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
 import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
-import { validateAndBuildBestYield } from './bestYield';
+// import { validateAndBuildBestYield } from './bestYield';
+import { Keypair } from '@solana/web3.js';
+import nacl from "tweetnacl";
+import tweetnaclUtils from 'tweetnacl-util';
+
 
 
 /**
@@ -36,9 +38,9 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
     case "CLAIM":
       result = await validateAndBuildClaim(message);
       break;
-    case "BEST_YIELD":
-      result = await validateAndBuildBestYield(message);
-      break;
+    // case "BEST_YIELD":
+    //   result = await validateAndBuildBestYield(message);
+    //   break;
     default:
       console.log('invalid type', message.body.type);
       return null;
@@ -60,16 +62,21 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
  * This is a simplistic approach that signs a stringified version of `payload`.
  * For real-world usage, consider EIP-712 or structured data hashing.
  */
-async function signPayload(payload: object, config: object): Promise<{ signature: string; signer: string }> {
-  // @ts-ignore
-  const account = privateKeyToAccount(config.PRIVATE_KEY as `0x${string}`);
-
-  const signer = account.address;
+async function signPayload(payload: object, config: { PRIVATE_KEY: string }): Promise<{ signature: string; signer: string }> {
   const payloadString = JSON.stringify(payload);
 
-  const signature = await account.signMessage({
-    message: payloadString
-  });
+  const account = Keypair.fromSecretKey(
+    new Uint8Array(
+      JSON.parse(config.PRIVATE_KEY)
+    )
+  );
+  const signer = account.publicKey.toBase58();
+  const signature = Buffer.from(
+    nacl.sign.detached(
+      tweetnaclUtils.decodeUTF8(payloadString),
+      account.secretKey
+    )
+  ).toString('base64');
 
   return { signature, signer };
 }

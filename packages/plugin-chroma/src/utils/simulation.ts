@@ -59,7 +59,7 @@ export const simulateTxs = async (runtime: IAgentRuntime, wallet: string, transa
 
   const result = await response.json();
 
-  await shareSimulations(runtime, result.simulation_results);
+  // await shareSimulations(runtime, result.simulation_results);
 
   const summary = await buildSummary(result.simulation_results);
 

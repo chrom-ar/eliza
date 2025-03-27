@@ -99,13 +99,13 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
   });
 
   return {
-    description: `Deposit ${fromToken} in ${protocolName} on ${fromChain}${description ? ` (from previous instructions: "${description}")` : ''}`,
+    description: `Deposit ${fromToken} in ${protocolName} on ${fromChain} [Solver Staking ~99,000 Chroma]${description ? ` (from previous instructions: "${description}")` : ''}`,
     titles: [
       'Approve', 'Deposit'
     ],
     calls: [
       `Approve ${amount}${fromToken} to be deposited in ${protocolName}`,
-      `Deposit ${tokenAmount}${fromToken} in ${protocolName}`
+      `Deposit ${amount}${fromToken} in ${protocolName}`
     ],
     transactions: [
       {

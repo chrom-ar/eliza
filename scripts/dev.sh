@@ -115,7 +115,7 @@ if [ -d "./agent" ]; then
   # the initial sleep helps newer machines (ryzen 7xxx+) cycle faster
   # older machine won't need it but they will be delayed 1 sec
   # favoring newer machine for development
-  COMMANDS+=("echo 'boot elizaOS' && sleep 1 && echo 'starting nodemon' && nodemon --verbose ${WATCH_PATHS[@]} -e js,json,map --delay 2 --exec 'pnpm --dir agent dev -- $*'")
+  COMMANDS+=("echo 'boot elizaOS' && sleep 1 && echo 'starting nodemon' && nodemon --verbose --watch './docs/' -e js,json,map --delay 2 --exec 'pnpm --dir agent dev -- $*'")
 else
   echo "Warning: 'agent' directory not found."
 fi
