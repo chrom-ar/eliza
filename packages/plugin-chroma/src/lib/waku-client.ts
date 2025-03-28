@@ -1,6 +1,5 @@
 import { elizaLogger, IAgentRuntime } from '@elizaos/core';
 import WakuClientInterface from '@elizaos/client-waku';
-import { BN } from 'bn.js';
 
 import { Keypair, PublicKey } from '@solana/web3.js';
 import nacl from "tweetnacl";
@@ -8,8 +7,7 @@ import tweetnaclUtils from 'tweetnacl-util';
 import { Connection, clusterApiUrl } from '@solana/web3.js';
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import { PythBalance, StakeConnection } from "staking-tmp";
-// import { IDL } from "./staking-idl";
-import { Staking, IDL } from "./staking-type";
+import { Staking, IDL } from "./staking-type"; // TMP until add to staking-tmp
 
 const url = process.env.CHROMA_SOLANA_RPC_URL || clusterApiUrl('devnet');
 const connection = new Connection(url);
@@ -65,8 +63,6 @@ export class WakuClient {
   private async _checkSignerIsValid(signer: string) {
     elizaLogger.info(`[WakuClient-Chroma] Checking Solver ${signer} stake...`);
     try {
-      // Suggested in https://github.com/vitejs/vite/issues/17291
-      // const IDL = await import("@pythnetwork/staking/target/idl/staking.json", { with: { type: "json" } });
       const program = new Program<Staking>(IDL, provider);
 
       stakeConnection = stakeConnection || await StakeConnection.createStakeConnection(

@@ -11,7 +11,6 @@ import nacl from "tweetnacl";
 import tweetnaclUtils from 'tweetnacl-util';
 
 
-
 /**
  * 1. Validate incoming data, ensuring all required fields are present.
  * 2. If valid, build a transaction object using 'viem'.

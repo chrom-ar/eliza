@@ -64,35 +64,33 @@ export const confirmIntentAction: Action = {
           const propTexts = formatProposalText(proposal) as any;
 
           // @ts-ignore
-          // const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions) as any;
+          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions) as any;
 
-          // const riskScore = await evaluateRisk(
-          //   runtime,
-          //   walletAddr,
-          //   proposal.transactions,
-          //   simulate
-          // ) as any[];
-          let simulate = { results: [] }
-          let riskScore = []
+          const riskScore = await evaluateRisk(
+            runtime,
+            walletAddr,
+            proposal.transactions,
+            simulate
+          ) as any[];
 
           let memoryText = propTexts.title; // Actions title
 
           for (let i in propTexts.actions) {
             memoryText += propTexts.actions[i]; // Action description
 
-            // if (riskScore[i]) {
-            //   memoryText += riskScore[i].error || riskScore[i].summary;
-            // } else {
-            //   memoryText += "No risk score available\n\n";
-            // }
+            if (riskScore[i]) {
+              memoryText += riskScore[i].error || riskScore[i].summary;
+            } else {
+              memoryText += "No risk score available\n\n";
+            }
 
-            // if (simulate.error) {
-            //   memoryText += `Simulation error: ${simulate.error}\n\n`;
-            // } else {
-            //   const result = simulate.results[i]; // Simulate description
-            //   memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n";
-            //   memoryText += `Link: ${result.link}\n\n`;
-            // }
+            if (simulate.error) {
+              memoryText += `Simulation error: ${simulate.error}\n\n`;
+            } else {
+              const result = simulate.results[i]; // Simulate description
+              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n";
+              memoryText += `Link: ${result.link}\n\n`;
+            }
           }
 
           finalText += memoryText;

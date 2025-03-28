@@ -174,7 +174,7 @@ export class WakuClient extends EventEmitter {
 
   async sendMessage(body: object, topic: string, roomId: string): Promise<void> {
     topic = this.buildFullTopic(topic);
-    elizaLogger.info(`[WakuBase] Sending message to topic ${topic}`);
+    elizaLogger.info(`[WakuBase] Sending message to topic ${topic} =>`, body);
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),

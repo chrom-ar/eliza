@@ -23,7 +23,6 @@ export class SolverService extends Service {
   }
 
   async initialize(runtime: IAgentRuntime): Promise<void> {
-    console.log("================ SOLVER INITIALIZED!!! =======================");
     if (this.initialized) {
       return
     }
@@ -46,8 +45,6 @@ export class SolverService extends Service {
 
     // Empty string for default topic
     this.waku.subscribe('', async (event) => {
-      elizaLogger.info(`[SolverService] Received event from ${event.roomId}`);
-
       const response = await buildResponse(event, this.config);
 
       if (!response) {
@@ -55,10 +52,9 @@ export class SolverService extends Service {
         return;
       }
 
-      elizaLogger.info(`[SolverService] Sending response to ${event.roomId}`);
+      elizaLogger.info(`[SolverService] Sending response to ${event.roomId}`, response);
 
       await sleep(500); // Sleep a little time to wait for the chat
-      elizaLogger.info(`[SolverService] Calling sendMessage()`);
       await this.waku.sendMessage(response, event.roomId, event.roomId);
     });
 
