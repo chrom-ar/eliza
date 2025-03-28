@@ -105,7 +105,7 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     ],
     calls: [
       `Approve ${amount}${fromToken} to be deposited in ${protocolName}`,
-      `Deposit ${tokenAmount}${fromToken} in ${protocolName}`
+      `Deposit ${amount}${fromToken} in ${protocolName}`
     ],
     transactions: [
       {

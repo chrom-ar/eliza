@@ -92,10 +92,6 @@ export class WakuClient extends EventEmitter {
       elizaLogger.info(`Health status changed to: ${event.detail}`);
     });
 
-    await sleep(2000);
-
-    elizaLogger.info("WakuNode Status", this.wakuNode.health.toString());
-
     elizaLogger.success('[WakuBase] Connected to Waku');
   }
 
@@ -110,12 +106,11 @@ export class WakuClient extends EventEmitter {
       }
     }
 
+
     const subscribedTopic = this.buildFullTopic(topic);
 
     // @ts-ignore
     const { error, subscription } = await this.wakuNode.filter.createSubscription({
-      // forceUseAllPeers: true,
-      maxAttempts: 10,
       contentTopics: [subscribedTopic]
     });
 

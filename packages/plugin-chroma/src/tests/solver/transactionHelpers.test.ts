@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { validateAndBuildProposal, buildSignedProposalResponse } from '../../solver';
 import { GeneralMessage } from '../../solver/transactionHelpers';
+import { Keypair } from '@solana/web3.js';
 
 describe('Transaction Helpers', () => {
   describe('validateAndBuildProposal', () => {
@@ -76,7 +77,7 @@ describe('Transaction Helpers', () => {
       };
 
       const config = {
-        PRIVATE_KEY: '0x1234567890123456789012345678901234567890123456789012345678901234'
+        PRIVATE_KEY: JSON.stringify(Array.from(Keypair.generate().secretKey))
       };
 
       const result = await buildSignedProposalResponse(proposal, config);
@@ -88,7 +89,7 @@ describe('Transaction Helpers', () => {
     it('should handle invalid proposals', async () => {
       const invalidProposal = null;
       const config = {
-        PRIVATE_KEY: '0x1234567890123456789012345678901234567890123456789012345678901234'
+        PRIVATE_KEY: JSON.stringify(Array.from(Keypair.generate().secretKey))
       };
 
       const result = await buildSignedProposalResponse(invalidProposal, config);
