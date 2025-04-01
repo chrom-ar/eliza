@@ -50,8 +50,8 @@ export class WakuClient {
         return;
       }
 
-      // TODO: remove the true part, tmp until devnet / mainnet deploy
-      if (true || !(await this._checkSignerIsValid(body.signer))) {
+      // TODO: remove the false part, tmp until devnet / mainnet deploy
+      if (false || !(await this._checkSignerIsValid(body.signer))) {
         elizaLogger.error("[WakuClient-Chroma] Invalid signer", body);
         return;
       }
