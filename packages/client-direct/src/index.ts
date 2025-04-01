@@ -218,7 +218,7 @@ export class DirectClient {
                 const roomId = stringToUuid(
                     req['jwtUserId'] ?? req.body.roomId ?? "default-room-" + agentId
                 );
-                const userId = stringToUuid(req['jwtUserId'] ?? req.params.userId ?? "user");
+                const userId = stringToUuid(req['jwtUserId'] ?? req.body.userId ?? "user");
 
                 await runtime.ensureConnection(
                     userId,
