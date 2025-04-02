@@ -62,7 +62,8 @@ export interface GeneralMessage {
     recipientAddress: string;
     recipientChain: string;
     description?: string;
-    protocol?: string; // Optional for yield operations
+    protocol?: string; // Optional for claim and withdraw operations
+    protocols?: string[]; // Optional to specify multiple protocols for operations
     transactionHash?: string; // Optional for claim operations
     type: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP' | 'CLAIM';
   };
