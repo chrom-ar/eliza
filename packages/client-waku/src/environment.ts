@@ -21,6 +21,12 @@ const wakuEnvSchema = z.object({
   WAKU_STATIC_PEERS: z
     .string()
     .trim(),
+  WAKU_STATIC_CLUSTER_ID: z
+    .number()
+    .int(),
+  WAKU_STATIC_SHARD: z
+    .number()
+    .int(),
 });
 
 export type WakuConfig = z.infer<typeof wakuEnvSchema>;
@@ -34,6 +40,8 @@ export async function validateWakuConfig(
       WAKU_TOPIC: runtime.getSetting('WAKU_TOPIC'),
       WAKU_PING_COUNT: parseInt(runtime.getSetting('WAKU_PING_COUNT')) || 20,
       WAKU_STATIC_PEERS: runtime.getSetting('WAKU_STATIC_PEERS'),
+      WAKU_STATIC_CLUSTER_ID: parseInt(runtime.getSetting('WAKU_STATIC_CLUSTER_ID') || '-1'),
+      WAKU_STATIC_SHARD: parseInt(runtime.getSetting('WAKU_STATIC_SHARD') || '-1'),
     };
 
     return wakuEnvSchema.parse(wakuConfig);

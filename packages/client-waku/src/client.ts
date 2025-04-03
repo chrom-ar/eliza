@@ -34,11 +34,22 @@ export class WakuClient extends EventEmitter {
     subscription: any;
     expiration: number;
   }> = new Map();
-  private timer: NodeJS.Timeout | null = null;
+  private topicNetworkConfig: {
+    clusterId: string;
+    shard: string;
+  } | null = null;
+  // private timer: NodeJS.Timeout | null = null;
 
   constructor(wakuConfig: WakuConfig) {
     super();
     this.wakuConfig = wakuConfig;
+
+    if (this.wakuConfig.WAKU_STATIC_CLUSTER_ID >= 0) {
+      this.topicNetworkConfig = {
+        clusterId: this.wakuConfig.WAKU_STATIC_CLUSTER_ID,
+        shard: this.wakuConfig.WAKU_STATIC_SHARD,
+      }
+    }
   }
 
   async init() {
@@ -46,23 +57,34 @@ export class WakuClient extends EventEmitter {
 
     if (peers.length > 0) {
       // NOTE: If other transports are needed we **have** to add them here
-      this.wakuNode = await createLightNode({
-        libp2p: { transports: [tcp()] }
-      });
-
-      for (let peer of peers) {
-        // Dial fails sometimes
-        for (let i = 0; i < 5; i++) {
-          try {
-            await this.wakuNode.dial(peer);
-            elizaLogger.info(`[WakuBase] ${peer} connected`);
-            break
-          } catch (e) {
-            elizaLogger.error(`[WakuBase] Error ${i} dialing peer ${peer}: ${e}`);
-            await sleep(500)
-          }
+      const nodeOpts = {
+        libp2p: { transports: [tcp()] },
+      }
+      if (this.wakuConfig.WAKU_STATIC_CLUSTER_ID >= 0) {
+        nodeOpts['networkConfig'] = {
+          clusterId: this.wakuConfig.WAKU_STATIC_CLUSTER_ID,
+          shards: [this.wakuConfig.WAKU_STATIC_SHARD],
         }
       }
+      this.wakuNode = await createLightNode(nodeOpts);
+
+      const peersDial = []
+      for (let peer of peers) {
+        // Dial fails sometimes
+        peersDial.push((async () => {
+          for (let i = 0; i < 5; i++) {
+            try {
+              await this.wakuNode.dial(peer);
+              elizaLogger.info(`[WakuBase] ${peer} connected`);
+              break
+            } catch (e) {
+              elizaLogger.error(`[WakuBase] Error ${i} dialing peer ${peer}: ${e}`);
+              await sleep(500)
+            }
+          }
+        }).bind(this)())
+      }
+      await Promise.all(peersDial)
     } else {
       this.wakuNode = await createLightNode({ defaultBootstrap: true });
     }
@@ -109,18 +131,10 @@ export class WakuClient extends EventEmitter {
 
     const subscribedTopic = this.buildFullTopic(topic);
 
+    const decoder = createDecoder(subscribedTopic, this.topicNetworkConfig);
+
     // @ts-ignore
-    const { error, subscription } = await this.wakuNode.filter.createSubscription({
-      contentTopics: [subscribedTopic]
-    });
-
-    if (error) {
-      throw new Error(`[WakuBase] Error creating subscription: ${error.toString()}`);
-    }
-
-    await subscription.subscribe(
-      [createDecoder(subscribedTopic)],
-      async (wakuMsg) => {
+    const subResult = await this.wakuNode.filter.subscribe([decoder], async (wakuMsg) => {
         if (!wakuMsg?.payload) {
           elizaLogger.error('[WakuBase] Received message with no payload');
           return;
@@ -146,6 +160,12 @@ export class WakuClient extends EventEmitter {
         }
       }
     );
+
+    if (subResult.error) {
+      throw new Error(`[WakuBase] Error creating subscription: ${subResult.error.toString()}`);
+    }
+
+    const subscription = subResult.subscription;
 
     // Attempt a 'ping' to ensure it is up
     for (let i = 0; i < this.wakuConfig.WAKU_PING_COUNT; i++) {
@@ -184,7 +204,7 @@ export class WakuClient extends EventEmitter {
 
     try {
       await this.wakuNode.lightPush.send(
-        createEncoder({ contentTopic: topic }),
+        createEncoder({ contentTopic: topic, pubsubTopicShardInfo: this.topicNetworkConfig }),
         { payload: ChatMessage.encode(protoMessage).finish() }
       );
       elizaLogger.success('[WakuBase] Message sent!');
