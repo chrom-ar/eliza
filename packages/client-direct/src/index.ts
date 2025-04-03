@@ -258,6 +258,7 @@ export class DirectClient {
 
                 // Here goes the preferred protocol (e.g. Beefy, yearn, Aave, etc)
                 let protocols = req.body.protocols;
+                console.log("TU VIEJA protocols: ", protocols)
                 if (protocols?.length > 0) {
                     const cacheKey = path.join(runtime.agentId, userId, "protocols");
                     await runtime.cacheManager.set(cacheKey, protocols);

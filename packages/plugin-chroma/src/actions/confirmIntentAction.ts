@@ -95,7 +95,7 @@ export const confirmIntentAction: Action = {
 
           finalText += memoryText;
 
-          proposals.push({ humanizedText: memoryText, proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
+          proposals.push({ humanizedText: memoryText, proposalNumber: counter, ...proposal }); // simulation: simulate.results, riskScore, ...proposal });
         } catch (e) {
           console.error("Error inside subscription:", e);
         }

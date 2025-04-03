@@ -32,9 +32,10 @@ Extract swap intent information from the message.
 When no from address or chain is directly specified, use the user's wallet data provided in the context.
 If no chain is specified, use "base-sepolia" as the default.
 
-Protocol Selection Rules:
-1. If no protocols are specified, leave an empty array.
-2. If protocols are specified, use the protocols from the message, all in lowercase.`;
+Protocols Selection Rules:
+1. Check in the context "# User wallet data" if protocols are specified.
+2. If protocols are specified  in the message, use them, all in lowercase.
+3. If no protocols are found or specified, leave protocols with an empty array.`;
 
 export const parseSwapAction: Action = {
   suppressInitialMessage: true,

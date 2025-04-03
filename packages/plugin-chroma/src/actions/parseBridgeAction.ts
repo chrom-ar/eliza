@@ -54,9 +54,10 @@ Address Selection Rules:
    - For Solana: Use user's Base58 address from wallet data
 2. If multiple addresses available, select the one matching the chain type
 
-Protocol Selection Rules:
-1. If no protocols are specified, leave an empty array.
-2. If protocols are specified, use the protocols from the message, all in lowercase.
+Protocols Selection Rules:
+1. Check in the context "# User wallet data" if protocols are specified.
+2. If protocols are specified  in the message, use them, all in lowercase.
+3. If no protocols are found or specified, leave protocols with an empty array.
 
 ## Required Output Fields
 1. amount: (number) USDC quantity to bridge

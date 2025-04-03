@@ -13,7 +13,7 @@ const allDataCollectedTemplate = Handlebars.compile(`
 - Solana ONLY addresses: {{solanaAddresses}}
 - Preferred chains: {{chains}}
 - Default wallet: {{defaultWallet}} ({{defaultWalletType}})
-- Required protocol: {{requiredProtocol}}
+- Protocols: {{protocols}}
 
 Use this when you need to know the user's wallet data and no other context is given.`);
 
@@ -56,8 +56,8 @@ Instructions for collecting missing data:
     const chainsStr = Array.from(allChains).join(', ');
     const defaultWalletType = defaultWallet ? getWalletType(defaultWallet) : 'none';
 
-    const cacheKey = path.join(message.agentId, message.userId, "requiredProtocol");
-    const requiredProtocol = await runtime.cacheManager.get(cacheKey) || 'None';
+    const cacheKey = path.join(runtime.agentId, message.userId, "protocols");
+    const protocols = await runtime.cacheManager.get(cacheKey) || [];
 
     // Present the wallet information
     return allDataCollectedTemplate({
@@ -66,7 +66,7 @@ Instructions for collecting missing data:
       chains: chainsStr || 'None',
       defaultWallet: defaultWallet ? defaultWallet.address : 'None',
       defaultWalletType,
-      requiredProtocol
+      protocols
     }).trim();
   },
 };

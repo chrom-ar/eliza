@@ -28,8 +28,9 @@ Follow the instructions:
 4. Do not include decimals unless the user specifies them.
 5. Use the "compact" format for the chain, so "Optimism Sepolia" becomes "opt-sepolia".
 6. For protocols extraction:
-   - Extract the specific protocols (like "Curve" or "Aave") if mentioned by the user into an array
-   - If no protocols are mentioned, set protocols to an empty array`;
+  1) Always check in the context "# User wallet data" if protocols are specified, use these.
+  2) If protocols are specified  in the message, use them, all in lowercase.
+  3) If no protocols are found or specified, leave protocols with an empty array.`;
 
 export const parseYieldAction: Action = {
   suppressInitialMessage: true,
