@@ -13,11 +13,11 @@ import tweetnaclUtils from 'tweetnacl-util';
 
 // Just for example purposes
 const AVAILABLE_PROTOCOLS = [
-  'aave', 
-  'curve', 
-  'lifi', 
-  'jupiter', 
-  'jup', 
+  'aave',
+  'curve',
+  'lifi',
+  'jupiter',
+  'jup',
   'cctp',
   'cctpv2',
   'wormhole',
@@ -37,15 +37,14 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       protocols
     }
   } = message;
-  
+
   if (protocols && protocols.length > 0) {
     // TODO: Implement protocol selection
-    console.log('protocols', protocols);
     const filteredProtocols = protocols.filter(protocol => AVAILABLE_PROTOCOLS.includes(protocol));
-    // console.log('filteredProtocols', filteredProtocols);
 
     if (filteredProtocols.length === 0) {
-      console.log('no valid protocols', filteredProtocols);
+      console.log('no valid protocols', protocols);
+
       return null;
     }
   }

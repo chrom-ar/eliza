@@ -137,7 +137,7 @@ describe('Cancel Intent Action', async () => {
 
             // Verify callback was called with success message
             expect(mockCallback).toHaveBeenCalledWith({
-                text: 'Your swap intent has been canceled.'
+                text: 'Your intent has been canceled.'
             });
         });
 

@@ -61,7 +61,7 @@ function buildYieldTransaction({
     };
   }
 
-  console.error(`Unsupported protocol: ${protocols}`);
+  console.error(`Unsupported protocols: ${protocols}`);
 }
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {
@@ -99,7 +99,7 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     fromToken: fromToken.toUpperCase(),
   });
 
-  if (!transaction) 
+  if (!transaction)
     return null;
 
   const protocolName = transaction.protocol;
