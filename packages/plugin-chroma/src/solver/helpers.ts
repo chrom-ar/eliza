@@ -222,7 +222,7 @@ export const AAVE_POOL = {
     "USDC": "0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff",
   },
   [chains.baseSepolia.id]: {
-    "USDC": "0x8bAB6d1b75f19e9eD9fCe8b9BD338844fF79aE27",
+    "USDC": "0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b",
   },
   [chains.optimismSepolia.id]: {
     "USDC": "0xb50201558B00496A145fE76f7424749556E326D8",
