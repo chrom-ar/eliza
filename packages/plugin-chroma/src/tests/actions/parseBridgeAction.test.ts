@@ -40,7 +40,8 @@ vi.mock('@elizaos/core', async (importOriginal) => {
                         fromAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
                         fromChain: 'sepolia',
                         recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-                        recipientChain: 'optimism-sepolia'
+                        recipientChain: 'optimism-sepolia',
+                        protocols: [],
                     }
                 };
             } else if (context.includes('50 USDC from Base to Arbitrum')) {
@@ -51,7 +52,8 @@ vi.mock('@elizaos/core', async (importOriginal) => {
                         fromAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
                         fromChain: 'base',
                         recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-                        recipientChain: 'arbitrum'
+                        recipientChain: 'arbitrum',
+                        protocols: [],
                     }
                 };
             } else if (context.includes('25 USDC from Polygon to Base')) {
@@ -62,7 +64,8 @@ vi.mock('@elizaos/core', async (importOriginal) => {
                         fromAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
                         fromChain: 'polygon',
                         recipientAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-                        recipientChain: 'base'
+                        recipientChain: 'base',
+                        protocols: [],
                     }
                 };
             }

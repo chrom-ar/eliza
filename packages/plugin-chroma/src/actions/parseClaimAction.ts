@@ -15,6 +15,7 @@ const claimSchema = z.object({
   fromChain: z.string(),
   recipientChain: z.string(),
   transactionHash: z.string(),
+  // protocol: z.string(), // TODO: Add this back when other protocols are supported
   deadline: z.number().optional()
 });
 

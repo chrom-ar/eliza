@@ -9,7 +9,7 @@ const yieldSchema = z.object({
   fromToken: z.string(),
   recipientAddress: z.string(),
   fromChain: z.string().nullable(),
-  protocol: z.string().nullable()
+  protocols: z.array(z.string()).optional()
 }) as z.ZodType<any>;
 
 const contextTemplate = `# Recent Messages
@@ -27,10 +27,10 @@ Follow the instructions:
 3. When extracting the amount, make sure to include the decimals and do not put any other text but the number.
 4. Do not include decimals unless the user specifies them.
 5. Use the "compact" format for the chain, so "Optimism Sepolia" becomes "opt-sepolia".
-6. For protocol extraction:
-   - Extract the specific protocol (like "Curve" or "Aave") if mentioned by the user
-   - If no protocol is mentioned, set protocol to null
-   - Never make up a default value`;
+6. For protocols extraction:
+  1) Always check in the context "# User wallet data" if protocols are specified, use these.
+  2) If protocols are specified  in the message, use them, all in lowercase.
+  3) If no protocols are found or specified, leave protocols with an empty array.`;
 
 export const parseYieldAction: Action = {
   suppressInitialMessage: true,

@@ -18,6 +18,7 @@ const swapSchema = z.object({
   fromAddress: z.string(),
   fromChain: z.string(),
   recipientAddress: z.string(),
+  protocols: z.array(z.string()).optional(),
   deadline: z.number().optional()
 });
 
@@ -29,7 +30,12 @@ const contextTemplate = `# Recent Messages
 
 Extract swap intent information from the message.
 When no from address or chain is directly specified, use the user's wallet data provided in the context.
-If no chain is specified, use "base-sepolia" as the default.`;
+If no chain is specified, use "base-sepolia" as the default.
+
+Protocols Selection Rules:
+1. Check in the context "# User wallet data" if protocols are specified.
+2. If protocols are specified  in the message, use them, all in lowercase.
+3. If no protocols are found or specified, leave protocols with an empty array.`;
 
 export const parseSwapAction: Action = {
   suppressInitialMessage: true,
@@ -110,7 +116,7 @@ export const parseSwapAction: Action = {
     [
       {
         user: '{{user1}}',
-        content: { text: 'Hey {{user2}}, swap 1 USDC to ETH' }
+        content: { text: 'Hey {{user2}}, swap 1 USDC to ETH using Paraswap' }
       },
       {
         user: '{{user2}}',

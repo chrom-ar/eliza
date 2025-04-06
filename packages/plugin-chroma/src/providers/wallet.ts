@@ -1,3 +1,4 @@
+import path from 'path';
 import { Provider, IAgentRuntime, Memory, State } from '@elizaos/core';
 import Handlebars from 'handlebars';
 import { getAllWallets, getDefaultWallet, getWalletType, getWalletsByType } from '../utils/walletData';
@@ -12,6 +13,7 @@ const allDataCollectedTemplate = Handlebars.compile(`
 - Solana ONLY addresses: {{solanaAddresses}}
 - Preferred chains: {{chains}}
 - Default wallet: {{defaultWallet}} ({{defaultWalletType}})
+- Protocols: {{protocols}}
 
 Use this when you need to know the user's wallet data and no other context is given.`);
 
@@ -54,13 +56,17 @@ Instructions for collecting missing data:
     const chainsStr = Array.from(allChains).join(', ');
     const defaultWalletType = defaultWallet ? getWalletType(defaultWallet) : 'none';
 
+    const cacheKey = path.join(runtime.agentId, message.userId, "protocols");
+    const protocols = await runtime.cacheManager.get(cacheKey) || [];
+
     // Present the wallet information
     return allDataCollectedTemplate({
       evmAddresses: evmAddresses.length ? evmAddresses.join(', ') : 'None',
       solanaAddresses: solanaAddresses.length ? solanaAddresses.join(', ') : 'None',
       chains: chainsStr || 'None',
       defaultWallet: defaultWallet ? defaultWallet.address : 'None',
-      defaultWalletType
+      defaultWalletType,
+      protocols
     }).trim();
   },
 };

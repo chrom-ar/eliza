@@ -18,6 +18,7 @@ const bridgeSchema = z.object({
   fromChain: z.string(),
   recipientAddress: z.string(),
   recipientChain: z.string(),
+  protocols: z.array(z.string()).optional(),
   deadline: z.number().optional()
 });
 
@@ -53,6 +54,11 @@ Address Selection Rules:
    - For Solana: Use user's Base58 address from wallet data
 2. If multiple addresses available, select the one matching the chain type
 
+Protocols Selection Rules:
+1. Check in the context "# User wallet data" if protocols are specified.
+2. If protocols are specified  in the message, use them, all in lowercase.
+3. If no protocols are found or specified, leave protocols with an empty array.
+
 ## Required Output Fields
 1. amount: (number) USDC quantity to bridge
 2. fromToken: Must be "USDC"
@@ -60,7 +66,8 @@ Address Selection Rules:
 4. fromAddress: Source wallet address (use rules above)
 5. recipientChain: Destination chain name (use rules above)
 6. recipientAddress: Destination wallet address (use rules above)
-7. deadline: (optional) Transaction deadline timestamp`;
+7. protocols: Array of protocols to use for the bridge (e.g., ["hop", "across"])
+8. deadline: (optional) Transaction deadline timestamp`;
 
 export const parseBridgeAction: Action = {
   suppressInitialMessage: true,
@@ -94,8 +101,9 @@ export const parseBridgeAction: Action = {
       return true;
     }
 
-    const { amount, fromToken, fromChain, recipientChain } = intentData;
+    const { amount, fromToken, fromChain, recipientChain, protocols } = intentData;
     const responseText = `I've created a bridge intent for ${amount} ${fromToken} from ${fromChain} to ${recipientChain}.
+${protocols.length > 0 ? `Protocols: ${protocols.join(', ')}` : ''}
 Would you like to confirm this bridge operation?`;
 
     const intentManager = new MemoryManager({
@@ -157,7 +165,7 @@ Would you like to confirm this bridge operation?`;
     [
       {
         user: '{{user1}}',
-        content: { text: 'Transfer 50 USDC across chains from Polygon to Base' }
+        content: { text: 'Transfer 50 USDC across chains from Polygon to Base using wormhole, hop and across' }
       },
       {
         user: '{{user2}}',

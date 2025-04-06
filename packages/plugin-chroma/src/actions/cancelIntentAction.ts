@@ -37,7 +37,7 @@ export const cancelIntentAction: Action = {
     console.log('Canceling intent', intentMemory.content.intent);
 
     callback({
-      text: 'Your swap intent has been canceled.'
+      text: 'Your intent has been canceled.'
     });
 
     return true;

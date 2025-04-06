@@ -10,17 +10,17 @@ import {
   getTokenAmount
 } from './helpers';
 
-const protocols = { aave: 'Aave V3', curve: 'Curve' };
+const PROTOCOLS = { aave: 'Aave V3', curve: 'Curve' };
 
 function buildYieldTransaction({
-  protocol,
+  protocols,
   chainId,
   tokenAddr,
   tokenAmount,
   recipientAddress,
   fromToken,
 }) {
-  if (!protocol || protocols.aave === protocol) {
+  if (!protocols || protocols.length === 0 || protocols.includes('aave')) {
     const aavePool = AAVE_POOL[chainId]?.[fromToken];
 
     if (!aavePool) {
@@ -28,6 +28,7 @@ function buildYieldTransaction({
     }
 
     return {
+      protocol: 'Aave V3',
       chainId,
       to: aavePool,
       value: 0,
@@ -37,7 +38,7 @@ function buildYieldTransaction({
         args: [tokenAddr, tokenAmount, recipientAddress, 0]
       }),
     };
-  } else if (protocols.curve === protocol) {
+  } else if (protocols.includes('curve')) {
     const curvePool = CURVE_POOLS[chainId]?.[fromToken];
 
     if (!curvePool) {
@@ -48,6 +49,7 @@ function buildYieldTransaction({
     amounts[curvePool.index] = tokenAmount;
 
     return {
+      protocol: 'Curve',
       chainId,
       to: curvePool.pool,
       value: 0,
@@ -59,7 +61,7 @@ function buildYieldTransaction({
     };
   }
 
-  throw new Error(`Unsupported protocol: ${protocol}`);
+  console.error(`Unsupported protocols: ${protocols}`);
 }
 
 export async function validateAndBuildYield(message: GeneralMessage): Promise<object> {
@@ -69,7 +71,7 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
       fromChain,
       fromToken,
       recipientAddress,
-      protocol,
+      protocols,
       description,
     }
   } = message;
@@ -87,16 +89,22 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
   }
 
   const chainId = getChainId(fromChain);
-  const protocolName = protocols[(protocol || 'aave').toLowerCase()] || protocol;
 
   const transaction = buildYieldTransaction({
-    protocol: protocolName,
+    protocols,
     chainId,
     tokenAddr,
     tokenAmount,
     recipientAddress,
     fromToken: fromToken.toUpperCase(),
   });
+
+  if (!transaction) {
+    return null;
+  }
+
+  const protocolName = transaction.protocol;
+  delete transaction.protocol;
 
   return {
     description: `Deposit ${fromToken} in ${protocolName} on ${fromChain}${description ? ` (from previous instructions: "${description}")` : ''}`,
