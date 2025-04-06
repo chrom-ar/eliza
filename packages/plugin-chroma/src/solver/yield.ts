@@ -99,8 +99,9 @@ export async function validateAndBuildYield(message: GeneralMessage): Promise<ob
     fromToken: fromToken.toUpperCase(),
   });
 
-  if (!transaction)
+  if (!transaction) {
     return null;
+  }
 
   const protocolName = transaction.protocol;
   delete transaction.protocol;
