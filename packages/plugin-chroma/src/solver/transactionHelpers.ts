@@ -99,7 +99,7 @@ async function signPayload(payload: object, config: { PRIVATE_KEY: string }): Pr
   const key = config.PRIVATE_KEY;
   const payloadString = JSON.stringify(payload);
 
-  if (typeof key == 'string' && key.startsWith("0x")) {
+  if (typeof key === 'string' && key.startsWith("0x")) {
     return signWithEvm(payloadString, key);
   } else {
     return signWithSolana(payloadString, key);
