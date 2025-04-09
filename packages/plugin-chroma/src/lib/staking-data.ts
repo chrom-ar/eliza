@@ -6237,3 +6237,37 @@ export const IDL: Staking = {
     }
   ]
 };
+
+export const stakingAbi = [
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_staker",
+        "type": "address"
+      }
+    ],
+    "name": "getStakerInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
+
+export const stakingEvmAddress = "0x60b5895d70Ca5307Db577e6e567F344408eCcD59"

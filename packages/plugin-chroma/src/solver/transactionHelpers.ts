@@ -6,6 +6,8 @@ import { validateAndBuildSwap } from './swap';
 import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
 // import { validateAndBuildBestYield } from './bestYield';
+
+import { privateKeyToAccount } from 'viem/accounts';
 import { Keypair } from '@solana/web3.js';
 import nacl from "tweetnacl";
 import tweetnaclUtils from 'tweetnacl-util';
@@ -94,15 +96,38 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
  * For real-world usage, consider EIP-712 or structured data hashing.
  */
 async function signPayload(payload: object, config: { PRIVATE_KEY: string }): Promise<{ signature: string; signer: string }> {
+  const key = config.PRIVATE_KEY;
   const payloadString = JSON.stringify(payload);
 
+  if (typeof key === 'string' && key.startsWith("0x")) {
+    return signWithEvm(payloadString, key);
+  } else {
+    return signWithSolana(payloadString, key);
+  }
+}
+
+async function signWithEvm(payloadString: string, privateKey: string): Promise<{ signature: string; signer: string }> {
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
+
+  const signer = account.address;
+
+  // This is already a hex string
+  const signature = await account.signMessage({
+    message: payloadString
+  });
+
+  return { signature, signer };
+}
+
+async function signWithSolana(payloadString: string, privateKey: string): Promise<{ signature: string; signer: string }> {
   const account = Keypair.fromSecretKey(
     new Uint8Array(
-      JSON.parse(config.PRIVATE_KEY)
+      JSON.parse(privateKey)
     )
   );
   const signer = account.publicKey.toBase58();
   const signature = Buffer.from(
+    // This returns a Uint8Array signature
     nacl.sign.detached(
       tweetnaclUtils.decodeUTF8(payloadString),
       account.secretKey
