@@ -22,7 +22,6 @@
     "@elizaos/core": "workspace:*",
     "@lifi/sdk": "3.4.1",
     "@lifi/types": "16.3.0",
-    "staking-tmp": "1.0.0",
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.8",
     "@waku/sdk": "0.0.30",
@@ -33,9 +32,11 @@
     "ethers": "5.7.2",
     "handlebars": "^4.7.8",
     "protobufjs": "^7.4.0",
+    "rpc-websockets": "7.11.0",
+    "staking-tmp": "1.0.0",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
-    "rpc-websockets": "7.11.0"
+    "viem": "2.21.58"
   },
   "devDependencies": {
     "@types/better-sqlite3": "7.6.12",

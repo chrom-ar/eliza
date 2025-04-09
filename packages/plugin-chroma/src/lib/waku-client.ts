@@ -1,13 +1,15 @@
 import { elizaLogger, IAgentRuntime } from '@elizaos/core';
 import WakuClientInterface from '@elizaos/client-waku';
 
+import { createPublicClient, http, verifyMessage } from 'viem';
+import { baseSepolia } from 'viem/chains'
 import { Keypair, PublicKey } from '@solana/web3.js';
 import nacl from "tweetnacl";
 import tweetnaclUtils from 'tweetnacl-util';
 import { Connection, clusterApiUrl } from '@solana/web3.js';
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import { PythBalance, StakeConnection } from "staking-tmp";
-import { Staking, IDL } from "./staking-type"; // TMP until add to staking-tmp
+import { Staking, IDL, stakingAbi, stakingEvmAddress } from "./staking-data";
 
 const url = process.env.CHROMA_SOLANA_RPC_URL || clusterApiUrl('devnet');
 const connection = new Connection(url);
@@ -17,6 +19,12 @@ const config = {
 };
 
 let stakeConnection: StakeConnection | null = null;
+
+// TODO: Change this with whatever chain we use in prod
+const evmClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http()
+});
 
 export class WakuClient {
   private waku: any;
@@ -63,6 +71,38 @@ export class WakuClient {
 
   private async _checkSignerIsValid(signer: string) {
     elizaLogger.info(`[WakuClient-Chroma] Checking Solver ${signer} stake...`);
+
+    if (signer.startsWith("0x")) {
+      return await this._checkEvmSigner(signer);
+    } else {
+      return await this._checkSolanaSigner(signer);
+    }
+  }
+
+  private async _checkEvmSigner(signer: string) {
+    try {
+      const [date, staked, locked] = await evmClient.readContract({
+        address: stakingEvmAddress,
+        abi: stakingAbi,
+        functionName: 'getStakerInfo',
+        args: [signer],
+      });
+
+      const amount = (staked - locked) / 1_000_000_000n;
+      if (amount >= 90n) {
+        elizaLogger.info(`[WakuClient-Chroma] Solver has ${amount.toString()} staked ✅`);
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.log("ERROR::", error)
+      elizaLogger.error("[WakuClient-Chroma] Error checking signer", error);
+      return false;
+    }
+  }
+
+  private async _checkSolanaSigner(signer: string) {
     try {
       const program = new Program<Staking>(IDL, provider);
 
@@ -93,6 +133,22 @@ export class WakuClient {
   }
 
   private async _verifyMessage(signer: string, encodedSignature: string, message: string): Promise<boolean> {
+    if (signer.startsWith("0x")) {
+      return this._verifyEvmMessage(signer, encodedSignature, message);
+    } else {
+      return this._verifySolanaMessage(signer, encodedSignature, message);
+    }
+  }
+
+  private async _verifyEvmMessage(signer: string, signature: string, message: string): Promise<boolean> {
+    return await verifyMessage({
+      signature: signature as `0x${string}`,
+      address:   signer as `0x${string}`,
+      message:   message
+    })
+  }
+
+  private async _verifySolanaMessage(signer: string, encodedSignature: string, message: string): Promise<boolean> {
     const signature = new Uint8Array(Buffer.from(encodedSignature, 'base64'))
     const result = nacl.sign.detached.verify(
       tweetnaclUtils.decodeUTF8(message),
