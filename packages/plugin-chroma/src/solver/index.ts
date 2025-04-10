@@ -1,7 +1,9 @@
 import {
   validateAndBuildProposal,
-  buildSignedProposalResponse,
 } from './transactionHelpers';
+import {
+  signProposal,
+} from './sign';
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
 import { buildBridgeTransaction } from './bridge/wormhole';
@@ -10,7 +12,7 @@ import { validateAndBuildWithdraw } from './withdraw';
 
 export {
   validateAndBuildProposal,
-  buildSignedProposalResponse,
+  signProposal,
   swapTokenSolJup,
   buildSwapTransaction,
   buildBridgeTransaction,
@@ -23,7 +25,7 @@ export const buildResponse = async (event: any, config: object) => {
     const proposal = await validateAndBuildProposal(event);
 
     if (proposal) {
-      return await buildSignedProposalResponse(proposal, config);
+      return await signProposal(proposal, config);
     }
   } catch (error) {
     console.error('Error building response:', error);
