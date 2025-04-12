@@ -1,5 +1,6 @@
 import {
   validateAndBuildProposal,
+  AVAILABLE_TYPES,
 } from './transactionHelpers';
 import {
   signProposal,
@@ -18,6 +19,7 @@ export {
   buildBridgeTransaction,
   validateAndBuildYield,
   validateAndBuildWithdraw,
+  AVAILABLE_TYPES,
 };
 
 export const buildResponse = async (event: any, config: object) => {

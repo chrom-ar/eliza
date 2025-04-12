@@ -39,12 +39,12 @@ export class WakuClient {
     return new WakuClient(client);
   }
 
-  async sendMessage(body: object, topic: string, roomId: string) {
-    return await this.waku.sendMessage(body, topic, roomId);
+  async sendMessage(body: object, topic: string, replyTo: string, encryptionPubKey?: string) {
+    return await this.waku.sendMessage(body, topic, replyTo, encryptionPubKey);
   }
 
   // All chroma messages should be signed by the sender
-  async subscribe(topic: string, fn: any, expirationSeconds: number = 20): Promise<void> {
+  async subscribe(topic: string, fn: any, opts = { expirationSeconds: 20, encrypted: false }): Promise<void> {
     return await this.waku.subscribe(topic, async (message) => {
       const body = message?.body;
 
@@ -65,7 +65,7 @@ export class WakuClient {
       }
 
       return await fn(message);
-    }, expirationSeconds);
+    }, opts);
   }
 
 
@@ -81,7 +81,7 @@ export class WakuClient {
 
   private async _checkEvmSigner(signer: string) {
     try {
-      const [date, staked, locked] = await evmClient.readContract({
+      const [_date, staked, locked] = await evmClient.readContract({
         address: stakingEvmAddress,
         abi: stakingAbi,
         functionName: 'getStakerInfo',

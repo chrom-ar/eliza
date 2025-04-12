@@ -1,7 +1,7 @@
 import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
 import WakuClientInterface from "@elizaos/client-waku";
 
-import { buildResponse } from '../solver';
+import { AVAILABLE_TYPES, buildResponse } from '../solver';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -36,6 +36,11 @@ export class SolverService extends Service {
 
         if (!key) throw new Error('PRIVATE_KEY is not set in the environment variables.');
 
+        // If waku encryption is enabled for confidential messages, the private key must be the same, to keep correlation in staking
+        if (this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') && this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') != key) {
+          throw new Error('SOLVER_PRIVATE_KEY and WAKU_ENCRYPTION_PRIVATE_KEY MUST be the same.');
+        }
+
         return key;
       })()
     }
@@ -57,6 +62,37 @@ export class SolverService extends Service {
       await sleep(500); // Sleep a little time to wait for the chat
       await this.waku.sendMessage(response, event.roomId, event.roomId);
     });
+
+    // Handshake topic for confidential messages
+    this.waku.subscribe('handshake', async (event) => {
+      const { body: { type} } = event;
+
+      if (AVAILABLE_TYPES.includes(type?.toUpperCase())) {
+        elizaLogger.info(`[SolverService] Received ${type}-handshake for ${event.roomId}`);
+      } else {
+        elizaLogger.info(`[SolverService] Received unknown ${type}-handshake for ${event.roomId}`);
+        return
+      }
+
+
+      // Just send an ack to init communication
+      await this.waku.sendMessage({}, event.body.replyTo, this.waku.publicKey);
+    });
+
+    this.waku.subscribe(this.waku.publicKey, async (event) => {
+      const response = await buildResponse(event, this.config);
+
+      if (!response) {
+        elizaLogger.info(`[SolverService] No response for confidential ${event.roomId}`);
+        return;
+      }
+
+      elizaLogger.info(`[SolverService] Sending response to confidential ${event.roomId}`, response);
+
+      await sleep(500); // Sleep a little time to wait for the chat
+      await this.waku.sendMessage(response, event.roomId, this.waku.publicKey, event.body.signerPubKey);
+    }, { encrypted: true })
+
 
     elizaLogger.info('[SolverService] initialized');
 

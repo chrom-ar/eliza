@@ -18,6 +18,14 @@ const AVAILABLE_PROTOCOLS = [
   'wormhole',
 ];
 
+export const AVAILABLE_TYPES = [
+  'TRANSFER',
+  'YIELD',
+  'SWAP',
+  'BRIDGE',
+  'CLAIM',
+];
+
 
 /**
  * 1. Validate incoming data, ensuring all required fields are present.

@@ -114,10 +114,11 @@ const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory,
       }
       const { body } = receivedMessage;
 
-      await waku.sendEncryptedMessage(
+      await waku.sendMessage(
         intent,
         body.signerPubKey, // the topic will be derived from the public key
-        confidentialTopic // where we want to receive the response
+        confidentialTopic, // where we want to receive the response
+        body.signerPubKey, // public key  for the encryption
       );
     },
   )
@@ -139,15 +140,14 @@ const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory,
         proposals.push(proposal);
       }
     },
-    confidential=true // just for clarity
+    { encrypted: true, expirationSeconds: TIMEOUT }
   )
 
   await waku.sendMessage(
-    { type: intent.type }, // only send the type of operation we want to exec
+    { type: intent.type, signerPubKey: waku.publicKey }, // only send the type of operation we want to exec
     '/handshake', // General handshake topic
     handshakeTopic // where we want to receive the response
   );
-
 
   // Sleep 10 seconds to wait for responses
   const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
