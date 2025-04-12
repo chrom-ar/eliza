@@ -8,6 +8,146 @@ import { storeProposals, formatProposalText } from '../utils/proposal';
 
 const TIMEOUT = 15000;
 
+const processProposal = async () => {
+  try {
+    counter += 1;
+    const proposal = receivedMessage.body.proposal;
+    proposal.number = counter;
+    const propTexts = formatProposalText(proposal) as any;
+
+    // @ts-ignore
+    const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions) as any;
+
+    const riskScore = await evaluateRisk(
+      runtime,
+      walletAddr,
+      proposal.transactions,
+      simulate
+    ) as any[];
+
+    let memoryText = propTexts.title; // Actions title
+
+    for (let i in propTexts.actions) {
+      memoryText += propTexts.actions[i]; // Action description
+
+      if (riskScore[i]) {
+        memoryText += riskScore[i].error || riskScore[i].summary;
+      } else {
+        memoryText += "No risk score available\n\n";
+      }
+
+      if (simulate.error) {
+        memoryText += `Simulation error: ${simulate.error}\n\n`;
+      } else {
+        const result = simulate.results[i]; // Simulate description
+        memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n";
+        memoryText += `Link: ${result.link}\n\n`;
+      }
+    }
+
+    finalText += memoryText;
+
+    proposals.push({ humanizedText: memoryText, proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
+  } catch (e) {
+    console.error("Error inside subscription:", e);
+  }
+
+}
+const handleIntent = async () => {
+  let counter = 0;
+  let finalText = '';
+
+  const waku = await WakuClient.new(runtime);
+  const proposals = [];
+  const expiration = Date.now() + TIMEOUT;
+  const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
+
+  // Subscribe to the room to receive the proposals
+  await waku.subscribe(
+    message.roomId,
+    async (receivedMessage) => {
+      if (Date.now() > expiration) {
+        // TODO unsubscribe
+        return;
+      }
+
+      await processProposal()
+    }
+  )
+
+  // Publish the *first* message to the "general" topic
+  await waku.sendMessage(
+    intent,
+    '', // General intent topic
+    message.roomId
+  );
+
+  // Sleep 10 seconds to wait for responses
+  const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
+  await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
+
+  return proposals
+
+
+}
+
+const handleConfidentialIntent = async () => {
+  let counter = 0;
+  let finalText = '';
+
+  const waku = await WakuClient.new(runtime);
+  const proposals = [];
+  const handshakeExpiration = Date.now() + (TIMEOUT / 2);
+  const totalExpiration = Date.now() + TIMEOUT;
+  const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
+
+  const handshakeTopic = `handshake-${message.roomId}`;
+  const confidentialTopic = `conf-${message.roomId}`;
+
+  // Subscribe to the handshake topic to send the intent
+  await waku.subscribe(
+    handshakeTopic,
+    async (receivedMessage) => {
+      if (Date.now() > handshakeExpiration) {
+        // TODO unsubscribe
+        return;
+      }
+      const { body } = receivedMessage;
+
+      await waku.sendEncryptedMessage(
+        intent,
+        body.signerPubKey, // the topic will be derived from the public key
+        confidentialTopic // where we want to receive the response
+      );
+    },
+  )
+
+  // Subscribe to the room to receive the proposals
+  await waku.subscribe(
+    confidentialTopic,
+    async (receivedMessage) => {
+      if (Date.now() > totalExpiration) {
+        // TODO unsubscribe
+        return;
+      }
+    },
+    confidential=true // just for clarity
+  )
+
+  await waku.sendMessage(
+    { type: intent.type }, // only send the type of operation we want to exec
+    '/handshake', // General handshake topic
+    handshakeTopic // where we want to receive the response
+  );
+
+
+  // Sleep 10 seconds to wait for responses
+  const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
+  await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
+
+  return proposals
+}
+
 export const confirmIntentAction: Action = {
   suppressInitialMessage: true,
   name: 'CONFIRM_INTENT',
@@ -40,78 +180,13 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    let counter = 0;
-    let finalText = '';
+    let proposals = []
 
-    const waku = await WakuClient.new(runtime);
-    const proposals = [];
-    const expiration = Date.now() + TIMEOUT;
-    const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
-
-    // Subscribe to the room to receive the proposals
-    await waku.subscribe(
-      message.roomId,
-      async (receivedMessage) => {
-        if (Date.now() > expiration) {
-          // TODO unsubscribe
-          return;
-        }
-
-        try {
-          counter += 1;
-          const proposal = receivedMessage.body.proposal;
-          proposal.number = counter;
-          const propTexts = formatProposalText(proposal) as any;
-
-          // @ts-ignore
-          const simulate = await simulateTxs(runtime, walletAddr, proposal.transactions) as any;
-
-          const riskScore = await evaluateRisk(
-            runtime,
-            walletAddr,
-            proposal.transactions,
-            simulate
-          ) as any[];
-
-          let memoryText = propTexts.title; // Actions title
-
-          for (let i in propTexts.actions) {
-            memoryText += propTexts.actions[i]; // Action description
-
-            if (riskScore[i]) {
-              memoryText += riskScore[i].error || riskScore[i].summary;
-            } else {
-              memoryText += "No risk score available\n\n";
-            }
-
-            if (simulate.error) {
-              memoryText += `Simulation error: ${simulate.error}\n\n`;
-            } else {
-              const result = simulate.results[i]; // Simulate description
-              memoryText += 'Simulation:\n' + (result.error || result.summary.join("\n")) + "\n";
-              memoryText += `Link: ${result.link}\n\n`;
-            }
-          }
-
-          finalText += memoryText;
-
-          proposals.push({ humanizedText: memoryText, proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
-        } catch (e) {
-          console.error("Error inside subscription:", e);
-        }
-      }
-    )
-
-    // Publish the *first* message to the "general" topic
-    await waku.sendMessage(
-      intent,
-      '', // General intent topic
-      message.roomId
-    );
-
-    // Sleep 10 seconds to wait for responses
-    const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
-    await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
+    if (intent.confidential) {
+      proposals = await handleConfidentialIntent(intent)
+    } else {
+      proposals = await handleIntent(intent)
+    }
 
     if (proposals.length == 0) {
       callback({ text: 'No proposals received. Do you want to try again?' });

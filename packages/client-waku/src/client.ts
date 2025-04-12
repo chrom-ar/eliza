@@ -8,6 +8,8 @@ import {
   LightNode,
   HealthStatusChangeEvents,
 } from '@waku/sdk';
+import { createEncoder as createEciesEncoder, createDecoder as createEciesDecoder } from "@waku/message-encryption/ecies";
+import { bytesToHex, hexToBytes } from "@waku/utils/bytes";
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
@@ -49,6 +51,21 @@ export class WakuClient extends EventEmitter {
         clusterId: this.wakuConfig.WAKU_STATIC_CLUSTER_ID,
         shard: this.wakuConfig.WAKU_STATIC_SHARD,
       }
+    }
+
+    if (this.wakuConfig.WAKU_ENCRYPTION_ENABLED) {
+      const rawPrivKey = this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY;
+      let privateKey;
+
+      if (rawPrivKey?.startsWith('0x')) {
+        privateKey = rawPrivKey;
+      } else { // solana private key
+        privateKey = bytesToHex(
+          new Uint8Array(JSON.parse(rawPrivKey).slice(0, 32)) // let's use the first 32 bytes of the private key
+        );
+      }
+
+      this.account = privateKeyToAccount(privateKey);
     }
   }
 
@@ -202,9 +219,23 @@ export class WakuClient extends EventEmitter {
       body:      utf8ToBytes(JSON.stringify(body)),
     });
 
+
+    const encoderDefaults = {
+      contentTopic: topic,
+      pubsubTopicShardInfo: this.topicNetworkConfig,
+      ephemeral: true, // prevent store
+    }
+    let encoder;
+    
+    if (this.publicKey) {
+      encoder = createEciesEncoder({ ...encoderDefaults, publicKey: this.publicKey})
+    } else {
+      encoder = createEncoder(encoderDefaults);
+    }
+
     try {
       await this.wakuNode.lightPush.send(
-        createEncoder({ contentTopic: topic, pubsubTopicShardInfo: this.topicNetworkConfig }),
+        encoder,
         { payload: ChatMessage.encode(protoMessage).finish() }
       );
       elizaLogger.success('[WakuBase] Message sent!');
