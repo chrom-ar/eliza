@@ -8,10 +8,8 @@ import { storeProposals, formatProposalText } from '../utils/proposal';
 
 const TIMEOUT = 15000;
 
-const processProposal = async () => {
+const processProposal = async (runtime: IAgentRuntime, counter: number, proposal: any, walletAddr: string) => {
   try {
-    counter += 1;
-    const proposal = receivedMessage.body.proposal;
     proposal.number = counter;
     const propTexts = formatProposalText(proposal) as any;
 
@@ -45,15 +43,13 @@ const processProposal = async () => {
       }
     }
 
-    finalText += memoryText;
-
-    proposals.push({ humanizedText: memoryText, proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal });
+    return { humanizedText: memoryText, proposalNumber: counter, simulation: simulate.results, riskScore, ...proposal };
   } catch (e) {
     console.error("Error inside subscription:", e);
   }
-
 }
-const handleIntent = async () => {
+
+const handleIntent = async (runtime: IAgentRuntime, message: Memory, intent: any) => {
   let counter = 0;
   let finalText = '';
 
@@ -71,7 +67,13 @@ const handleIntent = async () => {
         return;
       }
 
-      await processProposal()
+      counter += 1;
+      const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
+
+      if (proposal) {
+        finalText += proposal.humanizedText;
+        proposals.push(proposal);
+      }
     }
   )
 
@@ -86,12 +88,10 @@ const handleIntent = async () => {
   const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
   await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
-  return proposals
-
-
+  return { proposals, finalText }
 }
 
-const handleConfidentialIntent = async () => {
+const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory, intent: any) => {
   let counter = 0;
   let finalText = '';
 
@@ -130,6 +130,14 @@ const handleConfidentialIntent = async () => {
         // TODO unsubscribe
         return;
       }
+
+      counter += 1;
+      const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
+
+      if (proposal) {
+        finalText += proposal.humanizedText;
+        proposals.push(proposal);
+      }
     },
     confidential=true // just for clarity
   )
@@ -145,7 +153,7 @@ const handleConfidentialIntent = async () => {
   const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
   await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 
-  return proposals
+  return { proposals, finalText }
 }
 
 export const confirmIntentAction: Action = {
@@ -180,15 +188,17 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    let proposals = []
+    let proposals
+    let finalText
 
     if (intent.confidential) {
-      proposals = await handleConfidentialIntent(intent)
+      ({ proposals, finalText } = await handleConfidentialIntent(runtime, message, intent))
     } else {
-      proposals = await handleIntent(intent)
+      ({ proposals, finalText } = await handleIntent(runtime, message, intent))
     }
 
-    if (proposals.length == 0) {
+    const counter = proposals.length;
+    if (counter == 0) {
       callback({ text: 'No proposals received. Do you want to try again?' });
       return false;
     }
