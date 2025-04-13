@@ -92,7 +92,7 @@ export class SolverService extends Service {
         return;
       }
 
-      elizaLogger.info(`[SolverService] Sending response to confidential ${event.replyTo}`, response);
+      elizaLogger.info(`[SolverService] Sending response to confidential ${event.replyTo}`);
 
       await sleep(500); // Sleep a little time to wait for the chat
       await this.waku.sendMessage(response, event.replyTo, this.waku.publicKey, event.body.signerPubKey);

@@ -6,7 +6,7 @@ import { simulateTxs } from '../utils/simulation';
 import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
-const TIMEOUT = 15000;
+const TIMEOUT = 8000;
 
 const processProposal = async (runtime: IAgentRuntime, counter: number, proposal: any, walletAddr: string) => {
   try {

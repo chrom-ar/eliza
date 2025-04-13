@@ -48,8 +48,6 @@ export class WakuClient {
     return await this.waku.subscribe(topic, async (message) => {
       const body = message?.body;
 
-      console.log('message', message, message.body);
-
       if (!body?.signer || !body?.signature) {
         elizaLogger.error("[WakuClient-Chroma] Body without signer or signature", body);
         return;
@@ -68,6 +66,7 @@ export class WakuClient {
         return;
       }
 
+      elizaLogger.info(`[WakuClient-Chroma] Received ${opts.encrypted ? 'encrypted ' : ' '}message from ${body.signer}`);
       return await fn(message);
     }, opts);
   }

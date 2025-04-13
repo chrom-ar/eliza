@@ -7,9 +7,11 @@ import {
   Protocols,
   LightNode,
   HealthStatusChangeEvents,
+  IDecodedMessage,
 } from '@waku/sdk';
 import { createEncoder as createEciesEncoder, createDecoder as createEciesDecoder } from "@waku/message-encryption/ecies";
-import { hexToBytes } from "@waku/utils/bytes";
+import { keccak256 } from "@waku/message-encryption/crypto";
+import { bytesToHex, hexToBytes } from "@waku/utils/bytes";
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
@@ -45,6 +47,7 @@ export class WakuClient extends EventEmitter {
   // private timer: NodeJS.Timeout | null = null;
   private privateKey: Uint8Array | null = null;
   public publicKey: string | null = null;
+  private msgHashes: string[] = [];
 
   constructor(wakuConfig: WakuConfig) {
     super();
@@ -57,11 +60,9 @@ export class WakuClient extends EventEmitter {
       }
     }
 
-    console.log('this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY', this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
     if (this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY) {
       this.privateKey = hexToBytes(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
-      console.log('this.privateKey', this.privateKey);
-      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY).publicKey; 
+      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY).publicKey;
     }
   }
 
@@ -141,7 +142,6 @@ export class WakuClient extends EventEmitter {
       }
     }
 
-    console.log('opts', opts, this.privateKey, this.publicKey);
     if (opts.encrypted && !this.privateKey) {
       throw new Error('[WakuBase] Encryption is enabled but no private key is set');
     }
@@ -159,6 +159,11 @@ export class WakuClient extends EventEmitter {
     const subResult = await this.wakuNode.filter.subscribe([decoder], async (wakuMsg) => {
         if (!wakuMsg?.payload) {
           elizaLogger.error('[WakuBase] Received message with no payload');
+          return;
+        }
+
+        // Prevent duplicate messages
+        if (this.checkDuplicate(wakuMsg)) {
           return;
         }
 
@@ -205,7 +210,7 @@ export class WakuClient extends EventEmitter {
       }
     }
 
-    elizaLogger.success(`[WakuBase] Subscribed to topic: ${subscribedTopic}`);
+    elizaLogger.success(`[WakuBase] Subscribed to ${opts.encrypted ? 'encrypted ' : ' '}topic: ${subscribedTopic}`);
 
     // Save subscription to check expiration
     this.subscriptionMap.set(subscribedTopic, {
@@ -216,7 +221,7 @@ export class WakuClient extends EventEmitter {
 
   async sendMessage(body: object, topic: string, replyTo: string, encryptionPubKey?: string): Promise<void> {
     topic = this.buildFullTopic(topic);
-    elizaLogger.info(`[WakuBase] Sending message to topic ${topic} =>`, body);
+    elizaLogger.info(`[WakuBase] Sending ${encryptionPubKey ? 'encrypted ' : ' '}message to topic ${topic}`);
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
@@ -284,5 +289,29 @@ export class WakuClient extends EventEmitter {
     }
 
     return topic;
+  }
+
+  private checkDuplicate(msg: IDecodedMessage): boolean {
+    // Copied from https://github.com/vpavlin/waku-dispatcher/blob/main/src/dispatcher.ts
+    // const ts = (msg.timestamp! / 100000) * 100 // extract Max 99 seconds from timestamp to agroup
+    // NOTE: Hashing only contentTopic and payload because timestamp still changes for some reason
+    const input = new Uint8Array([
+      // ...utf8ToBytes(msg.pubsubTopic),
+      ...utf8ToBytes(msg.contentTopic),
+      // ...utf8ToBytes(ts.toString()),
+      ...msg.payload,
+    ])
+    const hash = bytesToHex(keccak256(input))
+    // console.log('hash', hash);
+    if (this.msgHashes.indexOf(hash) >= 0) {
+      // console.debug("Message already delivered")
+      return true
+    }
+    if (this.msgHashes.length > 2000) {
+      // console.debug("Dropping old messages from hash cache")
+      this.msgHashes.slice(hash.length - 500, hash.length)
+    }
+    this.msgHashes.push(hash)
+    return false
   }
 }
