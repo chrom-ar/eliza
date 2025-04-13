@@ -8,6 +8,33 @@ import { storeProposals, formatProposalText } from '../utils/proposal';
 
 const TIMEOUT = 15000;
 
+interface ProposalHandlerOptions {
+  runtime: IAgentRuntime;
+  message: Memory;
+  intent: any;
+  encrypted?: boolean;
+  expirationSeconds?: number;
+}
+
+interface SubscriptionConfig {
+  topic: string;
+  handler: (receivedMessage: any) => Promise<void>;
+  options?: {
+    encrypted?: boolean;
+    expirationSeconds?: number;
+  };
+}
+
+const setupSubscriptions = async (waku: any, configs: SubscriptionConfig[]) => {
+  for (const config of configs) {
+    await waku.subscribe(
+      config.topic,
+      config.handler,
+      config.options
+    );
+  }
+};
+
 const processProposal = async (runtime: IAgentRuntime, counter: number, proposal: any, walletAddr: string) => {
   try {
     proposal.number = counter;
@@ -49,113 +76,98 @@ const processProposal = async (runtime: IAgentRuntime, counter: number, proposal
   }
 }
 
+const handleProposals = async (options: ProposalHandlerOptions) => {
+  const { runtime, message, intent } = options;
+  let counter = 0;
+  let finalText = '';
+
+  const waku = await WakuClient.new(runtime);
+  const proposals = [];
+  const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
+
+  // TODO: Add `confidential` attr to intents when needed (Tested with if (true))
+  if (intent.confidential) {
+    const handshakeTopic = `handshake-${message.roomId}`;
+    const confidentialTopic = `conf-${message.roomId}`;
+    const handshakeExpiration = Date.now() + (TIMEOUT / 2);
+    const totalExpiration = Date.now() + TIMEOUT;
+
+    // Setup handshake subscription
+    const handshakeConfig: SubscriptionConfig = {
+      topic: handshakeTopic,
+      handler: async (receivedMessage) => {
+        if (Date.now() > handshakeExpiration) return;
+        const { body: { signerPubKey } } = receivedMessage;
+
+        await waku.sendMessage(
+          intent,
+          signerPubKey,
+          confidentialTopic,
+          signerPubKey,
+        );
+      }
+    };
+
+    // Setup proposal subscription
+    const proposalConfig: SubscriptionConfig = {
+      topic: confidentialTopic,
+      handler: async (receivedMessage) => {
+        if (Date.now() > totalExpiration) return;
+        counter += 1;
+        const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
+        if (proposal) {
+          finalText += proposal.humanizedText;
+          proposals.push(proposal);
+        }
+      },
+      options: { encrypted: true, expirationSeconds: TIMEOUT }
+    };
+
+    await setupSubscriptions(waku, [handshakeConfig, proposalConfig]);
+
+    // Send handshake message
+    await waku.sendMessage(
+      { type: intent.type, signerPubKey: waku.publicKey, replyTo: handshakeTopic },
+      'handshake',
+      handshakeTopic
+    );
+
+  } else {
+    // Setup regular proposal subscription
+    const proposalConfig: SubscriptionConfig = {
+      topic: message.roomId,
+      handler: async (receivedMessage) => {
+        if (Date.now() > Date.now() + TIMEOUT) return;
+        counter += 1;
+        const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
+        if (proposal) {
+          finalText += proposal.humanizedText;
+          proposals.push(proposal);
+        }
+      }
+    };
+
+    await setupSubscriptions(waku, [proposalConfig]);
+
+    // Send regular message
+    await waku.sendMessage(
+      intent,
+      '',
+      message.roomId
+    );
+  }
+
+  // Wait for responses
+  const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
+  await new Promise((resolve) => setTimeout(resolve, timeToSleep));
+
+  return { proposals, finalText };
+};
+
+// Replace both handleIntent and handleConfidentialIntent with a single function
 const handleIntent = async (runtime: IAgentRuntime, message: Memory, intent: any) => {
-  let counter = 0;
-  let finalText = '';
-
-  const waku = await WakuClient.new(runtime);
-  const proposals = [];
-  const expiration = Date.now() + TIMEOUT;
-  const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
-
-  // Subscribe to the room to receive the proposals
-  await waku.subscribe(
-    message.roomId,
-    async (receivedMessage) => {
-      if (Date.now() > expiration) {
-        // TODO unsubscribe
-        return;
-      }
-
-      counter += 1;
-      const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
-
-      if (proposal) {
-        finalText += proposal.humanizedText;
-        proposals.push(proposal);
-      }
-    }
-  )
-
-  // Publish the *first* message to the "general" topic
-  await waku.sendMessage(
-    intent,
-    '', // General intent topic
-    message.roomId
-  );
-
-  // Sleep 10 seconds to wait for responses
-  const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
-  await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
-
-  return { proposals, finalText }
-}
-
-const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory, intent: any) => {
-  let counter = 0;
-  let finalText = '';
-
-  const waku = await WakuClient.new(runtime);
-  const proposals = [];
-  const handshakeExpiration = Date.now() + (TIMEOUT / 2);
-  const totalExpiration = Date.now() + TIMEOUT;
-  const walletAddr = (await getDefaultWallet(runtime, message.userId))?.address;
-
-  const handshakeTopic = `handshake-${message.roomId}`;
-  const confidentialTopic = `conf-${message.roomId}`;
-
-  // Subscribe to the handshake topic to send the intent
-  await waku.subscribe(
-    handshakeTopic,
-    async (receivedMessage) => {
-      if (Date.now() > handshakeExpiration) {
-        // TODO unsubscribe
-        return;
-      }
-
-      const { body } = receivedMessage;
-
-      await waku.sendMessage(
-        intent,
-        body.signerPubKey, // the topic will be derived from the public key
-        confidentialTopic, // where we want to receive the response
-        body.signerPubKey, // public key  for the encryption
-      );
-    },
-  )
-
-  // Subscribe to the room to receive the proposals
-  await waku.subscribe(
-    confidentialTopic,
-    async (receivedMessage) => {
-      if (Date.now() > totalExpiration) {
-        // TODO unsubscribe
-        return;
-      }
-
-      counter += 1;
-      const proposal = await processProposal(runtime, counter, receivedMessage.body.proposal, walletAddr);
-
-      if (proposal) {
-        finalText += proposal.humanizedText;
-        proposals.push(proposal);
-      }
-    },
-    { encrypted: true, expirationSeconds: TIMEOUT }
-  )
-
-  await waku.sendMessage(
-    { type: intent.type, signerPubKey: waku.publicKey, replyTo: handshakeTopic }, // only send the type of operation we want to exec
-    'handshake', // General handshake topic
-    handshakeTopic // where we want to receive the response
-  );
-
-  // Sleep to wait for responses
-  const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
-  await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
-
-  return { proposals, finalText }
-}
+  return handleProposals({ runtime, message, intent });
+};
 
 export const confirmIntentAction: Action = {
   suppressInitialMessage: true,
@@ -189,14 +201,7 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    let proposals
-    let finalText
-
-    // if (true || intent.confidential) {
-      ({ proposals, finalText } = await handleConfidentialIntent(runtime, message, intent))
-    // } else {
-    //   ({ proposals, finalText } = await handleIntent(runtime, message, intent))
-    // }
+    const { proposals, finalText } = await handleIntent(runtime, message, intent);
 
     const counter = proposals.length;
     if (counter == 0) {
