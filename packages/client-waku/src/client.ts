@@ -43,7 +43,7 @@ export class WakuClient extends EventEmitter {
     shard: string;
   } | null = null;
   // private timer: NodeJS.Timeout | null = null;
-  private privateKey: Buffer | null = null;
+  private privateKey: Uint8Array | null = null;
   public publicKey: string | null = null;
 
   constructor(wakuConfig: WakuConfig) {
@@ -57,8 +57,10 @@ export class WakuClient extends EventEmitter {
       }
     }
 
+    console.log('this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY', this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
     if (this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY) {
       this.privateKey = hexToBytes(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
+      console.log('this.privateKey', this.privateKey);
       this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY).publicKey; 
     }
   }
@@ -139,6 +141,7 @@ export class WakuClient extends EventEmitter {
       }
     }
 
+    console.log('opts', opts, this.privateKey, this.publicKey);
     if (opts.encrypted && !this.privateKey) {
       throw new Error('[WakuBase] Encryption is enabled but no private key is set');
     }
@@ -218,7 +221,7 @@ export class WakuClient extends EventEmitter {
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
       replyTo:    utf8ToBytes(replyTo),
-      body:      utf8ToBytes(JSON.stringify(body)),
+      body:      utf8ToBytes(JSON.stringify({...body, signerPubKey: this.publicKey})),
     });
 
     let encoder;

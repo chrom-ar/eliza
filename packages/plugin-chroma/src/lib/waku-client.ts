@@ -48,12 +48,16 @@ export class WakuClient {
     return await this.waku.subscribe(topic, async (message) => {
       const body = message?.body;
 
+      console.log('message', message, message.body);
+
       if (!body?.signer || !body?.signature) {
         elizaLogger.error("[WakuClient-Chroma] Body without signer or signature", body);
         return;
       }
 
-      if (!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.proposal)))) {
+      // proposal is not always present
+      // TODO: add validation for other keys
+      if (body.proposal &&!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.proposal)))) {
         elizaLogger.error("[WakuClient-Chroma] Invalid signature", body);
         return;
       }

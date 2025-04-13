@@ -4,6 +4,7 @@ import {
 } from './transactionHelpers';
 import {
   signProposal,
+  signPayload,
 } from './sign';
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
@@ -14,6 +15,7 @@ import { validateAndBuildWithdraw } from './withdraw';
 export {
   validateAndBuildProposal,
   signProposal,
+  signPayload,
   swapTokenSolJup,
   buildSwapTransaction,
   buildBridgeTransaction,

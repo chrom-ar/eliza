@@ -27,6 +27,9 @@ const wakuEnvSchema = z.object({
   WAKU_STATIC_SHARD: z
     .number()
     .int(),
+  WAKU_ENCRYPTION_PRIVATE_KEY: z
+    .string()
+    .optional(),
 });
 
 export type WakuConfig = z.infer<typeof wakuEnvSchema>;
@@ -42,6 +45,7 @@ export async function validateWakuConfig(
       WAKU_STATIC_PEERS: runtime.getSetting('WAKU_STATIC_PEERS'),
       WAKU_STATIC_CLUSTER_ID: parseInt(runtime.getSetting('WAKU_STATIC_CLUSTER_ID') || '-1'),
       WAKU_STATIC_SHARD: parseInt(runtime.getSetting('WAKU_STATIC_SHARD') || '-1'),
+      WAKU_ENCRYPTION_PRIVATE_KEY: runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY'),
     };
 
     return wakuEnvSchema.parse(wakuConfig);

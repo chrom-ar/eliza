@@ -31,7 +31,7 @@ export async function signProposal(proposal: any, config: any): Promise<object> 
  * This is a simplistic approach that signs a stringified version of `payload`.
  * For real-world usage, consider EIP-712 or structured data hashing.
  */
-async function signPayload(payload: object, config: { PRIVATE_KEY: string }): Promise<{ signature: string; signer: string }> {
+export async function signPayload(payload: object, config: { PRIVATE_KEY: string }): Promise<{ signature: string; signer: string }> {
   const key = config.PRIVATE_KEY;
   const payloadString = JSON.stringify(payload);
 

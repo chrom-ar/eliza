@@ -112,6 +112,7 @@ const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory,
         // TODO unsubscribe
         return;
       }
+
       const { body } = receivedMessage;
 
       await waku.sendMessage(
@@ -144,8 +145,8 @@ const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory,
   )
 
   await waku.sendMessage(
-    { type: intent.type, signerPubKey: waku.publicKey }, // only send the type of operation we want to exec
-    '/handshake', // General handshake topic
+    { type: intent.type, signerPubKey: waku.publicKey, replyTo: handshakeTopic }, // only send the type of operation we want to exec
+    'handshake', // General handshake topic
     handshakeTopic // where we want to receive the response
   );
 
@@ -191,11 +192,11 @@ export const confirmIntentAction: Action = {
     let proposals
     let finalText
 
-    if (intent.confidential) {
+    // if (true || intent.confidential) {
       ({ proposals, finalText } = await handleConfidentialIntent(runtime, message, intent))
-    } else {
-      ({ proposals, finalText } = await handleIntent(runtime, message, intent))
-    }
+    // } else {
+    //   ({ proposals, finalText } = await handleIntent(runtime, message, intent))
+    // }
 
     const counter = proposals.length;
     if (counter == 0) {
