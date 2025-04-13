@@ -1,12 +1,12 @@
 import { Action, Memory, IAgentRuntime, MemoryManager, State, HandlerCallback } from '@elizaos/core';
-import { WakuClient } from '../lib/waku-client';
 
+import { WakuClient } from '../lib/waku-client';
 import { getDefaultWallet } from '../utils/walletData';
 import { simulateTxs } from '../utils/simulation';
 import { evaluateRisk } from '../utils/evaluateRisk';
 import { storeProposals, formatProposalText } from '../utils/proposal';
 
-const TIMEOUT = 8000;
+const TIMEOUT = 15000;
 
 const processProposal = async (runtime: IAgentRuntime, counter: number, proposal: any, walletAddr: string) => {
   try {
@@ -150,7 +150,7 @@ const handleConfidentialIntent = async (runtime: IAgentRuntime, message: Memory,
     handshakeTopic // where we want to receive the response
   );
 
-  // Sleep 10 seconds to wait for responses
+  // Sleep to wait for responses
   const timeToSleep = process.env.NODE_ENV == 'test' ? 500 : TIMEOUT;
   await (new Promise((resolve) => setTimeout(resolve, timeToSleep)));
 

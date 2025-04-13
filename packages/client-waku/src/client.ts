@@ -15,12 +15,11 @@ import { bytesToHex, hexToBytes } from "@waku/utils/bytes";
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
+import { privateKeyToAccount, Account } from "viem/accounts";
+import { elizaLogger } from '@elizaos/core';
+
 import { WakuConfig } from './environment';
 import { randomHexString, sleep } from './utils';
-
-import { privateKeyToAccount, Account } from "viem/accounts";
-
-import { elizaLogger } from '@elizaos/core';
 
 export const ChatMessage = new protobuf.Type('ChatMessage')
   .add(new protobuf.Field('timestamp', 1, 'uint64'))
@@ -41,8 +40,8 @@ export class WakuClient extends EventEmitter {
     expiration: number;
   }> = new Map();
   private topicNetworkConfig: {
-    clusterId: string;
-    shard: string;
+    clusterId: number;
+    shard: number;
   } | null = null;
   // private timer: NodeJS.Timeout | null = null;
   private privateKey: Uint8Array | null = null;
@@ -62,7 +61,7 @@ export class WakuClient extends EventEmitter {
 
     if (this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY) {
       this.privateKey = hexToBytes(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
-      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY).publicKey;
+      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY as `0x${string}`).publicKey;
     }
   }
 
@@ -225,20 +224,23 @@ export class WakuClient extends EventEmitter {
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
-      replyTo:    utf8ToBytes(replyTo),
+      replyTo:   utf8ToBytes(replyTo),
       body:      utf8ToBytes(JSON.stringify({...body, signerPubKey: this.publicKey})),
     });
 
     let encoder;
+    const encoderOpts =  {
+      contentTopic: topic,
+      pubsubTopicShardInfo: this.topicNetworkConfig,
+      ephemeral: true, // don't store messages
+    }
     if (encryptionPubKey) {
       encoder = createEciesEncoder({
-        contentTopic: topic,
-        publicKey: encryptionPubKey,
-        pubsubTopicShardInfo: this.topicNetworkConfig,
-        ephemeral: true,
+        ...encoderOpts,
+        publicKey: hexToBytes(encryptionPubKey),
       });
     } else {
-      encoder = createEncoder({ contentTopic: topic, pubsubTopicShardInfo: this.topicNetworkConfig, ephemeral: true });
+      encoder = createEncoder(encoderOpts);
     }
 
     try {

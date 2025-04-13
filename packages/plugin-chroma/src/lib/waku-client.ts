@@ -28,9 +28,11 @@ const evmClient = createPublicClient({
 
 export class WakuClient {
   private waku: any;
+  public readonly publicKey: string;
 
   constructor(waku: any) {
     this.waku = waku;
+    this.publicKey = waku.publicKey;
   }
 
   static async new(runtime: IAgentRuntime) {
