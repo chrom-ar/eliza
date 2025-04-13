@@ -12,8 +12,6 @@ interface ProposalHandlerOptions {
   runtime: IAgentRuntime;
   message: Memory;
   intent: any;
-  encrypted?: boolean;
-  expirationSeconds?: number;
 }
 
 interface SubscriptionConfig {
@@ -164,11 +162,6 @@ const handleProposals = async (options: ProposalHandlerOptions) => {
   return { proposals, finalText };
 };
 
-// Replace both handleIntent and handleConfidentialIntent with a single function
-const handleIntent = async (runtime: IAgentRuntime, message: Memory, intent: any) => {
-  return handleProposals({ runtime, message, intent });
-};
-
 export const confirmIntentAction: Action = {
   suppressInitialMessage: true,
   name: 'CONFIRM_INTENT',
@@ -201,7 +194,7 @@ export const confirmIntentAction: Action = {
       return false;
     }
 
-    const { proposals, finalText } = await handleIntent(runtime, message, intent);
+    const { proposals, finalText } = await handleProposals({runtime, message, intent});
 
     const counter = proposals.length;
     if (counter == 0) {
