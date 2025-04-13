@@ -8,7 +8,7 @@ describe('Transaction Helpers', () => {
     it('should validate and build a swap proposal', async () => {
       const message: GeneralMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           amount: '1',
           fromToken: 'ETH',
@@ -32,7 +32,7 @@ describe('Transaction Helpers', () => {
     it('should validate and build a bridge proposal', async () => {
       const message: GeneralMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           amount: '100',
           fromToken: 'USDC',
@@ -54,7 +54,7 @@ describe('Transaction Helpers', () => {
     it('should return null for invalid messages', async () => {
       const invalidMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           // Missing required fields
         }

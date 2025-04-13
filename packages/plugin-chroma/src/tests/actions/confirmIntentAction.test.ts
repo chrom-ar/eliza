@@ -21,7 +21,7 @@ vi.mock('../../lib/waku-client', () => ({
     WakuClient: {
         new: vi.fn().mockImplementation(() => ({
             sendMessage: vi.fn().mockResolvedValue(undefined),
-            subscribe: vi.fn().mockImplementation((roomId, callback) => {
+            subscribe: vi.fn().mockImplementation((replyTo, callback) => {
                 // Simulate receiving a message immediately
                 callback({
                     body: {

@@ -39,7 +39,7 @@ describe('buildSwapTransaction', () => {
   it('should build a swap transaction', async () => {
     const message: GeneralMessage = {
       timestamp: Date.now(),
-      roomId: 'test-room',
+      replyTo: 'test-room',
       body: {
         amount: '0.0001',
         fromToken: 'USDC',
