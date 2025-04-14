@@ -52,7 +52,7 @@ const ENVIRONMENTS: Record<string, 'Mainnet' | 'Testnet' | 'Devnet'> = {
 
 export interface GeneralMessage {
   timestamp: number;
-  roomId: string;
+  replyTo: string;
   body: {
     amount: string;
     fromToken: string;

@@ -81,7 +81,7 @@ const shareSimulations = async (runtime: IAgentRuntime, simulations: any[]) => {
   const results = await Promise.all(promises); // No content
   for (const result of results) {
     if (!result.ok) {
-      console.log("Share error:", result);
+      // console.log("Share error:", result);
     }
   }
 }

@@ -7,24 +7,29 @@ import {
   Protocols,
   LightNode,
   HealthStatusChangeEvents,
+  IDecodedMessage,
 } from '@waku/sdk';
+import { createEncoder as createEciesEncoder, createDecoder as createEciesDecoder } from "@waku/message-encryption/ecies";
+import { keccak256 } from "@waku/message-encryption/crypto";
+import { bytesToHex, hexToBytes } from "@waku/utils/bytes";
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
+import { privateKeyToAccount, Account } from "viem/accounts";
+import { elizaLogger } from '@elizaos/core';
+
 import { WakuConfig } from './environment';
 import { randomHexString, sleep } from './utils';
-
-import { elizaLogger } from '@elizaos/core';
 
 export const ChatMessage = new protobuf.Type('ChatMessage')
   .add(new protobuf.Field('timestamp', 1, 'uint64'))
   .add(new protobuf.Field('body', 2, 'bytes'))
-  .add(new protobuf.Field('roomId', 3, 'bytes'));
+  .add(new protobuf.Field('replyTo', 3, 'bytes'));
 
 export interface WakuMessageEvent {
   timestamp: number;
   body: any;
-  roomId: string;
+  replyTo: string;
 }
 
 export class WakuClient extends EventEmitter {
@@ -35,10 +40,13 @@ export class WakuClient extends EventEmitter {
     expiration: number;
   }> = new Map();
   private topicNetworkConfig: {
-    clusterId: string;
-    shard: string;
+    clusterId: number;
+    shard: number;
   } | null = null;
   // private timer: NodeJS.Timeout | null = null;
+  private privateKey: Uint8Array | null = null;
+  public publicKey: string | null = null;
+  private msgHashes: string[] = [];
 
   constructor(wakuConfig: WakuConfig) {
     super();
@@ -49,6 +57,11 @@ export class WakuClient extends EventEmitter {
         clusterId: this.wakuConfig.WAKU_STATIC_CLUSTER_ID,
         shard: this.wakuConfig.WAKU_STATIC_SHARD,
       }
+    }
+
+    if (this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY) {
+      this.privateKey = hexToBytes(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
+      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY as `0x${string}`).publicKey;
     }
   }
 
@@ -121,22 +134,35 @@ export class WakuClient extends EventEmitter {
    * Subscribe to the user-specified WAKU_CONTENT_TOPIC
    * If it contains the placeholder, we replace with the WAKU_TOPIC value, possibly with an appended random hex if so desired.
    */
-  async subscribe(topic: string, fn: any, expirationSeconds: number = 20): Promise<void> {
+  async subscribe(topic: string, fn: any, opts = { expirationSeconds: 20, encrypted: false }): Promise<void> {
     if (!topic) {
       if (!this.wakuConfig.WAKU_CONTENT_TOPIC || !this.wakuConfig.WAKU_TOPIC) {
         throw new Error('[WakuBase] subscription not configured (missing env). No messages will be received.');
       }
     }
 
+    if (opts.encrypted && !this.privateKey) {
+      throw new Error('[WakuBase] Encryption is enabled but no private key is set');
+    }
 
     const subscribedTopic = this.buildFullTopic(topic);
 
-    const decoder = createDecoder(subscribedTopic, this.topicNetworkConfig);
+    let decoder;
+    if (opts.encrypted) {
+      decoder = createEciesDecoder(subscribedTopic, this.privateKey, this.topicNetworkConfig);
+    } else {
+      decoder = createDecoder(subscribedTopic, this.topicNetworkConfig);
+    }
 
     // @ts-ignore
     const subResult = await this.wakuNode.filter.subscribe([decoder], async (wakuMsg) => {
         if (!wakuMsg?.payload) {
           elizaLogger.error('[WakuBase] Received message with no payload');
+          return;
+        }
+
+        // Prevent duplicate messages
+        if (this.checkDuplicate(wakuMsg)) {
           return;
         }
 
@@ -151,7 +177,7 @@ export class WakuClient extends EventEmitter {
             // @ts-ignore
             timestamp: Number(msgDecoded.timestamp),
             // @ts-ignore
-            roomId: bytesToUtf8(msgDecoded.roomId)
+            replyTo: bytesToUtf8(msgDecoded.replyTo)
           };
 
           await fn(event);
@@ -183,28 +209,43 @@ export class WakuClient extends EventEmitter {
       }
     }
 
-    elizaLogger.success(`[WakuBase] Subscribed to topic: ${subscribedTopic}`);
+    elizaLogger.success(`[WakuBase] Subscribed to ${opts.encrypted ? 'encrypted ' : ' '}topic: ${subscribedTopic}`);
 
     // Save subscription to check expiration
     this.subscriptionMap.set(subscribedTopic, {
       subscription: subscription,
-      expiration: Date.now() + expirationSeconds * 1000
+      expiration: Date.now() + opts.expirationSeconds * 1000
     });
   }
 
-  async sendMessage(body: object, topic: string, roomId: string): Promise<void> {
+  async sendMessage(body: object, topic: string, replyTo: string, encryptionPubKey?: string): Promise<void> {
     topic = this.buildFullTopic(topic);
-    elizaLogger.info(`[WakuBase] Sending message to topic ${topic} =>`, body);
+    elizaLogger.info(`[WakuBase] Sending ${encryptionPubKey ? 'encrypted ' : ' '}message to topic ${topic}`);
 
     const protoMessage = ChatMessage.create({
       timestamp: Date.now(),
-      roomId:    utf8ToBytes(roomId),
-      body:      utf8ToBytes(JSON.stringify(body)),
+      replyTo:   utf8ToBytes(replyTo),
+      body:      utf8ToBytes(JSON.stringify({...body, signerPubKey: this.publicKey})),
     });
+
+    let encoder;
+    const encoderOpts =  {
+      contentTopic: topic,
+      pubsubTopicShardInfo: this.topicNetworkConfig,
+      ephemeral: true, // don't store messages
+    }
+    if (encryptionPubKey) {
+      encoder = createEciesEncoder({
+        ...encoderOpts,
+        publicKey: hexToBytes(encryptionPubKey),
+      });
+    } else {
+      encoder = createEncoder(encoderOpts);
+    }
 
     try {
       await this.wakuNode.lightPush.send(
-        createEncoder({ contentTopic: topic, pubsubTopicShardInfo: this.topicNetworkConfig }),
+        encoder,
         { payload: ChatMessage.encode(protoMessage).finish() }
       );
       elizaLogger.success('[WakuBase] Message sent!');
@@ -250,5 +291,29 @@ export class WakuClient extends EventEmitter {
     }
 
     return topic;
+  }
+
+  private checkDuplicate(msg: IDecodedMessage): boolean {
+    // Copied from https://github.com/vpavlin/waku-dispatcher/blob/main/src/dispatcher.ts
+    // const ts = (msg.timestamp! / 100000) * 100 // extract Max 99 seconds from timestamp to agroup
+    // NOTE: Hashing only contentTopic and payload because timestamp still changes for some reason
+    const input = new Uint8Array([
+      // ...utf8ToBytes(msg.pubsubTopic),
+      ...utf8ToBytes(msg.contentTopic),
+      // ...utf8ToBytes(ts.toString()),
+      ...msg.payload,
+    ])
+    const hash = bytesToHex(keccak256(input))
+    // console.log('hash', hash);
+    if (this.msgHashes.indexOf(hash) >= 0) {
+      // console.debug("Message already delivered")
+      return true
+    }
+    if (this.msgHashes.length > 2000) {
+      // console.debug("Dropping old messages from hash cache")
+      this.msgHashes.slice(hash.length - 500, hash.length)
+    }
+    this.msgHashes.push(hash)
+    return false
   }
 }

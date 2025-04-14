@@ -1,7 +1,7 @@
 import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
 import WakuClientInterface from "@elizaos/client-waku";
 
-import { buildResponse } from '../solver';
+import { AVAILABLE_TYPES, buildResponse, signPayload } from '../solver';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -23,7 +23,8 @@ export class SolverService extends Service {
   }
 
   async initialize(runtime: IAgentRuntime): Promise<void> {
-    if (this.initialized) {
+    // TODO: Drop SKIP_SOLVER when solver is in other repo
+    if (runtime.getSetting('SKIP_SOLVER') || this.initialized) {
       return
     }
 
@@ -35,6 +36,13 @@ export class SolverService extends Service {
         const key = this.runtime.getSetting('SOLVER_PRIVATE_KEY');
 
         if (!key) throw new Error('PRIVATE_KEY is not set in the environment variables.');
+
+        // If waku encryption is enabled for confidential messages,
+        // the private key must be the same, to keep correlation in staking
+        if (this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') &&
+            this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') != key) {
+          throw new Error('SOLVER_PRIVATE_KEY and WAKU_ENCRYPTION_PRIVATE_KEY MUST be the same.');
+        }
 
         return key;
       })()
@@ -48,15 +56,47 @@ export class SolverService extends Service {
       const response = await buildResponse(event, this.config);
 
       if (!response) {
-        elizaLogger.info(`[SolverService] No response for ${event.roomId}`);
+        elizaLogger.info(`[SolverService] No response for ${event.replyTo}`);
         return;
       }
 
-      elizaLogger.info(`[SolverService] Sending response to ${event.roomId}`, response);
+      elizaLogger.info(`[SolverService] Sending response to ${event.replyTo}`, response);
 
       await sleep(500); // Sleep a little time to wait for the chat
-      await this.waku.sendMessage(response, event.roomId, event.roomId);
+      await this.waku.sendMessage(response, event.replyTo, event.replyTo);
     });
+
+    // Handshake topic for confidential messages
+    this.waku.subscribe('handshake', async (event) => {
+      const { body: { type } } = event;
+
+      if (AVAILABLE_TYPES.includes(type?.toUpperCase())) {
+        elizaLogger.info(`[SolverService] Received ${type}-handshake for ${event.replyTo}`);
+      } else {
+        elizaLogger.info(`[SolverService] Received unknown ${type}-handshake for ${event.replyTo}`);
+        return
+      }
+
+      // Just send an ack to init communication
+      const { signer, signature } = await signPayload({}, this.config);
+      const body = { signer, signature, signerPubKey: this.waku.publicKey };
+      await this.waku.sendMessage(body, event.body.replyTo, this.waku.publicKey);
+    });
+
+    this.waku.subscribe(this.waku.publicKey, async (event) => {
+      const response = await buildResponse(event, this.config);
+
+      if (!response) {
+        elizaLogger.info(`[SolverService] No response for confidential ${event.replyTo}`);
+        return;
+      }
+
+      elizaLogger.info(`[SolverService] Sending response to confidential ${event.replyTo}`);
+
+      await sleep(500); // Sleep a little time to wait for the chat
+      await this.waku.sendMessage(response, event.replyTo, this.waku.publicKey, event.body.signerPubKey);
+    }, { encrypted: true })
+
 
     elizaLogger.info('[SolverService] initialized');
 

@@ -511,9 +511,15 @@ importers:
       '@libp2p/tcp':
         specifier: ^10.0.15
         version: 10.1.8
+      '@waku/message-encryption':
+        specifier: ^0.0.32
+        version: 0.0.32(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)
       '@waku/sdk':
         specifier: 0.0.30
         version: 0.0.30(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@waku/utils':
+        specifier: ^0.0.22
+        version: 0.0.22
       '@wormhole-foundation/sdk-connect':
         specifier: 1.10.0
         version: 1.10.0
@@ -693,9 +699,15 @@ importers:
       '@solana/web3.js':
         specifier: npm:@solana/web3.js@1.98.0
         version: 1.98.0(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
+      '@waku/message-encryption':
+        specifier: ^0.0.32
+        version: 0.0.32(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)
       '@waku/sdk':
         specifier: 0.0.30
         version: 0.0.30(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@waku/utils':
+        specifier: ^0.0.22
+        version: 0.0.22
       '@wormhole-foundation/sdk':
         specifier: ^1.7.0
         version: 1.13.3(@types/react@19.0.12)(axios@1.8.4)(bufferutil@4.0.9)(encoding@0.1.13)(got@12.6.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@4.9.5)(utf-8-validate@5.0.10)
@@ -5248,6 +5260,10 @@ packages:
 
   '@waku/interfaces@0.0.29':
     resolution: {integrity: sha512-FO5rSMLMfnFiz17h8dyVlqc68lW/11FK0JzMtMu8oeYrfcT9jAj6fBzd9gD/gibaKVt68kbRf6CxoZUzk9qEKQ==}
+    engines: {node: '>=20'}
+
+  '@waku/message-encryption@0.0.32':
+    resolution: {integrity: sha512-rk1VDtcls8PrU1wBqphDtDNsx/I/YqohCRkxeScm2SdwkTYGLCMoUlcIO1hsxJb0nbWTVAIodr9XpHjo84scUA==}
     engines: {node: '>=20'}
 
   '@waku/message-hash@0.1.18':
@@ -20396,6 +20412,21 @@ snapshots:
   '@waku/interfaces@0.0.29':
     dependencies:
       '@waku/proto': 0.0.9
+
+  '@waku/message-encryption@0.0.32(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)':
+    dependencies:
+      '@noble/secp256k1': 1.7.1
+      '@waku/core': 0.0.34(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)
+      '@waku/interfaces': 0.0.29
+      '@waku/proto': 0.0.9
+      '@waku/utils': 0.0.22
+      debug: 4.4.0(supports-color@5.5.0)
+      js-sha3: 0.9.3
+      uint8arrays: 5.1.0
+    transitivePeerDependencies:
+      - '@multiformats/multiaddr'
+      - libp2p
+      - supports-color
 
   '@waku/message-hash@0.1.18':
     dependencies:

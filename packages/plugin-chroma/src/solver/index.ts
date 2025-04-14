@@ -1,7 +1,11 @@
 import {
   validateAndBuildProposal,
-  buildSignedProposalResponse,
+  AVAILABLE_TYPES,
 } from './transactionHelpers';
+import {
+  signProposal,
+  signPayload,
+} from './sign';
 import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
 import { buildBridgeTransaction } from './bridge/wormhole';
@@ -10,12 +14,14 @@ import { validateAndBuildWithdraw } from './withdraw';
 
 export {
   validateAndBuildProposal,
-  buildSignedProposalResponse,
+  signProposal,
+  signPayload,
   swapTokenSolJup,
   buildSwapTransaction,
   buildBridgeTransaction,
   validateAndBuildYield,
   validateAndBuildWithdraw,
+  AVAILABLE_TYPES,
 };
 
 export const buildResponse = async (event: any, config: object) => {
@@ -23,7 +29,7 @@ export const buildResponse = async (event: any, config: object) => {
     const proposal = await validateAndBuildProposal(event);
 
     if (proposal) {
-      return await buildSignedProposalResponse(proposal, config);
+      return await signProposal(proposal, config);
     }
   } catch (error) {
     console.error('Error building response:', error);

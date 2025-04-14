@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { validateAndBuildProposal, buildSignedProposalResponse } from '../../solver';
+import { validateAndBuildProposal, signProposal } from '../../solver';
 import { GeneralMessage } from '../../solver/transactionHelpers';
 import { Keypair } from '@solana/web3.js';
 
@@ -8,7 +8,7 @@ describe('Transaction Helpers', () => {
     it('should validate and build a swap proposal', async () => {
       const message: GeneralMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           amount: '1',
           fromToken: 'ETH',
@@ -32,7 +32,7 @@ describe('Transaction Helpers', () => {
     it('should validate and build a bridge proposal', async () => {
       const message: GeneralMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           amount: '100',
           fromToken: 'USDC',
@@ -54,7 +54,7 @@ describe('Transaction Helpers', () => {
     it('should return null for invalid messages', async () => {
       const invalidMessage = {
         timestamp: Date.now(),
-        roomId: 'test-room',
+        replyTo: 'test-room',
         body: {
           // Missing required fields
         }
@@ -65,7 +65,7 @@ describe('Transaction Helpers', () => {
     });
   });
 
-  describe('buildSignedProposalResponse', () => {
+  describe('signProposal', () => {
     it('should build a signed proposal response', async () => {
       const proposal = {
         type: 'SWAP',
@@ -80,7 +80,7 @@ describe('Transaction Helpers', () => {
         PRIVATE_KEY: JSON.stringify(Array.from(Keypair.generate().secretKey))
       };
 
-      const result = await buildSignedProposalResponse(proposal, config);
+      const result = await signProposal(proposal, config);
       expect(result).toBeDefined();
       expect(result).toHaveProperty('signature');
       expect(result).toHaveProperty('proposal');
@@ -92,7 +92,7 @@ describe('Transaction Helpers', () => {
         PRIVATE_KEY: JSON.stringify(Array.from(Keypair.generate().secretKey))
       };
 
-      const result = await buildSignedProposalResponse(invalidProposal, config);
+      const result = await signProposal(invalidProposal, config);
       expect(result).toBeNull();
     });
   });

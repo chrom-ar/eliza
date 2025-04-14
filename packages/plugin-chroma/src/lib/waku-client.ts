@@ -28,9 +28,11 @@ const evmClient = createPublicClient({
 
 export class WakuClient {
   private waku: any;
+  public readonly publicKey: string;
 
   constructor(waku: any) {
     this.waku = waku;
+    this.publicKey = waku.publicKey;
   }
 
   static async new(runtime: IAgentRuntime) {
@@ -39,12 +41,12 @@ export class WakuClient {
     return new WakuClient(client);
   }
 
-  async sendMessage(body: object, topic: string, roomId: string) {
-    return await this.waku.sendMessage(body, topic, roomId);
+  async sendMessage(body: object, topic: string, replyTo: string, encryptionPubKey?: string) {
+    return await this.waku.sendMessage(body, topic, replyTo, encryptionPubKey);
   }
 
   // All chroma messages should be signed by the sender
-  async subscribe(topic: string, fn: any, expirationSeconds: number = 20): Promise<void> {
+  async subscribe(topic: string, fn: any, opts = { expirationSeconds: 20, encrypted: false }): Promise<void> {
     return await this.waku.subscribe(topic, async (message) => {
       const body = message?.body;
 
@@ -53,7 +55,9 @@ export class WakuClient {
         return;
       }
 
-      if (!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.proposal)))) {
+      // proposal is not always present
+      // TODO: add validation for other keys
+      if (body.proposal &&!(await this._verifyMessage(body.signer, body.signature, JSON.stringify(body.proposal)))) {
         elizaLogger.error("[WakuClient-Chroma] Invalid signature", body);
         return;
       }
@@ -64,8 +68,9 @@ export class WakuClient {
         return;
       }
 
+      elizaLogger.info(`[WakuClient-Chroma] Received ${opts.encrypted ? 'encrypted ' : ' '}message from ${body.signer}`);
       return await fn(message);
-    }, expirationSeconds);
+    }, opts);
   }
 
 
@@ -81,7 +86,7 @@ export class WakuClient {
 
   private async _checkEvmSigner(signer: string) {
     try {
-      const [date, staked, locked] = await evmClient.readContract({
+      const [_date, staked, locked] = await evmClient.readContract({
         address: stakingEvmAddress,
         abi: stakingAbi,
         functionName: 'getStakerInfo',

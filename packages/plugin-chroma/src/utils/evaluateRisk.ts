@@ -1,7 +1,6 @@
 import { IAgentRuntime, elizaLogger } from '@elizaos/core';
 
 export const evaluateRisk = async (runtime: IAgentRuntime, wallet: string, _transactions: any[], simulation: any) => {
-
   const results = {};
   const promisses = [];
 
