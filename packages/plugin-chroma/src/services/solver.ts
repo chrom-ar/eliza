@@ -68,7 +68,7 @@ export class SolverService extends Service {
 
     // Handshake topic for confidential messages
     this.waku.subscribe('handshake', async (event) => {
-      const { body: { type} } = event;
+      const { body: { type } } = event;
 
       if (AVAILABLE_TYPES.includes(type?.toUpperCase())) {
         elizaLogger.info(`[SolverService] Received ${type}-handshake for ${event.replyTo}`);
