@@ -197,7 +197,7 @@ export const confirmIntentAction: Action = {
     const { proposals, finalText } = await handleProposals({runtime, message, intent});
 
     const counter = proposals.length;
-    if (counter == 0) {
+    if (counter === 0) {
       callback({ text: 'No proposals received. Do you want to try again?' });
       return false;
     }
