@@ -292,6 +292,7 @@ export class DirectClient {
                     response = {
                         text:   text,
                         action: reqAction.name,
+                        user: "Chroma"
                     }
                 // Compose the message from text
                 } else {
