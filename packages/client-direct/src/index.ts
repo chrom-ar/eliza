@@ -148,49 +148,6 @@ export class DirectClient {
             file?: Express.Multer.File;
         }
 
-        // Update the route handler to use CustomRequest instead of express.Request
-        // this.app.post(
-        //     "/:agentId/whisper",
-        //     upload.single("file"),
-        //     async (req: CustomRequest, res: express.Response) => {
-        //         const audioFile = req.file; // Access the uploaded file using req.file
-        //         const agentId = req.params.agentId;
-
-        //         if (!audioFile) {
-        //             res.status(400).send("No audio file provided");
-        //             return;
-        //         }
-
-        //         let runtime = this.agents.get(agentId);
-        //         const apiKey = runtime.getSetting("OPENAI_API_KEY");
-
-        //         // if runtime is null, look for runtime with the same name
-        //         if (!runtime) {
-        //             runtime = Array.from(this.agents.values()).find(
-        //                 (a) =>
-        //                     a.character.name.toLowerCase() ===
-        //                     agentId.toLowerCase()
-        //             );
-        //         }
-
-        //         if (!runtime) {
-        //             res.status(404).send("Agent not found");
-        //             return;
-        //         }
-
-        //         const openai = new OpenAI({
-        //             apiKey,
-        //         });
-
-        //         const transcription = await openai.audio.transcriptions.create({
-        //             file: fs.createReadStream(audioFile.path),
-        //             model: "whisper-1",
-        //         });
-
-        //         res.json(transcription);
-        //     }
-        // );
-
         this.app.post(
             "/:agentId/message",
             tryJWTWithoutError,
