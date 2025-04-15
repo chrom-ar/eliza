@@ -161,15 +161,15 @@ export class WakuClient extends EventEmitter {
           return;
         }
 
-        // Prevent duplicate messages
-        if (this.checkDuplicate(wakuMsg)) {
-          return;
-        }
-
         let msgDecoded: any;
 
         try {
           msgDecoded = ChatMessage.decode(wakuMsg.payload);
+
+          // Prevent duplicate messages
+          if (this.checkDuplicate(wakuMsg, msgDecoded)) {
+            return;
+          }
 
           const event: WakuMessageEvent = {
             // @ts-ignore
@@ -182,6 +182,7 @@ export class WakuClient extends EventEmitter {
 
           await fn(event);
         } catch (err) {
+          console.log(err)
           elizaLogger.error('[WakuBase] Error decoding message payload:', err, msgDecoded);
         }
       }
@@ -222,8 +223,9 @@ export class WakuClient extends EventEmitter {
     topic = this.buildFullTopic(topic);
     elizaLogger.info(`[WakuBase] Sending ${encryptionPubKey ? 'encrypted ' : ' '}message to topic ${topic}`);
 
+    const ts = Date.now();
     const protoMessage = ChatMessage.create({
-      timestamp: Date.now(),
+      timestamp: ts,
       replyTo:   utf8ToBytes(replyTo),
       body:      utf8ToBytes(JSON.stringify({...body, signerPubKey: this.publicKey})),
     });
@@ -246,7 +248,7 @@ export class WakuClient extends EventEmitter {
     try {
       await this.wakuNode.lightPush.send(
         encoder,
-        { payload: ChatMessage.encode(protoMessage).finish() }
+        { payload: ChatMessage.encode(protoMessage).finish(), timestamp: ts },
       );
       elizaLogger.success('[WakuBase] Message sent!');
     } catch (e) {
@@ -293,27 +295,28 @@ export class WakuClient extends EventEmitter {
     return topic;
   }
 
-  private checkDuplicate(msg: IDecodedMessage): boolean {
+  private checkDuplicate(wakuMsg: IDecodedMessage, decodedMsg: any): boolean {
     // Copied from https://github.com/vpavlin/waku-dispatcher/blob/main/src/dispatcher.ts
-    // const ts = (msg.timestamp! / 100000) * 100 // extract Max 99 seconds from timestamp to agroup
-    // NOTE: Hashing only contentTopic and payload because timestamp still changes for some reason
     const input = new Uint8Array([
-      // ...utf8ToBytes(msg.pubsubTopic),
-      ...utf8ToBytes(msg.contentTopic),
-      // ...utf8ToBytes(ts.toString()),
-      ...msg.payload,
+      // Filter by topic
+      ...utf8ToBytes(wakuMsg.contentTopic),
+      // Filter by timestamp (could be `wakuMsg.timestamp` too)
+      ...utf8ToBytes(decodedMsg.timestamp.toString()),
+      // Filter by message.body (already in Uint8Array)
+      // `wakuMsg.payload` can't be used because of encryption randomness
+      ...decodedMsg.body,
     ])
+
     const hash = bytesToHex(keccak256(input))
-    // console.log('hash', hash);
     if (this.msgHashes.indexOf(hash) >= 0) {
-      // console.debug("Message already delivered")
       return true
     }
     if (this.msgHashes.length > 2000) {
-      // console.debug("Dropping old messages from hash cache")
       this.msgHashes.slice(hash.length - 500, hash.length)
     }
+
     this.msgHashes.push(hash)
+
     return false
   }
 }
