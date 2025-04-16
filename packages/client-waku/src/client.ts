@@ -10,13 +10,11 @@ import {
   IDecodedMessage,
 } from '@waku/sdk';
 import { createEncoder as createEciesEncoder, createDecoder as createEciesDecoder } from "@waku/message-encryption/ecies";
-import { keccak256 } from "@waku/message-encryption/crypto";
+import { keccak256, getPublicKey } from "@waku/message-encryption/crypto";
 import { bytesToHex, hexToBytes } from "@waku/utils/bytes";
 import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
-import { privateKeyToAccount, Account } from "viem/accounts";
-import { elizaLogger } from '@elizaos/core';
 
 import { WakuConfig } from './environment';
 import { randomHexString, sleep } from './utils';
@@ -60,8 +58,9 @@ export class WakuClient extends EventEmitter {
     }
 
     if (this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY) {
-      this.privateKey = hexToBytes(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY);
-      this.publicKey = privateKeyToAccount(this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY as `0x${string}`).publicKey;
+      const privateKey = this.wakuConfig.WAKU_ENCRYPTION_PRIVATE_KEY as `0x${string}`
+      this.privateKey = hexToBytes(privateKey);
+      this.publicKey  = bytesToHex(getPublicKey(privateKey.slice(2), false))
     }
   }
 
