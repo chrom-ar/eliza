@@ -24,7 +24,7 @@
     "@solana/spl-token": "0.4.9",
     "@solana/web3.js": "1.95.8",
     "@chrom-ar/waku-client": "1.0.0",
-    "@wormhole-foundation/sdk": "^1.7.0",
+    "@wormhole-foundation/sdk": "1.15.1",
     "@wormhole-foundation/sdk-connect": "1.10.0",
     "bignumber.js": "9.0.1",
     "bs58": "^6.0.0",
