@@ -1,5 +1,5 @@
 import { elizaLogger, IAgentRuntime } from '@elizaos/core';
-import WakuClientInterface from '@elizaos/client-waku';
+import WClient from '@chrom-ar/waku-client';
 
 import { createPublicClient, http, verifyMessage } from 'viem';
 import { baseSepolia } from 'viem/chains'
@@ -36,7 +36,9 @@ export class WakuClient {
   }
 
   static async new(runtime: IAgentRuntime) {
-    const client = await WakuClientInterface.start(runtime);
+    const client = await WClient.start(runtime.getSetting.bind(runtime)); // WTF with the bind()
+
+    client.setLogger(elizaLogger); // set the same logger
 
     return new WakuClient(client);
   }
@@ -72,7 +74,6 @@ export class WakuClient {
       return await fn(message);
     }, opts);
   }
-
 
   private async _checkSignerIsValid(signer: string) {
     elizaLogger.info(`[WakuClient-Chroma] Checking Solver ${signer} stake...`);

@@ -11,7 +11,6 @@
     },
     "dependencies": {
         "@elizaos/client-direct": "workspace:*",
-        "@elizaos/client-waku": "workspace:*",
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-bootstrap": "workspace:*",
         "@elizaos/plugin-chroma": "workspace:*",
