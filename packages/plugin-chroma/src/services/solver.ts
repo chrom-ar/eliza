@@ -1,5 +1,5 @@
 import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
-import WakuClientInterface from "@elizaos/client-waku";
+import WClient from "@chrom-ar/waku-client";
 
 import { AVAILABLE_TYPES, buildResponse, signPayload } from '../solver';
 
@@ -48,8 +48,8 @@ export class SolverService extends Service {
       })()
     }
 
-    // @ts-ignore
-    this.waku = await WakuClientInterface.start(runtime);
+    this.waku = await WClient.start(this.runtime.getSetting.bind(this.runtime)); // WTF with the bind()
+    this.waku.setLogger(elizaLogger); // set the same logger
 
     // Empty string for default topic
     this.waku.subscribe('', async (event) => {
@@ -78,6 +78,7 @@ export class SolverService extends Service {
       }
 
       // Just send an ack to init communication
+      // @ts-ignore
       const { signer, signature } = await signPayload({}, this.config);
       const body = { signer, signature, signerPubKey: this.waku.publicKey };
       await this.waku.sendMessage(body, event.body.replyTo, this.waku.publicKey);

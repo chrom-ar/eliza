@@ -146,9 +146,6 @@ importers:
       '@elizaos/client-direct':
         specifier: workspace:*
         version: link:../packages/client-direct
-      '@elizaos/client-waku':
-        specifier: workspace:*
-        version: link:../packages/client-waku
       '@elizaos/core':
         specifier: workspace:*
         version: link:../packages/core
@@ -500,46 +497,6 @@ importers:
         specifier: 8.3.5
         version: 8.3.5(@swc/core@1.11.21(@swc/helpers@0.5.17))(jiti@1.21.7)(postcss@8.5.3)(typescript@5.6.3)(yaml@2.7.1)
 
-  packages/client-waku:
-    dependencies:
-      '@elizaos/core':
-        specifier: workspace:*
-        version: link:../core
-      '@libp2p/bootstrap':
-        specifier: ^11.0.16
-        version: 11.0.33
-      '@libp2p/tcp':
-        specifier: ^10.0.15
-        version: 10.1.9
-      '@waku/message-encryption':
-        specifier: ^0.0.32
-        version: 0.0.32(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)
-      '@waku/sdk':
-        specifier: 0.0.30
-        version: 0.0.30(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@waku/utils':
-        specifier: ^0.0.22
-        version: 0.0.22
-      '@wormhole-foundation/sdk-connect':
-        specifier: 1.10.0
-        version: 1.10.0
-      bignumber.js:
-        specifier: 9.0.1
-        version: 9.0.1
-      bs58:
-        specifier: 5.0.0
-        version: 5.0.0
-      protobufjs:
-        specifier: ^7.4.0
-        version: 7.4.0
-      tweetnacl:
-        specifier: ^1.0.3
-        version: 1.0.3
-    devDependencies:
-      tsup:
-        specifier: 8.3.5
-        version: 8.3.5(@swc/core@1.11.21(@swc/helpers@0.5.17))(jiti@1.21.7)(postcss@8.5.3)(typescript@5.6.3)(yaml@2.7.1)
-
   packages/core:
     dependencies:
       '@ai-sdk/amazon-bedrock':
@@ -672,6 +629,9 @@ importers:
       '@bgd-labs/aave-address-book':
         specifier: ^4.13.1
         version: 4.18.0
+      '@chrom-ar/waku-client':
+        specifier: 1.0.0
+        version: 1.0.0(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(libp2p@2.1.8)(utf-8-validate@5.0.10)
       '@coinbase/agentkit':
         specifier: 0.1.2
         version: 0.1.2(bufferutil@4.0.9)(typescript@4.9.5)(utf-8-validate@5.0.10)
@@ -681,9 +641,6 @@ importers:
       '@coral-xyz/anchor':
         specifier: 0.30.1
         version: 0.30.1(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
-      '@elizaos/client-waku':
-        specifier: workspace:*
-        version: link:../client-waku
       '@elizaos/core':
         specifier: workspace:*
         version: link:../core
@@ -699,9 +656,6 @@ importers:
       '@solana/web3.js':
         specifier: npm:@solana/web3.js@1.98.0
         version: 1.98.0(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
-      '@waku/sdk':
-        specifier: 0.0.30
-        version: 0.0.30(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@wormhole-foundation/sdk':
         specifier: ^1.7.0
         version: 1.14.2(@types/react@19.1.1)(axios@1.8.4)(bufferutil@4.0.9)(encoding@0.1.13)(got@12.6.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@4.9.5)(utf-8-validate@5.0.10)
@@ -720,9 +674,6 @@ importers:
       handlebars:
         specifier: ^4.7.8
         version: 4.7.8
-      protobufjs:
-        specifier: ^7.4.0
-        version: 7.4.0
       rpc-websockets:
         specifier: 7.11.0
         version: 7.11.0
@@ -1881,6 +1832,9 @@ packages:
 
   '@chevrotain/utils@11.0.3':
     resolution: {integrity: sha512-YslZMgtJUyuMbZ+aKvfF3x1f5liK4mWNxghFRv7jqRR9C3R3fAOGTTKvxXDa2Y1s9zSbcpuO0cAxDYsc9SrXoQ==}
+
+  '@chrom-ar/waku-client@1.0.0':
+    resolution: {integrity: sha512-X7yXTKUAjT/fu/9hj6GPpwC6e7TJWo96iMH9Td7jGHVyTqsGDUfpUOVYHWuRigFnE7ON0Jo5idhCBM7raMcITw==}
 
   '@coinbase/agentkit@0.1.2':
     resolution: {integrity: sha512-vG7crTvtkG/dovng5vSuOgHam7KXeirTPi3yzPbVyV+Xi3toGxB51ZYOXPiqp31tKI9avm2TSNuv7nCnPQEAVg==}
@@ -13703,6 +13657,9 @@ packages:
     peerDependencies:
       zod: ^3.24.1
 
+  zod@3.24.1:
+    resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
+
   zod@3.24.2:
     resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
 
@@ -15344,6 +15301,22 @@ snapshots:
   '@chevrotain/types@11.0.3': {}
 
   '@chevrotain/utils@11.0.3': {}
+
+  '@chrom-ar/waku-client@1.0.0(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(libp2p@2.1.8)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@libp2p/bootstrap': 11.0.33
+      '@libp2p/tcp': 10.1.9
+      '@waku/message-encryption': 0.0.32(@multiformats/multiaddr@12.4.0)(libp2p@2.1.8)
+      '@waku/sdk': 0.0.30(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@waku/utils': 0.0.22
+      protobufjs: 7.4.0
+      zod: 3.24.1
+    transitivePeerDependencies:
+      - '@multiformats/multiaddr'
+      - bufferutil
+      - libp2p
+      - supports-color
+      - utf-8-validate
 
   '@coinbase/agentkit@0.1.2(bufferutil@4.0.9)(typescript@4.9.5)(utf-8-validate@5.0.10)':
     dependencies:
@@ -28302,7 +28275,7 @@ snapshots:
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
       '@types/long': 4.0.2
-      '@types/node': 20.17.30
+      '@types/node': 22.14.1
       long: 4.0.0
 
   protobufjs@7.4.0:
@@ -31279,6 +31252,8 @@ snapshots:
   zod-to-json-schema@3.24.5(zod@3.24.2):
     dependencies:
       zod: 3.24.2
+
+  zod@3.24.1: {}
 
   zod@3.24.2: {}
 
