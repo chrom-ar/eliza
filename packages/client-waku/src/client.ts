@@ -16,6 +16,8 @@ import { tcp } from '@libp2p/tcp';
 import protobuf from 'protobufjs';
 import { EventEmitter } from 'events';
 
+import { elizaLogger } from '@elizaos/core';
+
 import { WakuConfig } from './environment';
 import { randomHexString, sleep } from './utils';
 
