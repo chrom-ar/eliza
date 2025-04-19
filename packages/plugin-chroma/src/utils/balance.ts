@@ -141,8 +141,6 @@ export async function getBalances(
       return [];
     }
 
-    console.log(data)
-
     const tokenAddressMap = buildTokenAddressMap(normalizedNetworks);
     const balances: TokenBalance[] = [];
 
