@@ -141,13 +141,16 @@ export async function getBalances(
       return [];
     }
 
+    console.log(data)
+
     const tokenAddressMap = buildTokenAddressMap(normalizedNetworks);
     const balances: TokenBalance[] = [];
 
     if (data.data && data.data.tokens) {
       for (const tokenData of data.data.tokens) {
+        console.log(tokenData)
         const tokenAddress = tokenData.tokenAddress as string;
-        const tokenDetails = tokenAddressMap[tokenAddress.toLowerCase()];
+        const tokenDetails = tokenAddressMap[tokenAddress?.toLowerCase() || ZERO_ADDRESS]; // NATIVE TOKEN is null
 
         if (!tokenDetails || (tokenSymbols.length > 0 && !tokenSymbols.includes(tokenDetails.symbol))) {
           continue;
@@ -171,6 +174,7 @@ export async function getBalances(
     return balances;
   } catch (error) {
     elizaLogger.error(`Error getting balances for ${address}:`, error);
+    console.log(error)
     return [];
   }
 }

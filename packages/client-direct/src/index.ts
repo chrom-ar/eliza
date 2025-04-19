@@ -183,22 +183,16 @@ export class DirectClient {
                     req.body.name,
                     "direct"
                 );
-                console.log('DD index.ts:227');
 
-                const reqAction = req.body.action && runtime.actions.find((a) => a.name === req.body.action);
-                console.log('DD index.ts:230');
-                const text = req.body.text || req.body.action;
+                const requestAction = req.body.action;
+                const elizaAction = requestAction && runtime.actions.find((a) => a.name === requestAction);
+                const text = req.body.text || requestAction;
 
-
-                console.log('DD index.ts:234', req.body, req.params);
-                console.log('DD index.ts:233', req.body.text, req.body.action, !text && !reqAction);
-                if (!text && !reqAction) {
-                    console.log('DD index.ts:235');
+                if (!text && !elizaAction) {
                     res.json([]);
                     return;
                 }
 
-                console.log('DD index.ts:240');
                 const messageId = stringToUuid(Date.now().toString());
 
                 // Here goes the preferred protocol (e.g. Beefy, yearn, Aave, etc)
@@ -234,26 +228,21 @@ export class DirectClient {
                 await runtime.messageManager.addEmbeddingToMemory(memory);
                 await runtime.messageManager.createMemory(memory);
 
-                console.log('DD index.ts:276');
-
                 let state = await runtime.composeState(userMessage, {
                     agentName: runtime.character.name,
                 });
 
                 let response;
 
-                console.log('DD index.ts:284');
                 // Use requested action
-                if (reqAction) {
-                    console.log('DD index.ts:287');
+                if (elizaAction) {
                     response = {
                         text:   text,
-                        action: reqAction.name,
-                        user: "Chroma"
+                        action: elizaAction.name,
+                        user:   "Chroma"
                     }
                 // Compose the message from text
                 } else {
-                    console.log('DD index.ts:296');
                     const context = composeContext({
                         state,
                         template: messageHandlerTemplate,
@@ -274,7 +263,6 @@ export class DirectClient {
                     }
                 }
 
-                console.log('DD index.ts:316');
                 // save response to memory
                 const responseMessage: Memory = {
                     id: stringToUuid(messageId + "-" + runtime.agentId),
@@ -285,14 +273,12 @@ export class DirectClient {
                     createdAt: Date.now(),
                 };
 
-                console.log('DD index.ts:327');
                 await runtime.messageManager.createMemory(responseMessage);
 
                 state = await runtime.updateRecentMessageState(state);
 
                 let message = null as Content | null;
 
-                console.log('DD index.ts:334');
                 await runtime.processActions(
                     memory,
                     [responseMessage],
@@ -303,7 +289,6 @@ export class DirectClient {
                     }
                 );
 
-                console.log('DD index.ts:345');
                 await runtime.evaluate(memory, state);
 
                 if (message) {
