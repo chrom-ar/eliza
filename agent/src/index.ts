@@ -23,7 +23,7 @@ import {
 
 import { defaultCharacter } from "./defaultCharacter.ts";
 
-import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
+// import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import JSON5 from 'json5';
 
 import { chromaPlugin } from "@elizaos/plugin-chroma";
@@ -633,7 +633,7 @@ export async function createAgent(
         character,
         // character.plugins are handled when clients are added
         plugins: [
-            bootstrapPlugin,
+            // bootstrapPlugin,
             chromaPlugin,
         ]
             .flat()
