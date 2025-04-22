@@ -1,6 +1,8 @@
 import * as chains from 'viem/chains';
 import { parseUnits } from 'viem';
 
+import { WakuMessage, BodyMessage } from '@chrom-ar/solver-sdk';
+
 const networkAliases: Record<string, string> = {
   // Ethereum
   'eth': 'mainnet',
@@ -50,21 +52,8 @@ const ENVIRONMENTS: Record<string, 'Mainnet' | 'Testnet' | 'Devnet'> = {
   [chains.avalancheFuji.id]: 'Testnet',
 }
 
-export interface GeneralMessage {
-  timestamp: number;
-  replyTo: string;
-  body: {
-    amount: string;
-    fromToken: string;
-    toToken?: string; // Optional for bridge operations
-    fromAddress: string;
-    fromChain: string;
-    recipientAddress: string;
-    recipientChain: string;
-    description?: string;
-    protocol?: string; // Optional for claim and withdraw operations
-    protocols?: string[]; // Optional to specify multiple protocols for operations
-    transactionHash?: string; // Optional for claim operations
+export interface GeneralMessage extends WakuMessage {
+  body: Omit<BodyMessage, 'type'> & {
     type: 'BRIDGE' | 'TRANSFER' | 'YIELD' | 'SWAP' | 'CLAIM';
   };
 }
