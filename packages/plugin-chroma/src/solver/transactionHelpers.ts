@@ -5,6 +5,7 @@ import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
 import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
+import { validateAndBuildConfidentialTransfer } from './confidentialTransfer';
 
 // Just for example purposes
 const AVAILABLE_PROTOCOLS = [
@@ -56,6 +57,9 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
   switch (type?.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes
       result = await validateAndBuildTransfer(message);
+      break;
+    case "CONFIDENTIAL_TRANSFER":
+      result = await validateAndBuildConfidentialTransfer(message);
       break;
     case "YIELD":
       result = await validateAndBuildYield(message);

@@ -34,6 +34,21 @@ const setupSubscriptions = async (waku: any, configs: SubscriptionConfig[]) => {
 };
 
 const processProposal = async (runtime: IAgentRuntime, counter: number, proposal: any, walletAddr: string) => {
+  // If the proposal has partial transactions, return it as is
+  // TODO: Add support for partial transactions
+  if (proposal.partialTransactions) {
+    proposal.number = counter;
+
+    const propTexts = formatProposalText(proposal) as any;
+    let memoryText = propTexts.title;
+
+    for (let i in propTexts.actions) {
+      memoryText += propTexts.actions[i]; // Action description
+    }
+
+    return { humanizedText: memoryText, proposalNumber: counter, ...proposal };
+  }
+
   try {
     proposal.number = counter;
     const propTexts = formatProposalText(proposal) as any;

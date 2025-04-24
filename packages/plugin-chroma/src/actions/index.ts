@@ -7,6 +7,7 @@ import { parseBridgeAction } from './parseBridgeAction';
 import { parseClaimAction } from './parseClaimAction';
 import { parseSwapAction } from './parseSwapAction';
 import { parseTransferAction } from './parseTransferAction';
+import { parseConfidentialTransferAction } from './parseConfidentialTransferAction';
 import { parseYieldAction } from './parseYieldAction';
 import { parseWithdrawAction } from './parseWithdrawAction';
 
@@ -20,6 +21,7 @@ export {
   parseClaimAction,
   parseSwapAction,
   parseTransferAction,
+  parseConfidentialTransferAction,
   parseYieldAction,
   parseWithdrawAction,
 };
