@@ -1,0 +1,97 @@
+{
+  "a2aVersion": "0.1.0",
+  "agentId": "eliza-chroma-agent",
+  "displayName": "Eliza Chroma DeFi Agent",
+  "description": "An agent specialized in understanding and executing DeFi actions via the Chroma plugin.",
+  "endpointUrl": "/api/a2a",
+  "authentication": {
+    "type": "bearer",
+    "description": "Requires a JWT Bearer token in the Authorization header for /tasks/* endpoints."
+  },
+  "capabilities": {
+    "methods": [
+      "tasks/send",
+      "tasks/get"
+    ],
+    "supportedInputParts": [
+      "TextPart"
+    ],
+    "supportedOutputParts": [
+      "TextPart",
+      "DataPart"
+    ],
+    "supportedArtifactParts": [
+      "TextPart",
+      "DataPart"
+    ]
+  },
+  "skills": [
+    {
+      "skillId": "getBalance",
+      "description": "Retrieves the balance of specified tokens for a wallet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {"type": "string"},
+          "tokenSymbols": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["walletAddress"]
+      },
+      "outputSchema": {
+         "type": "object",
+         "properties": {
+            "balances": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "amount": {"type": "string"}
+                    }
+                }
+            }
+         }
+      }
+    },
+    {
+      "skillId": "parseTransfer",
+      "description": "Parses a natural language request to transfer tokens."
+    },
+    {
+      "skillId": "parseSwap",
+      "description": "Parses a natural language request to swap tokens."
+    },
+    {
+      "skillId": "parseBridge",
+      "description": "Parses a natural language request to bridge tokens between chains."
+    },
+    {
+       "skillId": "parseYield",
+       "description": "Parses a natural language request related to yield farming/staking."
+    },
+    {
+        "skillId": "parseClaim",
+        "description": "Parses a natural language request to claim rewards or tokens."
+    },
+    {
+        "skillId": "parseWithdraw",
+        "description": "Parses a natural language request to withdraw assets."
+    },
+    {
+        "skillId": "createWallet",
+        "description": "Creates a new wallet."
+    },
+    {
+        "skillId": "confirmIntent",
+        "description": "Confirms a previously parsed user intent."
+    },
+    {
+        "skillId": "cancelIntent",
+        "description": "Cancels a previously parsed user intent."
+    },
+    {
+        "skillId": "confirmProposal",
+        "description": "Confirms a proposal related to an intent."
+    }
+  ]
+} 

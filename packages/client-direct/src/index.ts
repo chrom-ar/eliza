@@ -1,20 +1,15 @@
 import {
     composeContext,
     elizaLogger,
-    generateCaption,
-    generateImage,
     generateMessageResponse,
-    generateObject,
     getEmbeddingZeroVector,
     messageCompletionFooter,
     ModelClass,
     settings,
     stringToUuid,
-    type AgentRuntime,
     type Client,
     type Content,
     type IAgentRuntime,
-    type Media,
     type Memory,
     type Plugin,
 } from "@elizaos/core";
@@ -23,12 +18,11 @@ import cors from "cors";
 import express, { type Request as ExpressRequest } from "express";
 import * as fs from "fs";
 import multer from "multer";
-import OpenAI from "openai";
 import * as path from "path";
-import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 import { tryJWTWithoutError } from "./jwt.ts";
+import { createA2ARouter } from "./a2a.ts";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -110,6 +104,20 @@ Response format should be formatted in a JSON block like this:
 \`\`\`
 `;
 
+export const defaultImageRequest = {
+    prompt: "",
+    n: 1,
+    size: "512x512",
+};
+
+export interface StartServerParams {
+    port?: number;
+    agents: Map<string, IAgentRuntime>;
+    startAgent: Function;
+    loadCharacterTryPath: Function;
+    jsonToCharacter: Function;
+}
+
 export class DirectClient {
     public app: express.Application;
     private agents: Map<string, IAgentRuntime>; // container management
@@ -142,6 +150,10 @@ export class DirectClient {
 
         const apiLogRouter = createVerifiableLogApiRouter(this.agents);
         this.app.use(apiLogRouter);
+
+        // Setup A2A Router
+        const a2aRouter = createA2ARouter(this.agents);
+        this.app.use(a2aRouter);
 
         // Define an interface that extends the Express Request interface
         interface CustomRequest extends ExpressRequest {
@@ -311,41 +323,64 @@ export class DirectClient {
         this.agents.delete(runtime.agentId);
     }
 
-    public start(port: number) {
-        this.server = this.app.listen(port, () => {
-            elizaLogger.success(
-                `REST API bound to 0.0.0.0:${port}. If running locally, access it at http://localhost:${port}.`
-            );
-        });
+    async start(params: StartServerParams) {
+        this.agents = params.agents;
+        this.startAgent = params.startAgent;
+        this.loadCharacterTryPath = params.loadCharacterTryPath;
+        this.jsonToCharacter = params.jsonToCharacter;
 
-        // Handle graceful shutdown
-        const gracefulShutdown = () => {
-            elizaLogger.log("Received shutdown signal, closing server...");
-            this.server.close(() => {
-                elizaLogger.success("Server closed successfully");
-                process.exit(0);
-            });
+        // Refresh routes that depend on agents map after it's populated
+        const apiRouter = createApiRouter(this.agents, this);
+        const apiLogRouter = createVerifiableLogApiRouter(this.agents);
+        const a2aRouter = createA2ARouter(this.agents);
 
-            // Force close after 5 seconds if server hasn't closed
-            setTimeout(() => {
-                elizaLogger.error(
-                    "Could not close connections in time, forcefully shutting down"
-                );
-                process.exit(1);
-            }, 5000);
+        // Find existing layers and replace them, or add if not present
+        const updateRouterLayer = (basePath: string, newRouter: express.Router) => {
+            let replaced = false;
+            for (let i = 0; i < this.app._router.stack.length; i++) {
+                const layer = this.app._router.stack[i];
+                // Check if the layer handle identity matches one of the routers we manage
+                if (layer.name === 'router' && (layer.handle === apiRouter || layer.handle === apiLogRouter || layer.handle === a2aRouter)) {
+                    layer.handle = newRouter;
+                    replaced = true;
+                    elizaLogger.log(`Updated router layer by handle identity for path matching ${basePath}`);
+                    break;
+                }
+            }
+            if (!replaced) {
+                // Fallback: Attempt to find by regex if mounting at a known base path (other than '/')
+                // Or simply add if no match was found by identity
+                elizaLogger.log(`Mounting new router for path ${basePath}`);
+                this.app.use(basePath, newRouter);
+            }
         };
 
-        // Handle different shutdown signals
-        process.on("SIGTERM", gracefulShutdown);
-        process.on("SIGINT", gracefulShutdown);
+        updateRouterLayer('/', apiRouter); // Assuming root mount path
+        updateRouterLayer('/', apiLogRouter); // Assuming root mount path
+        updateRouterLayer('/', a2aRouter); // Assuming root mount path
+
+        const port = params.port || 8080;
+        this.server = this.app.listen(port, () => {
+            elizaLogger.info(`⚡️[server]: Server is running at http://localhost:${port}`);
+        });
     }
 
-    public async stop() {
-        if (this.server) {
-            this.server.close(() => {
-                elizaLogger.success("Server stopped");
-            });
-        }
+    stop(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (this.server) {
+                this.server.close((err?: Error) => {
+                    if (err) {
+                        elizaLogger.error("Error closing server:", err);
+                        reject(err);
+                    } else {
+                        elizaLogger.log("Server stopped");
+                        resolve();
+                    }
+                });
+            } else {
+                resolve(); // Resolve immediately if server wasn't running
+            }
+        });
     }
 }
 
