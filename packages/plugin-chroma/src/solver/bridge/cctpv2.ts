@@ -47,7 +47,6 @@ export async function buildBurnTransactions(message: GeneralMessage) {
     body: {
       amount,
       fromChain,
-      fromAddress,
       recipientAddress,
       recipientChain,
     }

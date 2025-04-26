@@ -40,7 +40,7 @@ export class SolverService extends Service {
         // If waku encryption is enabled for confidential messages,
         // the private key must be the same, to keep correlation in staking
         if (this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') &&
-            this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') != key) {
+            this.runtime.getSetting('WAKU_ENCRYPTION_PRIVATE_KEY') !== key) {
           throw new Error('SOLVER_PRIVATE_KEY and WAKU_ENCRYPTION_PRIVATE_KEY MUST be the same.');
         }
 

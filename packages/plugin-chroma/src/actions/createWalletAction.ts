@@ -4,14 +4,6 @@ import { elizaLogger } from '@elizaos/core';
 import { getWalletAndProvider, createWallet } from '../utils/cdp';
 import { getDefaultWallet, addWallet } from '../utils/walletData';
 
-const contextTemplate = `# Recent Messages
-{{recentMessages}}
-
-# Providers data
-{{providers}}
-
-Check if the user is requesting to create or access their wallet.`;
-
 export const createWalletAction: Action = {
   suppressInitialMessage: true,
   name: 'CREATE_WALLET',
