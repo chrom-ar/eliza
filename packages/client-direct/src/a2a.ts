@@ -7,7 +7,7 @@ import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateM
 import { tryJWTWithoutError } from './jwt'; // Corrected relative path
 import * as fs from 'fs/promises';
 import * as path from 'path';
-
+import agentJson from './agentJson';
 const app = express();
 app.use(express.json());
 
@@ -63,11 +63,8 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
   // /.well-known/agent.json endpoint
   router.get('/.well-known/agent.json', async (req, res) => {
     try {
-      // Use path.resolve with process.cwd()
-      const agentJsonPath = path.resolve('./agent.json');
-      const agentJsonContent = await fs.readFile(agentJsonPath, 'utf-8');
       res.setHeader('Content-Type', 'application/json');
-      res.send(agentJsonContent);
+      res.send(agentJson);
     } catch (error) {
       console.error("Error reading agent.json:", error);
       res.status(500).json({ error: 'Could not load agent configuration.' });
@@ -76,9 +73,14 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
 
   // --- A2A Protocol Endpoints ---
 
+  router.post(`${A2A_BASE_PATH}`, tryJWTWithoutError, async (req: Request, res: Response) => {
+    res.status(200).json({ message: 'A2A protocol endpoint received.' });
+  });
+
   // POST /tasks/send
   // Applies JWT Auth middleware
   router.post(`${A2A_BASE_PATH}/tasks/send`, tryJWTWithoutError, async (req: Request, res: Response) => {
+    console.log(`[A2A] Received POST request to ${A2A_BASE_PATH}/tasks/send`, req.body);
     // TODO: Validate incoming request body against A2A Task/Message schema
     const { taskId: clientTaskId, message: incomingMessage, skillId } = req.body as { taskId?: string, message: A2AMessage, skillId?: string };
 
@@ -113,6 +115,13 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
     const userId = stringToUuid(req['jwtUserId'] ?? 'a2a-default-user');
     const userName = req['jwtUserName'] ?? 'A2A User'; // Assuming userName might be in JWT
     const roomId = stringToUuid(req['jwtRoomId'] ?? 'a2a-default-room-' + agentId); // Assuming roomId might be in JWT
+
+    console.log(`[A2A] Received POST request to ${A2A_BASE_PATH}/tasks/send with userId: ${userId}, userName: ${userName}, roomId: ${roomId}`);
+    console.log(`[A2A] Incoming message:`, incomingMessage);
+    console.log(`[A2A] Skill ID: ${skillId}`);
+    console.log(`[A2A] Client Task ID: ${clientTaskId}`);
+    console.log(`[A2A] Agent ID: ${agentId}`);
+
 
     // --- Task Management ---
     const taskId = clientTaskId || uuidv4();
@@ -308,12 +317,12 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
 
 // --- Server Start --- 
 // This might be integrated differently depending on how eliza starts its services
-const PORT = process.env.A2A_PORT || 3001; // Example port
-app.listen(PORT, () => {
-  console.log(`A2A compatible server listening on port ${PORT}`);
-  console.log(`Agent Card potentially available at /.well-known/agent.json`);
-  console.log(`A2A API endpoint base: ${A2A_BASE_PATH}`);
-});
+// const PORT = process.env.A2A_PORT || 3001; // Example port
+// app.listen(PORT, () => {
+//   console.log(`A2A compatible server listening on port ${PORT}`);
+//   console.log(`Agent Card potentially available at /.well-known/agent.json`);
+//   console.log(`A2A API endpoint base: ${A2A_BASE_PATH}`);
+// });
 
 // Export the app or start logic if needed for integration
 // export default app; 
