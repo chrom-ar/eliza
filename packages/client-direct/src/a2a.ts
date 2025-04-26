@@ -3,11 +3,10 @@
 
 // Example using Express (replace if different framework is used)
 import express, { Router, Request, Response } from 'express';
-import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector, messageHandlerTemplate, Action, State, HandlerCallback } from '@elizaos/core'; // Adjust path as needed
-import { tryJWTWithoutError } from '../packages/client-direct/src/jwt'; // Corrected relative path
+import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector,  HandlerCallback } from '@elizaos/core'; // Adjust path as needed
+import { tryJWTWithoutError } from './jwt'; // Corrected relative path
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid'; // For generating task IDs
 
 const app = express();
 app.use(express.json());
@@ -54,6 +53,10 @@ interface Task {
   skillId?: string; // Added skillId to task
 }
 
+const uuidv4 = (...args: any[]) => {
+  return stringToUuid(`${args.join('-')}-${Date.now()}`);
+}
+
 export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
   const router = Router();
 
@@ -61,7 +64,7 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
   router.get('/.well-known/agent.json', async (req, res) => {
     try {
       // Use path.resolve with process.cwd()
-      const agentJsonPath = path.resolve(process.cwd(), 'a2a-compat', 'agent.json');
+      const agentJsonPath = path.resolve('./agent.json');
       const agentJsonContent = await fs.readFile(agentJsonPath, 'utf-8');
       res.setHeader('Content-Type', 'application/json');
       res.send(agentJsonContent);
@@ -145,7 +148,6 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
         const elizaContent: Content = {
             text: inputText,
             source: "a2a-direct",
-            // attachments? map from FilePart/DataPart if needed
         };
 
         const userMessage: Memory = {
@@ -184,23 +186,12 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
             };
 
             // Execute the action handler
-            // Need to decide what options to pass, if any
-            const actionResult = await elizaAction.handler(runtime, userMessage, state, {}, actionCallback);
+            // TODO: Actions return value is not currently normalized (most of the time is false)
+            await elizaAction.handler(runtime, userMessage, state, {}, actionCallback);
 
-            // Wait briefly if handler is async and doesn't immediately call back (optional, might need better sync)
-            // await new Promise(resolve => setTimeout(resolve, 100));
-
-             if (!actionCompleted) {
-                 console.warn(`[A2A] Action handler for ${elizaAction.name} finished but callback might not have been called.`);
-                 // Handle cases where action might return boolean or not call callback as expected
-                 if (typeof actionResult === 'boolean' && !actionResult) {
-                      throw new Error(`Action ${elizaAction.name} handler returned false.`);
-                 }
-                 // If responseContent is still null, maybe the action failed silently?
-                 if (!responseContent) {
-                     responseContent = { text: `Action ${elizaAction.name} executed, but produced no specific output via callback.` };
-                 }
-             }
+            if (!responseContent) {
+              responseContent = { text: `Action ${elizaAction.name} executed, but produced no specific output via callback.` };
+            }
              console.log(`[A2A] Action execution finished for: ${elizaAction.name}. Response content:`, responseContent);
 
         } else {
