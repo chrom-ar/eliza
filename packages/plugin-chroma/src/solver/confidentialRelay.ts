@@ -74,6 +74,6 @@ export async function validateAndBuildConfidentialRelay(message: GeneralMessage)
     description: `Confidential relay via Privacy Pools on ${fromChain}`,
     titles: ['Confidential Relay'],
     calls: ['relay'],
-    partialTransactions: [partialRelay],
+    partialTransactions: [PARTIAL_RELAY],
   };
 }
