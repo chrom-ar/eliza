@@ -17,7 +17,7 @@ const DEPOSIT_ABI = [
   }
 ];
 
-const partialDeposit = {
+const PARTIAL_DEPOSIT = {
   to: ENTRYPOINT_ADDRESS,
   // For now, we only support mainnet as Privacy Pools is not deployed on other chains
   chainId: mainnet.id,
