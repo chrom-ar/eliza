@@ -35,7 +35,7 @@ const RELAY_ABI = [
   }
 ];
 
-const partialRelay = {
+const PARTIAL_RELAY = {
   to: ENTRYPOINT_ADDRESS,
   chainId: mainnet.id,
   callData: {
