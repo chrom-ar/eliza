@@ -5,6 +5,8 @@ import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
 import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
+import { validateAndBuildConfidentialDeposit } from './confidentialDeposit';
+import { validateAndBuildConfidentialRelay } from './confidentialRelay';
 
 // Just for example purposes
 const AVAILABLE_PROTOCOLS = [
@@ -24,6 +26,8 @@ export const AVAILABLE_TYPES = [
   'SWAP',
   'BRIDGE',
   'CLAIM',
+  'CONFIDENTIAL_DEPOSIT',
+  'CONFIDENTIAL_RELAY',
 ];
 
 
@@ -56,6 +60,12 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
   switch (type?.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes
       result = await validateAndBuildTransfer(message);
+      break;
+    case "CONFIDENTIAL_DEPOSIT":
+      result = await validateAndBuildConfidentialDeposit(message);
+      break;
+    case "CONFIDENTIAL_RELAY":
+      result = await validateAndBuildConfidentialRelay(message);
       break;
     case "YIELD":
       result = await validateAndBuildYield(message);
