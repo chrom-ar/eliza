@@ -51,6 +51,6 @@ export async function validateAndBuildConfidentialDeposit(
     description: `Confidential deposit via Privacy Pools on ${fromChain}`,
     titles: ['Confidential Deposit'],
     calls: ['deposit'],
-    partialTransactions: [partialDeposit]
+    partialTransactions: [PARTIAL_DEPOSIT]
   };
 }
