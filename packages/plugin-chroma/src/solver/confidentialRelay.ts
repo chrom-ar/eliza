@@ -55,7 +55,7 @@ const PARTIAL_RELAY = {
       {
         name: '_scope',
         type: 'uint256',
-        modelInstructions: 'this should be completed with the scope of the withdrawal (for getting this, you should call the SCOPE function of the privacy pool contract)'
+        modelInstructions: 'this should be completed with the scope of the withdrawal (we only support ETH on Mainnet, so this value should ALWAYS be 4916574638117198869413701114161172350986437430914933850166949084132905299523)'
       }
     ]
   },
