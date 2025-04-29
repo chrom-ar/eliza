@@ -9,6 +9,19 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import agentJson from './agentJson';
 import { messageHandlerTemplate } from './index'; // Import messageHandlerTemplate
+// Import A2A schema types
+import {
+    Task,
+    TaskState,
+    Message,
+    Part,
+    TextPart, // Added TextPart
+    Artifact,
+    JSONRPCError, // Using JSONRPCError from schema
+    ErrorCodeInternalError, // For error codes
+    TaskStatus as SchemaTaskStatus, // Rename to avoid conflict with internal usage pattern
+    // Add other necessary types from a2a-schema.ts as needed
+} from './a2a-schema'; // Assuming a2a-schema.ts is in the same directory
 
 const app = express();
 app.use(express.json());
@@ -17,45 +30,12 @@ app.use(express.json());
 const A2A_BASE_PATH = '/api/a2a';
 
 // Simple in-memory store for task status (Replace with persistent storage for production)
+// The Task type now comes from a2a-schema.ts
 const taskStore: Map<string, Task> = new Map();
 
-// Define A2A specific types (or import from a schema definition if available)
-interface TextPart {
-  type: 'text';
-  text: string;
-}
-
-interface DataPart {
-  type: 'data';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-}
-
-type Part = TextPart | DataPart; // Add FilePart etc. if needed
-
-interface A2AMessage {
-  messageId?: string;
-  role: 'user' | 'agent';
-  parts: Part[];
-  createdAt?: string; // ISO 8601 format
-}
-
-interface A2AArtifact {
-   artifactId?: string;
-   parts: Part[];
-   createdAt?: string; // ISO 8601 format
-}
-
-interface Task {
-  id: string;
-  status: 'submitted' | 'working' | 'input-required' | 'completed' | 'failed' | 'canceled';
-  history: A2AMessage[];
-  artifacts?: A2AArtifact[];
-  createdAt?: string; // ISO 8601 format
-  updatedAt?: string; // ISO 8601 format
-  error?: { code: string; message: string };
-  skillId?: string; // Added skillId to task
-}
+// --- A2A Schema Types ---
+// Removed local definitions from here down to --- End A2A Schema Types ---
+// --- End A2A Schema Types ---
 
 const uuidv4 = (...args: any[]) => {
   // Simple UUID generation for demonstration
@@ -110,14 +90,16 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
 
 async function handleTasksSend(req: Request, res: Response, agents: Map<string, IAgentRuntime>, body: any) {
     // Logic from the original POST /tasks/send handler
-    const { id: clientTaskId, message: incomingMessage, skillId } = body as { id?: string, message: A2AMessage, skillId?: string };
+    // Use Message type from schema
+    const { id: clientTaskId, message: incomingMessage, skillId } = body as { id?: string, message: Message, skillId?: string };
 
     // Basic Input Validation
     if (!incomingMessage || !Array.isArray(incomingMessage.parts) || incomingMessage.parts.length === 0) {
       console.error('Invalid request: Missing or invalid message parts for tasks/send.', incomingMessage);
         return res.status(400).json({ error: 'Invalid request: Missing or invalid message parts for tasks/send.' });
     }
-    const textPart = incomingMessage.parts.find(p => 'text' in p) as TextPart | undefined;
+    // Use TextPart type from schema
+    const textPart = incomingMessage.parts.find(p => p.type === 'text') as TextPart | undefined;
     if (!textPart || typeof textPart.text !== 'string') {
         console.error('Invalid request: Missing text part in message for tasks/send.', incomingMessage);
         return res.status(400).json({ error: 'Invalid request: Missing text part in message for tasks/send.' });
@@ -147,19 +129,31 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
     const nowISO = now.toISOString();
     let task: Task = {
         id: id,
-        status: 'submitted',
-        history: [
-            { ...incomingMessage, messageId: incomingMessage.messageId || uuidv4(), role: 'user', createdAt: incomingMessage.createdAt || nowISO }
-        ],
-        createdAt: nowISO,
-        updatedAt: nowISO,
-        skillId: skillId
+        // Task status is now an object with state and timestamp
+        status: { state: 'submitted', timestamp: nowISO },
+        // History is not directly part of the Task object in the schema
+        // We'll need to manage history separately or adapt if needed.
+        // For now, let's store the initial user message for internal logic,
+        // but the returned Task won't have a history field like before.
+        // history: [ // Removed history from the main Task object
+        //     { ...incomingMessage, id: incomingMessage.id || uuidv4(), role: 'user', createdAt: incomingMessage.createdAt || nowISO }
+        // ],
+        // These timestamps are not directly in the schema Task object
+        // createdAt: nowISO,
+        // updatedAt: nowISO,
+        // Store skillId in metadata if needed
+        metadata: skillId ? { skillId: skillId } : undefined,
     };
+    // Storing the full history associated with the task ID separately
+    const taskHistory: Message[] = [
+         { ...incomingMessage, role: 'user' } // Simplified, assuming incomingMessage matches Message structure
+    ];
+
     taskStore.set(id, task);
 
     try {
-        task.status = 'working';
-        task.updatedAt = new Date().toISOString();
+        // Update task status object
+        task.status = { state: 'working', timestamp: new Date().toISOString() };
         taskStore.set(id, task);
 
         await runtime.ensureConnection(userId, roomId, userName, runtime.character.name, "a2a-direct");
@@ -171,12 +165,14 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
         const elizaContent: Content = { text: inputText, source: "a2a-direct" };
 
         const userMessage: Memory = {
-            id: stringToUuid(task.history[0].messageId + '-' + userId),
+            // The schema Message doesn't have a top-level id/messageId in the same way.
+            // We'll generate one for the Memory object. The original message parts are in taskHistory[0]
+            id: stringToUuid(id + '-user-' + userId), // Use task ID and user ID for uniqueness
             content: elizaContent,
             userId,
             roomId,
             agentId: runtime.agentId,
-            createdAt: now.getTime(),
+            createdAt: Date.now(),
         };
 
         await runtime.messageManager.addEmbeddingToMemory(userMessage);
@@ -184,7 +180,8 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
 
         let state = await runtime.composeState(userMessage, { agentName: runtime.character.name });
         let responseContent: Content | null = null;
-        let responseArtifacts: A2AArtifact[] = [];
+        // Use Artifact type from schema
+        let responseArtifacts: Artifact[] = [];
 
         if (elizaAction?.handler) {
             console.log(`[A2A tasks/send] Executing action: ${elizaAction.name}`);
@@ -226,31 +223,52 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
         });
         const finalContent = finalContentFromActions || responseContent;
 
-        const agentMessage: A2AMessage = {
-            messageId: responseMessageId, role: 'agent',
-            parts: [], createdAt: new Date(responseMemory.createdAt).toISOString()
+        // Use Message type from schema
+        const agentMessage: Message = {
+            // messageId is not part of the schema Message structure
+            role: 'agent',
+            parts: [],
+            // createdAt is not part of the schema Message structure
+            // timestamp is part of TaskStatus, not individual messages
         };
         if (finalContent.text) agentMessage.parts.push({ type: 'text', text: finalContent.text });
-        if ((finalContent as any).structuredData) agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
+        // Adapt structured data handling if needed based on schema DataPart
+        if ((finalContent as any).structuredData) {
+             // Assuming structuredData fits the Record<string, unknown> type
+            agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
+        }
 
         console.log('DD a2a.ts:233');
-        task.history.push(agentMessage);
+        // Add agent message to our separate history store
+        taskHistory.push(agentMessage);
+        // Update task object with artifacts and final status
         task.artifacts = responseArtifacts.length > 0 ? responseArtifacts : undefined;
-        task.status = 'completed';
-        task.updatedAt = new Date().toISOString();
+        task.status = { state: 'completed', timestamp: new Date().toISOString() };
         taskStore.set(id, task);
 
         console.log('DD a2a.ts:240');
-        res.status(200).json({id: id, result: task});
+        // Return the final task object as defined by the schema
+        // Note: The response structure for tasks/send in A2A is JSONRPCResponse<Task | null, A2AError>
+        // We are currently returning the Task directly in the 'result' field.
+        res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task }); // Align with JSON-RPC response
 
     } catch (error) {
       console.error(`[A2A tasks/send] Error processing task ${id}:`, error);
-      task.status = 'failed';
-      task.error = { code: 'INTERNAL_ERROR', message: error.message || 'An internal error occurred' };
-      task.updatedAt = new Date().toISOString();
+      // Update task status object
+      task.status = { state: 'failed', timestamp: new Date().toISOString() };
+      // Use JSONRPCError structure from schema
+      task.error = { code: ErrorCodeInternalError, message: error.message || 'An internal error occurred' };
       taskStore.set(id, task);
-      // Send back the failed task object even on error
-      res.status(500).json(task);
+      // Send back the failed task object in a JSON-RPC error response structure
+      res.status(500).json({
+            jsonrpc: "2.0",
+            id: req.body.id, // Use request ID for response
+            error: {
+                code: ErrorCodeInternalError, // Or a more specific A2A error code if applicable
+                message: error.message || 'An internal server error occurred processing the task.',
+                data: task // Include the task object in the error data field
+            }
+        });
     }
 }
 
@@ -267,11 +285,17 @@ function handleTasksGet(req: Request, res: Response, body: any) {
     const task = taskStore.get(id);
 
     if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
+      // Return JSON-RPC error format
+      return res.status(404).json({
+            jsonrpc: "2.0",
+            id: req.body.id,
+            error: { code: -32001 /* ErrorCodeTaskNotFound */, message: 'Task not found' }
+      });
     }
 
     // No authorization check as authentication is removed
-    res.status(200).json(task);
+    // Return JSON-RPC success format
+     res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
 }
 
 // Note: Server start/stop logic is handled by the main DirectClient in index.ts
