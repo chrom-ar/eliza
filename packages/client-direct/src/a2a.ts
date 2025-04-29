@@ -21,7 +21,9 @@ import {
     ErrorCodeInternalError, // For error codes
     TaskStatus as SchemaTaskStatus, // Rename to avoid conflict with internal usage pattern
     // Add other necessary types from a2a-schema.ts as needed
+    ErrorCodeTaskNotFound,
 } from './a2a-schema'; // Assuming a2a-schema.ts is in the same directory
+import { setImmediate } from 'timers'; // Import setImmediate for scheduling background task
 
 const app = express();
 app.use(express.json());
@@ -63,13 +65,16 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
     console.log(`[A2A] Received POST to ${A2A_BASE_PATH} with method: ${method}`, body, body.params.message.parts);
 
     if (!method) {
-      return res.status(400).json({ error: 'Missing required field: method' });
+      return res.status(400).json({
+        jsonrpc: "2.0", id: req.body.id, error: { code: -32600, message: 'Missing required field: method' }
+      });
     }
 
     // --- Dispatch based on method ---
     switch (method) {
       case 'tasks/send':
-        await handleTasksSend(req, res, agents, body.params);
+        // No await here - handleTasksSend now responds immediately and processes in background
+        handleTasksSend(req, res, agents, body.params);
         break;
 
       case 'tasks/get':
@@ -79,7 +84,9 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
       // TODO: Add cases for other methods like tasks/cancel, tasks/sendSubscribe etc.
 
       default:
-        res.status(400).json({ error: `Unsupported method: ${method}` });
+         res.status(400).json({
+           jsonrpc: "2.0", id: req.body.id, error: { code: -32601, message: `Unsupported method: ${method}` }
+         });
     }
   });
 
@@ -88,32 +95,48 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
 
 // --- Handler Functions ---
 
-async function handleTasksSend(req: Request, res: Response, agents: Map<string, IAgentRuntime>, body: any) {
-    // Logic from the original POST /tasks/send handler
-    // Use Message type from schema
+// Renamed original function slightly to avoid conflict if needed, and made it non-async regarding the response
+function handleTasksSend(req: Request, res: Response, agents: Map<string, IAgentRuntime>, body: any) {
+    // Logic from the original POST /tasks/send handler, adapted for immediate response
     const { id: clientTaskId, message: incomingMessage, skillId } = body as { id?: string, message: Message, skillId?: string };
 
     // Basic Input Validation
     if (!incomingMessage || !Array.isArray(incomingMessage.parts) || incomingMessage.parts.length === 0) {
       console.error('Invalid request: Missing or invalid message parts for tasks/send.', incomingMessage);
-        return res.status(400).json({ error: 'Invalid request: Missing or invalid message parts for tasks/send.' });
+        // Ensure response is JSON-RPC compliant
+        return res.status(400).json({
+            jsonrpc: "2.0",
+            id: req.body.id,
+            error: { code: -32602, message: 'Invalid request: Missing or invalid message parts for tasks/send.' }
+        });
     }
-    // Use TextPart type from schema
     const textPart = incomingMessage.parts.find(p => p.type === 'text') as TextPart | undefined;
     if (!textPart || typeof textPart.text !== 'string') {
         console.error('Invalid request: Missing text part in message for tasks/send.', incomingMessage);
-        return res.status(400).json({ error: 'Invalid request: Missing text part in message for tasks/send.' });
+        // Ensure response is JSON-RPC compliant
+        return res.status(400).json({
+            jsonrpc: "2.0",
+            id: req.body.id,
+            error: { code: -32602, message: 'Invalid request: Missing text part in message for tasks/send.' }
+        });
     }
     const inputText = textPart.text;
 
-    // Agent & User Identification (FIXME: Needs proper handling)
+    // Agent & User Identification
+    // FIXME: Use actual agent/skill routing if multiple agents/skills are relevant
     const agentId = Array.from(agents.keys())[0];
     if (!agentId) {
-        return res.status(500).json({ error: 'No agents available.' });
+        console.error('[A2A tasks/send] No agents available.');
+        return res.status(500).json({
+             jsonrpc: "2.0", id: req.body.id, error: { code: ErrorCodeInternalError, message: 'No agents available.' }
+        });
     }
     const runtime = agents.get(agentId);
     if (!runtime) {
-      return res.status(404).json({ error: `Agent with ID ${agentId} not found.` });
+        console.error(`[A2A tasks/send] Agent with ID ${agentId} not found.`);
+        return res.status(404).json({
+             jsonrpc: "2.0", id: req.body.id, error: { code: ErrorCodeInternalError, message: `Agent with ID ${agentId} not found.` }
+        });
     }
 
     // Use generic user/room IDs since auth is removed
@@ -121,53 +144,132 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
     const userName = 'A2A User';
     const roomId = stringToUuid('a2a-default-room-' + agentId);
 
-    console.log(`[A2A tasks/send] Processing for user: ${userId}, room: ${roomId}`);
+    console.log(`[A2A tasks/send] Preparing task for user: ${userId}, room: ${roomId}`);
 
-    // Task Management
+    // Task Management - Create Task
     const id = clientTaskId || uuidv4();
     const now = new Date();
     const nowISO = now.toISOString();
     let task: Task = {
         id: id,
-        // Task status is now an object with state and timestamp
-        status: { state: 'submitted', timestamp: nowISO },
-        // History is not directly part of the Task object in the schema
-        // We'll need to manage history separately or adapt if needed.
-        // For now, let's store the initial user message for internal logic,
-        // but the returned Task won't have a history field like before.
-        // history: [ // Removed history from the main Task object
-        //     { ...incomingMessage, id: incomingMessage.id || uuidv4(), role: 'user', createdAt: incomingMessage.createdAt || nowISO }
-        // ],
-        // These timestamps are not directly in the schema Task object
-        // createdAt: nowISO,
-        // updatedAt: nowISO,
-        // Store skillId in metadata if needed
+        status: { state: 'submitted', timestamp: nowISO }, // Initial state
         metadata: skillId ? { skillId: skillId } : undefined,
     };
-    // Storing the full history associated with the task ID separately
     const taskHistory: Message[] = [
-         { ...incomingMessage, role: 'user' } // Simplified, assuming incomingMessage matches Message structure
+         { ...incomingMessage, role: 'user' } // Start history with the user message
     ];
+    taskStore.set(id, { ...task }); // Store the initial submitted task state
 
-    taskStore.set(id, task);
+    // Pre-calculate elizaAction to pass to background task
+    const elizaAction = skillId
+        ? runtime.actions.find(a => (a as any).skillId === skillId || a.name === skillId || a.similes?.includes(skillId))
+        : runtime.actions.find(a => a.name === inputText || a.similes?.includes(inputText));
+
 
     try {
-        // Update task status object
+        // Update task status to working
         task.status = { state: 'working', timestamp: new Date().toISOString() };
-        taskStore.set(id, task);
+        taskStore.set(id, { ...task }); // Update store with working task
 
+        // Respond immediately with the 'working' task status
+        console.log(`[A2A tasks/send] Responding with 'working' status for task ${id}`);
+        res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
+
+        // --- Schedule background processing ---
+        // Use setImmediate to ensure the response is sent before heavy processing begins
+        setImmediate(() => {
+             // Pass only necessary data to the background task
+             processTaskInBackground(
+                 runtime,
+                 id, // Pass ID instead of the whole task object initially
+                 userId,
+                 roomId,
+                 userName,
+                 inputText,
+                 incomingMessage, // Pass original message if needed for context/history
+                 taskHistory, // Pass the initial history array
+                 elizaAction // Pass the pre-calculated action
+             ).catch(backgroundError => {
+                 // Catch unhandled errors from the background process itself (should be rare if internal try/catch is good)
+                 console.error(`[A2A Background] Unhandled error for task ${id}:`, backgroundError);
+                 // Attempt to update task status to failed if it's still working
+                 const currentTask = taskStore.get(id);
+                 if (currentTask && currentTask.status.state === 'working') {
+                     const errorMessage: Message = { role: 'agent', parts: [{ type: 'text', text: `Critical background error: ${backgroundError.message}`}]};
+                     currentTask.status = { state: 'failed', timestamp: new Date().toISOString(), message: errorMessage };
+                     taskStore.set(id, currentTask);
+                 }
+             });
+        });
+        // --- Background processing scheduled ---
+
+    } catch (error) {
+      // This catch block handles errors during the *synchronous* part:
+      // task creation, status update to 'working', scheduling the background task, or sending the response.
+      console.error(`[A2A tasks/send] Error during initial setup/response for task ${id}:`, error);
+
+      // If headers haven't been sent, we can send an error response.
+      if (!res.headersSent) {
+           // Update task state to failed if possible (it might not have been stored yet)
+           const failedTask = taskStore.get(id);
+           if (failedTask) {
+                failedTask.status = { state: 'failed', timestamp: new Date().toISOString() };
+                // Add error message if desired, e.g., in metadata or status.message
+                taskStore.set(id, failedTask);
+           }
+           res.status(500).json({
+                jsonrpc: "2.0",
+                id: req.body.id,
+                error: {
+                    code: ErrorCodeInternalError,
+                    message: error.message || 'An internal server error occurred during task initiation.',
+                    // data: task // Avoid sending potentially partial task data
+                }
+            });
+       } else {
+           // Response was already sent (likely 'working' status).
+           // Log the error. The background task might not have been scheduled.
+           // Mark the task as failed in the store because processing cannot proceed.
+            console.error(`[A2A tasks/send] Error occurred after sending 'working' response for task ${id}. Attempting to mark as failed.`);
+            const currentTask = taskStore.get(id);
+            if (currentTask && currentTask.status.state === 'working') {
+                 const errorMessage: Message = { role: 'agent', parts: [{ type: 'text', text: `Error during task setup: ${error.message}`}]};
+                 currentTask.status = { state: 'failed', timestamp: new Date().toISOString(), message: errorMessage };
+                 taskStore.set(id, currentTask);
+            }
+       }
+    }
+}
+
+// --- Background Task Processing ---
+
+async function processTaskInBackground(
+    runtime: IAgentRuntime,
+    taskId: string,
+    userId: string,
+    roomId: string,
+    userName: string,
+    inputText: string,
+    incomingMessage: Message, // Original user message from request
+    taskHistory: Message[], // History array, starting with user message
+    elizaAction: any // Pre-calculated action
+) {
+    console.log(`[A2A Background] Starting processing for task ${taskId}`);
+    // Fetch the task state, expecting it to be 'working'
+    let task = taskStore.get(taskId);
+    if (!task || task.status.state !== 'working') {
+        console.warn(`[A2A Background] Task ${taskId} not found or not in 'working' state (current: ${task?.status?.state}). Aborting background process.`);
+        return; // Avoid processing if task is missing or already completed/failed/canceled
+    }
+
+    try {
+        // Ensure connection (idempotent)
         await runtime.ensureConnection(userId, roomId, userName, runtime.character.name, "a2a-direct");
 
-        const elizaAction = skillId
-          ? runtime.actions.find(a => (a as any).skillId === skillId || a.name === skillId || a.similes?.includes(skillId))
-          : runtime.actions.find(a => a.name === inputText || a.similes?.includes(inputText));
-
+        // Prepare user message for Eliza Core Memory
         const elizaContent: Content = { text: inputText, source: "a2a-direct" };
-
         const userMessage: Memory = {
-            // The schema Message doesn't have a top-level id/messageId in the same way.
-            // We'll generate one for the Memory object. The original message parts are in taskHistory[0]
-            id: stringToUuid(id + '-user-' + userId), // Use task ID and user ID for uniqueness
+            id: stringToUuid(taskId + '-user-' + userId),
             content: elizaContent,
             userId,
             roomId,
@@ -175,109 +277,130 @@ async function handleTasksSend(req: Request, res: Response, agents: Map<string, 
             createdAt: Date.now(),
         };
 
-        await runtime.messageManager.addEmbeddingToMemory(userMessage);
+        // Add user message to memory. addEmbeddingToMemory might be redundant if createMemory handles it.
+        // await runtime.messageManager.addEmbeddingToMemory(userMessage);
         await runtime.messageManager.createMemory(userMessage);
 
+        // Compose initial state
         let state = await runtime.composeState(userMessage, { agentName: runtime.character.name });
         let responseContent: Content | null = null;
-        // Use Artifact type from schema
-        let responseArtifacts: Artifact[] = [];
+        let responseArtifacts: Artifact[] = []; // Initialize artifacts collector
 
+        // --- Execute Action or Generate Response ---
         if (elizaAction?.handler) {
-            console.log(`[A2A tasks/send] Executing action: ${elizaAction.name}`);
-            const actionCallback: HandlerCallback = (content: Content | null) => {
-                console.log(`[A2A tasks/send] Action ${elizaAction.name} callback:`, content);
+            console.log(`[A2A Background] Executing action: ${elizaAction.name} for task ${taskId}`);
+            // Adapt callback if actions need to produce A2A Artifacts
+            const actionCallback: HandlerCallback = async (content: Content | null /*, artifacts?: Artifact[] */) => {
+                console.log(`[A2A Background] Action ${elizaAction.name} callback for task ${taskId}:`, content);
                 if (content) responseContent = content;
-                return Promise.resolve([userMessage]);
+                // if (artifacts) responseArtifacts.push(...artifacts); // Collect artifacts
+                return [userMessage]; // Return relevant messages for core processing
             };
             await elizaAction.handler(runtime, userMessage, state, {}, actionCallback);
-            console.log('DD a2a.ts:194');
             if (!responseContent) {
-              console.log('DD a2a.ts:196');
-                responseContent = { text: `Action ${elizaAction.name} executed, but no specific output via callback.` };
+                // Provide a default response if action completes without explicit output via callback
+                responseContent = { text: `Action ${elizaAction.name} completed.` };
             }
         } else {
-            console.log(`[A2A tasks/send] No specific action found. Generating generic response.`);
-            const context = composeContext({ state, template: messageHandlerTemplate });
+            console.log(`[A2A Background] No specific action found for task ${taskId}. Generating generic response.`);
+            const context = composeContext({ state, template: messageHandlerTemplate }); // Use imported template
             responseContent = await generateMessageResponse({ runtime, context, modelClass: ModelClass.LARGE });
-            if (!responseContent) throw new Error("No response from generateMessageResponse");
+            // TODO: Extract artifacts from responseContent if applicable
         }
 
-        console.log('DD a2a.ts:206');
-        if (!responseContent) throw new Error("Agent did not produce response content.");
+        if (!responseContent) {
+            throw new Error("Agent did not produce response content after action/generation.");
+        }
 
-        console.log('DD a2a.ts:209');
+        // --- Process Agent Response ---
         const responseMessageId = uuidv4();
         const responseMemory: Memory = {
             id: stringToUuid(responseMessageId + "-" + runtime.agentId),
             userId: runtime.agentId, roomId, agentId: runtime.agentId, content: responseContent,
-            embedding: getEmbeddingZeroVector(), createdAt: Date.now(),
+            embedding: getEmbeddingZeroVector(), // Assuming zero vector is appropriate here
+            createdAt: Date.now(),
         };
         await runtime.messageManager.createMemory(responseMemory);
 
+        // --- Post-Response Processing (e.g., triggered function calls by LLM) ---
         state = await runtime.updateRecentMessageState(state);
         let finalContentFromActions: Content | null = null;
         await runtime.processActions(userMessage, [responseMemory], state, async (newContent) => {
             finalContentFromActions = newContent;
-            return [userMessage, responseMemory];
+            // TODO: Handle/collect artifacts generated during processActions
+            return [userMessage, responseMemory]; // Return messages for core processing
         });
-        const finalContent = finalContentFromActions || responseContent;
+        const finalContent = finalContentFromActions || responseContent; // Use action result or initial response
 
-        // Use Message type from schema
+        // --- Format Final Agent Message for A2A ---
         const agentMessage: Message = {
-            // messageId is not part of the schema Message structure
             role: 'agent',
             parts: [],
-            // createdAt is not part of the schema Message structure
-            // timestamp is part of TaskStatus, not individual messages
+            // metadata: { timestamp: new Date().toISOString() } // Metadata isn't standard on Message, put timestamp in TaskStatus
         };
-        if (finalContent.text) agentMessage.parts.push({ type: 'text', text: finalContent.text });
-        // Adapt structured data handling if needed based on schema DataPart
+        if (finalContent.text) {
+            agentMessage.parts.push({ type: 'text', text: finalContent.text });
+        }
         if ((finalContent as any).structuredData) {
-             // Assuming structuredData fits the Record<string, unknown> type
+            // Ensure structuredData fits Record<string, unknown>
             agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
         }
+        // TODO: Convert any other finalContent parts (images, files) into A2A Parts (FilePart, etc.)
+        // TODO: Populate responseArtifacts based on finalContent or collected artifacts
 
-        console.log('DD a2a.ts:233');
-        // Add agent message to our separate history store
-        taskHistory.push(agentMessage);
-        // Update task object with artifacts and final status
-        task.artifacts = responseArtifacts.length > 0 ? responseArtifacts : undefined;
-        task.status = { state: 'completed', timestamp: new Date().toISOString() };
-        taskStore.set(id, task);
+        // Add agent message to history (optional, as it's also in final status)
+        // taskHistory.push(agentMessage);
 
-        console.log('DD a2a.ts:240');
-        // Return the final task object as defined by the schema
-        // Note: The response structure for tasks/send in A2A is JSONRPCResponse<Task | null, A2AError>
-        // We are currently returning the Task directly in the 'result' field.
-        res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task }); // Align with JSON-RPC response
+        // --- Update Task to Completed ---
+        task = taskStore.get(taskId); // Re-fetch task before update
+        if (task && task.status.state === 'working') {
+             task.artifacts = responseArtifacts.length > 0 ? responseArtifacts : undefined; // Set collected artifacts
+             task.status = {
+                 state: 'completed',
+                 timestamp: new Date().toISOString(),
+                 message: agentMessage // Include the final agent message in the status
+             };
+             taskStore.set(taskId, task);
+             console.log(`[A2A Background] Task ${taskId} completed successfully.`);
+        } else {
+             // Log if the task was not 'working' anymore (e.g., canceled)
+             console.warn(`[A2A Background] Task ${taskId} was not in 'working' state (current: ${task?.status?.state}) when trying to mark as completed.`);
+        }
 
     } catch (error) {
-      console.error(`[A2A tasks/send] Error processing task ${id}:`, error);
-      // Update task status object
-      task.status = { state: 'failed', timestamp: new Date().toISOString() };
-      // Use JSONRPCError structure from schema
-      task.error = { code: ErrorCodeInternalError, message: error.message || 'An internal error occurred' };
-      taskStore.set(id, task);
-      // Send back the failed task object in a JSON-RPC error response structure
-      res.status(500).json({
-            jsonrpc: "2.0",
-            id: req.body.id, // Use request ID for response
-            error: {
-                code: ErrorCodeInternalError, // Or a more specific A2A error code if applicable
-                message: error.message || 'An internal server error occurred processing the task.',
-                data: task // Include the task object in the error data field
-            }
-        });
+      console.error(`[A2A Background] Error processing task ${taskId}:`, error);
+      // --- Update Task to Failed ---
+      task = taskStore.get(taskId); // Re-fetch task before update
+      if (task && task.status.state === 'working') { // Check state again before marking failed
+          const errorMessage: Message = {
+              role: 'agent',
+              parts: [{ type: 'text', text: `Error processing task: ${error.message || 'Internal error'}` }],
+              // metadata: { error: true, timestamp: new Date().toISOString() } // Metadata not standard on Message
+          };
+          task.status = {
+              state: 'failed',
+              timestamp: new Date().toISOString(),
+              message: errorMessage // Include error details in the status message
+          };
+          // task.artifacts = undefined; // Clear any potentially partial artifacts
+          taskStore.set(taskId, task);
+          console.log(`[A2A Background] Task ${taskId} status updated to 'failed'.`);
+       } else {
+           // Log if the task was not 'working' anymore
+           console.warn(`[A2A Background] Task ${taskId} was not in 'working' state (current: ${task?.status?.state}) when trying to mark as failed.`);
+       }
     }
 }
+
 
 function handleTasksGet(req: Request, res: Response, body: any) {
     // Logic from the original GET /tasks/:id handler
     const { id } = body as { id?: string };
 
     if (!id) {
-        return res.status(400).json({ error: 'Missing required field: id for tasks/get' });
+         return res.status(400).json({
+             jsonrpc: "2.0", id: req.body.id, error: { code: -32602, message: 'Missing required field: id for tasks/get' }
+         });
     }
 
     console.log(`[A2A tasks/get] Received request for task ${id}`);
@@ -289,13 +412,11 @@ function handleTasksGet(req: Request, res: Response, body: any) {
       return res.status(404).json({
             jsonrpc: "2.0",
             id: req.body.id,
-            error: { code: -32001 /* ErrorCodeTaskNotFound */, message: 'Task not found' }
+            error: { code: ErrorCodeTaskNotFound , message: 'Task not found' } // Use defined error code
       });
     }
 
     // No authorization check as authentication is removed
     // Return JSON-RPC success format
-     res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
+    res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
 }
-
-// Note: Server start/stop logic is handled by the main DirectClient in index.ts
