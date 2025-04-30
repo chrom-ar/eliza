@@ -1,7 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector,  HandlerCallback, Uuid } from '@elizaos/core'; // Adjust path as needed
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import agentJson from './agentJson';
 import { messageHandlerTemplate } from './index'; // Import messageHandlerTemplate
 // Import A2A schema types
@@ -12,7 +10,6 @@ import {
     Part,
     TextPart, // Added TextPart
     Artifact,
-    JSONRPCError, // Using JSONRPCError from schema
     ErrorCodeInternalError, // For error codes
     TaskStatus as SchemaTaskStatus, // Rename to avoid conflict with internal usage pattern
     // Add other necessary types from a2a-schema.ts as needed
@@ -23,13 +20,11 @@ import {
     TaskStatusUpdateEvent,
     TaskArtifactUpdateEvent,
     ErrorCodeTaskNotCancelable, // Added for tasks/cancel
-    ErrorCodeUnsupportedOperation, // Added
 } from './a2a-schema'; // Assuming a2a-schema.ts is in the same directory
-import { setImmediate } from 'timers'; // Import setImmediate for scheduling background task
 import { EventEmitter } from 'events'; // For cancellation
 
 // Define the base path from agent.json
-const A2A_BASE_PATH = '/api/a2a';
+const A2A_BASE_PATH = '/a2a';
 
 // Simple in-memory store for task status (Replace with persistent storage for production)
 // The Task type now comes from a2a-schema.ts
@@ -235,7 +230,11 @@ export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
     router.get('/.well-known/agent.json', async (req, res) => {
         try {
             res.setHeader('Content-Type', 'application/json');
-            res.send(agentJson)
+            if (process.env.NODE_ENV === 'development') {
+                res.send({...agentJson, url: 'http://localhost:3000/a2a'});
+            } else {
+                res.send(agentJson);
+            }
         } catch (error) {
             console.error("Error serving agent.json:", error);
             res.status(500).json({ jsonrpc: "2.0", error: { code: ErrorCodeInternalError, message: 'Could not load agent configuration.' } });

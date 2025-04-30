@@ -4,9 +4,9 @@ export default {
   "agentId": "eliza-chroma-agent",
   "name": "Eliza Chroma DeFi Agent",
   "displayName": "Eliza Chroma DeFi Agent",
-  "url": "http://localhost:3000/api/a2a",
+  "url": "https://sandbox-api.chrom.ar/a2a",
   "description": "An agent specialized in understanding and executing DeFi actions via the Chroma plugin.",
-  "endpointUrl": "/api/a2a",
+  "endpointUrl": "/a2a",
   "capabilities": {
     "pushNotifications": false,
     "methods": [
@@ -306,4 +306,4 @@ export default {
         }
     }
   ]
-} 
+}
