@@ -8,12 +8,12 @@ export default {
   "description": "An agent specialized in understanding and executing DeFi actions via the Chroma plugin.",
   "endpointUrl": "/api/a2a",
   "capabilities": {
-    "streaming": false,
     "pushNotifications": false,
-    "stateTransitionHistory": false,
     "methods": [
       "tasks/send",
-      "tasks/get"
+      "tasks/get",
+      "tasks/sendSubscribe",
+      "tasks/cancel"
     ],
     "supportedInputParts": [
       "TextPart"

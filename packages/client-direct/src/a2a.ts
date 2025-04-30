@@ -1,10 +1,5 @@
-// TODO: Implement A2A server logic here
-// Import necessary types from A2A specification and eliza actions
-
-// Example using Express (replace if different framework is used)
-import express, { Router, Request, Response } from 'express';
-import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector,  HandlerCallback } from '@elizaos/core'; // Adjust path as needed
-// Removed JWT import: import { tryJWTWithoutError } from './jwt';
+import { Router, Request, Response } from 'express';
+import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector,  HandlerCallback, Uuid } from '@elizaos/core'; // Adjust path as needed
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import agentJson from './agentJson';
@@ -22,11 +17,16 @@ import {
     TaskStatus as SchemaTaskStatus, // Rename to avoid conflict with internal usage pattern
     // Add other necessary types from a2a-schema.ts as needed
     ErrorCodeTaskNotFound,
+    ErrorCodeMethodNotFound,
+    ErrorCodeInvalidRequest,
+    ErrorCodeInvalidParams,
+    TaskStatusUpdateEvent,
+    TaskArtifactUpdateEvent,
+    ErrorCodeTaskNotCancelable, // Added for tasks/cancel
+    ErrorCodeUnsupportedOperation, // Added
 } from './a2a-schema'; // Assuming a2a-schema.ts is in the same directory
 import { setImmediate } from 'timers'; // Import setImmediate for scheduling background task
-
-const app = express();
-app.use(express.json());
+import { EventEmitter } from 'events'; // For cancellation
 
 // Define the base path from agent.json
 const A2A_BASE_PATH = '/api/a2a';
@@ -39,384 +39,525 @@ const taskStore: Map<string, Task> = new Map();
 // Removed local definitions from here down to --- End A2A Schema Types ---
 // --- End A2A Schema Types ---
 
-const uuidv4 = (...args: any[]) => {
+const uuidv4 = (): Uuid => {
   // Simple UUID generation for demonstration
-  return stringToUuid(`${args.join('-')}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
+  return stringToUuid(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
+}
+
+// --- Task Store and Cancellation Management ---
+const taskCancellationEmitters: Map<string, EventEmitter> = new Map(); // To signal cancellation
+
+// --- Utility Types based on A2A Example ---
+
+// Represents an update yielded by the task handler generator
+type TaskYieldUpdate =
+    | Omit<SchemaTaskStatus, 'timestamp'> // Update status (state, message)
+    | (Omit<Artifact, 'index' | 'append' | 'lastChunk'> & { type: 'artifact' }) // Yield an artifact
+    | { type: 'error', error: Error }; // Yield an error
+
+// Context passed to the task handler
+interface TaskContext {
+    task: Task; // The initial task object
+    incomingMessage: Message; // The user's message
+    cancellationEmitter: EventEmitter; // Emitter to listen for cancellation
+    isCancelled: () => boolean; // Function to check cancellation status
+}
+
+// Type for the async generator function that handles the task logic
+type TaskHandler = (context: TaskContext) => AsyncGenerator<TaskYieldUpdate, void, void>;
+
+// --- Main Eliza Task Handler Logic (Async Generator) ---
+
+const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): AsyncGenerator<TaskYieldUpdate, void, void> {
+    const { task: initialTask, incomingMessage, cancellationEmitter, isCancelled } = context;
+    const taskId = initialTask.id;
+    const skillId = initialTask.metadata?.skillId as string | undefined;
+
+    // --- Find Agent Runtime (Assuming single agent for now) ---
+    // In a multi-agent setup, the runtime would be determined based on skillId or other routing logic
+    let runtime: IAgentRuntime | undefined;
+    // Placeholder: Need access to the 'agents' map here. This structure might need adjustment
+    // Option 1: Pass 'agents' map to the handler (complex)
+    // Option 2: Refactor routing to select agent *before* calling handler
+    // Option 3: For now, assume a global way to get the runtime (not ideal)
+    // Let's simulate getting the first agent's runtime
+    // This part NEEDS to be refactored for proper agent routing if multiple agents exist.
+    const agentsMapFromSomewhere = getAgentsMap(); // Needs implementation
+    const agentId = Array.from(agentsMapFromSomewhere.keys())[0];
+    runtime = agentsMapFromSomewhere.get(agentId);
+
+    if (!runtime) {
+        console.error(`[Task Handler ${taskId}] Could not find runtime.`);
+        yield { type: 'error', error: new Error('Agent runtime not found.') };
+        return;
+    }
+    const agentIdUuid = runtime.agentId;
+
+    // --- User/Room Setup ---
+    const textPart = incomingMessage.parts.find(p => p.type === 'text') as TextPart | undefined;
+    if (!textPart?.text) {
+        yield { type: 'error', error: new Error('Missing text part in incoming message.') };
+        return;
+    }
+    const inputText = textPart.text;
+    const userId = stringToUuid(`a2a-user-${taskId}`); // Generate unique ID per task for simplicity
+    const userName = 'A2A User';
+    const roomId = stringToUuid(`a2a-room-${agentIdUuid}`); // Room associated with the agent
+
+    try {
+        yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Initializing..." }] } };
+
+        // --- Check for Cancellation Early ---
+        if (isCancelled()) {
+            yield { state: 'canceled' };
+            return;
+        }
+
+        await runtime.ensureConnection(userId, roomId, userName, runtime.character.name, "a2a-direct");
+
+        // --- Prepare Eliza Core Input ---
+        const elizaAction = skillId
+            ? runtime.actions.find(a => (a as any).skillId === skillId || a.name === skillId || a.similes?.includes(skillId))
+            : runtime.actions.find(a => a.name === inputText || a.similes?.includes(inputText));
+
+        const elizaContent: Content = { text: inputText, source: "a2a-direct" };
+        const userMemory: Memory = {
+            id: stringToUuid(`${taskId}-user-${userId}`),
+            content: elizaContent, userId, roomId, agentId: agentIdUuid, createdAt: Date.now(),
+        };
+        await runtime.messageManager.createMemory(userMemory);
+
+        yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Processing request..." }] } };
+
+        // --- Check for Cancellation During Processing ---
+        if (isCancelled()) {
+            yield { state: 'canceled' };
+            return;
+        }
+
+        // --- Execute Logic (Action or Generation) ---
+        let state = await runtime.composeState(userMemory, { agentName: runtime.character.name });
+        let responseContent: Content | null = null;
+        const responseArtifacts: Artifact[] = []; // Initialize artifacts collector
+
+        if (elizaAction?.handler) {
+            console.log(`[Task Handler ${taskId}] Executing action: ${elizaAction.name}`);
+            yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: `Executing action: ${elizaAction.name}...` }] } };
+            const actionCallback: HandlerCallback = async (content: Content | null /*, artifacts?: Artifact[] */) => {
+                if (isCancelled()) return [userMemory]; // Stop if cancelled
+                if (content) responseContent = content;
+                // if (artifacts) responseArtifacts.push(...artifacts); // TODO: Adapt artifact handling
+                // yield { type: 'artifact', ... someArtifact }; // Yield artifacts if callback provides them
+                return [userMemory];
+            };
+            await elizaAction.handler(runtime, userMemory, state, {}, actionCallback);
+            if (!responseContent && !isCancelled()) {
+                responseContent = { text: `Action ${elizaAction.name} completed.` };
+            }
+        } else {
+            console.log(`[Task Handler ${taskId}] No specific action found. Generating generic response.`);
+            yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Generating response..." }] } };
+            if (isCancelled()) { yield { state: 'canceled' }; return; } // Check again before LLM call
+            const context = composeContext({ state, template: messageHandlerTemplate });
+            responseContent = await generateMessageResponse({ runtime, context, modelClass: ModelClass.LARGE });
+        }
+
+        // --- Check for Cancellation After Main Logic ---
+        if (isCancelled()) {
+            yield { state: 'canceled' };
+            return;
+        }
+        if (!responseContent) {
+            throw new Error("Agent did not produce response content.");
+        }
+
+        // --- Process Agent Response & Post-Processing ---
+        const responseMemory: Memory = {
+            id: uuidv4(), userId: agentIdUuid, roomId, agentId: agentIdUuid, content: responseContent,
+            embedding: getEmbeddingZeroVector(), createdAt: Date.now(),
+        };
+        await runtime.messageManager.createMemory(responseMemory);
+
+        state = await runtime.updateRecentMessageState(state);
+        let finalContentFromActions: Content | null = null;
+        await runtime.processActions(userMemory, [responseMemory], state, async (newContent) => {
+            if (isCancelled()) return [userMemory, responseMemory]; // Stop if cancelled
+            finalContentFromActions = newContent;
+            // TODO: Handle/collect artifacts generated during processActions
+            // yield { type: 'artifact', ... someArtifact };
+            return [userMemory, responseMemory];
+        });
+
+        const finalContent = finalContentFromActions || responseContent;
+
+        // --- Final Check for Cancellation ---
+        if (isCancelled()) {
+            yield { state: 'canceled' };
+            return;
+        }
+
+        // --- Format Final Agent Message and Yield ---
+        const agentMessage: Message = { role: 'agent', parts: [] };
+        if (finalContent.text) agentMessage.parts.push({ type: 'text', text: finalContent.text });
+        if ((finalContent as any).structuredData) agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
+        // TODO: Convert other content types to Parts
+        // TODO: Yield collected artifacts properly before final state
+        // responseArtifacts.forEach(artifact => yield { type: 'artifact', ...artifact });
+
+        yield { state: 'completed', message: agentMessage };
+
+    } catch (error) {
+        console.error(`[Task Handler ${taskId}] Error:`, error);
+        yield { type: 'error', error: error };
+    } finally {
+        // Clean up cancellation listener
+        cancellationEmitter.removeAllListeners('cancel');
+        taskCancellationEmitters.delete(taskId);
+        console.log(`[Task Handler ${taskId}] Processing finished.`);
+    }
+};
+
+// --- Router Setup ---
+
+// Placeholder - This needs to be accessible by the task handler.
+// Ideally, pass it during router creation or use a context/DI pattern.
+let globalAgentsMap: Map<string, IAgentRuntime> | null = null;
+function getAgentsMap(): Map<string, IAgentRuntime> {
+    if (!globalAgentsMap) throw new Error("Agents Map not initialized");
+    return globalAgentsMap;
 }
 
 export function createA2ARouter(agents: Map<string, IAgentRuntime>): Router {
-  const router = Router();
+    const router = Router();
+    globalAgentsMap = agents; // Store agents map for the handler (Needs better solution)
 
-  // /.well-known/agent.json endpoint
-  router.get('/.well-known/agent.json', async (req, res) => {
-    try {
-      res.setHeader('Content-Type', 'application/json');
-      res.send(agentJson);
-    } catch (error) {
-      console.error("Error serving agent.json:", error);
-      res.status(500).json({ error: 'Could not load agent configuration.' });
-    }
-  });
+    // --- /.well-known/agent.json ---
+    router.get('/.well-known/agent.json', async (req, res) => {
+        try {
+            res.setHeader('Content-Type', 'application/json');
+            res.send(agentJson)
+        } catch (error) {
+            console.error("Error serving agent.json:", error);
+            res.status(500).json({ jsonrpc: "2.0", error: { code: ErrorCodeInternalError, message: 'Could not load agent configuration.' } });
+        }
+    });
 
-  // Single POST endpoint for all A2A methods
-  router.post(A2A_BASE_PATH, async (req: Request, res: Response) => {
-    const { method, ...body } = req.body;
+    // --- A2A JSON-RPC Endpoint ---
+    router.post(A2A_BASE_PATH, async (req: Request, res: Response) => {
+        const { method, params, id: reqId } = req.body;
 
-    console.log(`[A2A] Received POST to ${A2A_BASE_PATH} with method: ${method}`, body, body.params.message.parts);
+        console.log(`[A2A] Received method: ${method} (ID: ${reqId})`);
 
-    if (!method) {
-      return res.status(400).json({
-        jsonrpc: "2.0", id: req.body.id, error: { code: -32600, message: 'Missing required field: method' }
-      });
-    }
+        if (!method) {
+            return res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeInvalidRequest, message: 'Missing required field: method' } });
+        }
 
-    // --- Dispatch based on method ---
-    switch (method) {
-      case 'tasks/send':
-        // No await here - handleTasksSend now responds immediately and processes in background
-        handleTasksSend(req, res, agents, body.params);
-        break;
+        // --- Dispatch based on method ---
+        switch (method) {
+            case 'tasks/send':
+                await handleTasksSend(req, res, params, reqId);
+                break;
+            case 'tasks/get':
+                handleTasksGet(req, res, params, reqId);
+                break;
+            case 'tasks/sendSubscribe':
+                handleTasksSendSubscribe(req, res, params, reqId); // No await, handles response itself
+                break;
+            case 'tasks/cancel':
+                handleTasksCancel(req, res, params, reqId);
+                break;
+            // TODO: Add cases for other methods
+            default:
+                res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeMethodNotFound, message: `Unsupported method: ${method}` } });
+        }
+    });
 
-      case 'tasks/get':
-        handleTasksGet(req, res, body.params);
-        break;
-
-      // TODO: Add cases for other methods like tasks/cancel, tasks/sendSubscribe etc.
-
-      default:
-         res.status(400).json({
-           jsonrpc: "2.0", id: req.body.id, error: { code: -32601, message: `Unsupported method: ${method}` }
-         });
-    }
-  });
-
-  return router;
+    return router;
 }
 
 // --- Handler Functions ---
 
-// Renamed original function slightly to avoid conflict if needed, and made it non-async regarding the response
-function handleTasksSend(req: Request, res: Response, agents: Map<string, IAgentRuntime>, body: any) {
-    // Logic from the original POST /tasks/send handler, adapted for immediate response
-    const { id: clientTaskId, message: incomingMessage, skillId } = body as { id?: string, message: Message, skillId?: string };
+// Execute task handler in background, updating store
+async function runTaskHandlerInBackground(taskId: string, context: TaskContext) {
+    try {
+        const handler = elizaTaskHandler(context);
+        for await (const update of handler) {
+            const task = taskStore.get(taskId);
+            if (!task) break; // Task was deleted or is no longer tracked
 
-    // Basic Input Validation
+            if (context.isCancelled() && task.status.state !== 'canceled' && task.status.state !== 'completed' && task.status.state !== 'failed') {
+                 task.status = { state: 'canceled', timestamp: new Date().toISOString() };
+                 taskStore.set(taskId, { ...task });
+                 break; // Stop processing if canceled externally
+            }
+
+            if (update.type === 'error') {
+                task.status = {
+                    state: 'failed',
+                    timestamp: new Date().toISOString(),
+                    message: { role: 'agent', parts: [{ type: 'text', text: `Error: ${update.error.message}` }] }
+                };
+                task.artifacts = undefined; // Clear artifacts on failure
+                taskStore.set(taskId, { ...task });
+                break; // Stop on error
+            } else if (update.type === 'artifact') {
+                const { type, ...artifactData } = update;
+                 if (!task.artifacts) task.artifacts = [];
+                 task.artifacts.push({ ...artifactData, index: task.artifacts.length }); // Add artifact with index
+                 taskStore.set(taskId, { ...task });
+            } else {
+                // It's a TaskStatus update (state, message)
+                 task.status = { ...update, timestamp: new Date().toISOString() };
+                 taskStore.set(taskId, { ...task });
+                 if (task.status.state === 'completed' || task.status.state === 'failed' || task.status.state === 'canceled') {
+                     break; // Stop generator processing if task reaches a terminal state
+                 }
+            }
+        }
+    } catch (e) {
+        // Catch errors in the generator runner itself
+        console.error(`[Task Runner ${taskId}] Error running handler:`, e);
+        const task = taskStore.get(taskId);
+        if (task && task.status.state !== 'failed' && task.status.state !== 'completed' && task.status.state !== 'canceled') {
+            task.status = { state: 'failed', timestamp: new Date().toISOString(), message: { role: 'agent', parts: [{ type: 'text', text: `Internal handler runner error: ${e.message}` }] } };
+            taskStore.set(taskId, { ...task });
+        }
+    } finally {
+         // Ensure cleanup even if runner loop fails
+        taskCancellationEmitters.delete(taskId);
+    }
+}
+
+
+// --- tasks/send ---
+async function handleTasksSend(req: Request, res: Response, params: any, reqId: string | number | null) {
+    const { id: clientTaskId, message: incomingMessage, skillId } = params as { id?: string, message: Message, skillId?: string };
+
+    // Basic Validation
     if (!incomingMessage || !Array.isArray(incomingMessage.parts) || incomingMessage.parts.length === 0) {
-      console.error('Invalid request: Missing or invalid message parts for tasks/send.', incomingMessage);
-        // Ensure response is JSON-RPC compliant
-        return res.status(400).json({
-            jsonrpc: "2.0",
-            id: req.body.id,
-            error: { code: -32602, message: 'Invalid request: Missing or invalid message parts for tasks/send.' }
-        });
-    }
-    const textPart = incomingMessage.parts.find(p => p.type === 'text') as TextPart | undefined;
-    if (!textPart || typeof textPart.text !== 'string') {
-        console.error('Invalid request: Missing text part in message for tasks/send.', incomingMessage);
-        // Ensure response is JSON-RPC compliant
-        return res.status(400).json({
-            jsonrpc: "2.0",
-            id: req.body.id,
-            error: { code: -32602, message: 'Invalid request: Missing text part in message for tasks/send.' }
-        });
-    }
-    const inputText = textPart.text;
-
-    // Agent & User Identification
-    // FIXME: Use actual agent/skill routing if multiple agents/skills are relevant
-    const agentId = Array.from(agents.keys())[0];
-    if (!agentId) {
-        console.error('[A2A tasks/send] No agents available.');
-        return res.status(500).json({
-             jsonrpc: "2.0", id: req.body.id, error: { code: ErrorCodeInternalError, message: 'No agents available.' }
-        });
-    }
-    const runtime = agents.get(agentId);
-    if (!runtime) {
-        console.error(`[A2A tasks/send] Agent with ID ${agentId} not found.`);
-        return res.status(404).json({
-             jsonrpc: "2.0", id: req.body.id, error: { code: ErrorCodeInternalError, message: `Agent with ID ${agentId} not found.` }
-        });
+        return res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeInvalidParams, message: 'Invalid request: Missing or invalid message parts.' } });
     }
 
-    // Use generic user/room IDs since auth is removed
-    const userId = stringToUuid('a2a-default-user');
-    const userName = 'A2A User';
-    const roomId = stringToUuid('a2a-default-room-' + agentId);
-
-    console.log(`[A2A tasks/send] Preparing task for user: ${userId}, room: ${roomId}`);
-
-    // Task Management - Create Task
-    const id = clientTaskId || uuidv4();
-    const now = new Date();
-    const nowISO = now.toISOString();
+    // Task Creation
+    const taskId = clientTaskId || uuidv4();
+    const nowISO = new Date().toISOString();
     let task: Task = {
-        id: id,
-        status: { state: 'submitted', timestamp: nowISO }, // Initial state
+        id: taskId,
+        status: { state: 'submitted', timestamp: nowISO },
         metadata: skillId ? { skillId: skillId } : undefined,
     };
-    const taskHistory: Message[] = [
-         { ...incomingMessage, role: 'user' } // Start history with the user message
-    ];
-    taskStore.set(id, { ...task }); // Store the initial submitted task state
+    taskStore.set(taskId, { ...task });
 
-    // Pre-calculate elizaAction to pass to background task
-    const elizaAction = skillId
-        ? runtime.actions.find(a => (a as any).skillId === skillId || a.name === skillId || a.similes?.includes(skillId))
-        : runtime.actions.find(a => a.name === inputText || a.similes?.includes(inputText));
+    // Cancellation Setup
+    const cancellationEmitter = new EventEmitter();
+    taskCancellationEmitters.set(taskId, cancellationEmitter);
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+    cancellationEmitter.once('cancel', () => { cancelled = true; });
 
+    // Prepare Context
+    const context: TaskContext = {
+        task: { ...task }, // Pass a copy
+        incomingMessage,
+        cancellationEmitter,
+        isCancelled
+    };
 
-    try {
-        // Update task status to working
-        task.status = { state: 'working', timestamp: new Date().toISOString() };
-        taskStore.set(id, { ...task }); // Update store with working task
+    // Start handler in background (DO NOT AWAIT)
+    runTaskHandlerInBackground(taskId, context).catch(e => console.error(`[Task Runner ${taskId}] Unhandled background error: ${e}`));
 
-        // Respond immediately with the 'working' task status
-        console.log(`[A2A tasks/send] Responding with 'working' status for task ${id}`);
-        res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
+    // Update status to working immediately and respond
+    task.status = { state: 'working', timestamp: new Date().toISOString() };
+    taskStore.set(taskId, { ...task }); // Update store
 
-        // --- Schedule background processing ---
-        // Use setImmediate to ensure the response is sent before heavy processing begins
-        setImmediate(() => {
-             // Pass only necessary data to the background task
-             processTaskInBackground(
-                 runtime,
-                 id, // Pass ID instead of the whole task object initially
-                 userId,
-                 roomId,
-                 userName,
-                 inputText,
-                 incomingMessage, // Pass original message if needed for context/history
-                 taskHistory, // Pass the initial history array
-                 elizaAction // Pass the pre-calculated action
-             ).catch(backgroundError => {
-                 // Catch unhandled errors from the background process itself (should be rare if internal try/catch is good)
-                 console.error(`[A2A Background] Unhandled error for task ${id}:`, backgroundError);
-                 // Attempt to update task status to failed if it's still working
-                 const currentTask = taskStore.get(id);
-                 if (currentTask && currentTask.status.state === 'working') {
-                     const errorMessage: Message = { role: 'agent', parts: [{ type: 'text', text: `Critical background error: ${backgroundError.message}`}]};
-                     currentTask.status = { state: 'failed', timestamp: new Date().toISOString(), message: errorMessage };
-                     taskStore.set(id, currentTask);
+    console.log(`[A2A tasks/send] Responding with 'working' status for task ${taskId}`);
+    res.status(200).json({ jsonrpc: "2.0", id: reqId, result: task });
+}
+
+// --- tasks/sendSubscribe ---
+function handleTasksSendSubscribe(req: Request, res: Response, params: any, reqId: string | number | null) {
+    const { id: clientTaskId, message: incomingMessage, skillId } = params as { id?: string, message: Message, skillId?: string };
+
+    // Basic Validation
+    if (!incomingMessage || !Array.isArray(incomingMessage.parts) || incomingMessage.parts.length === 0) {
+        // Cannot send 400 easily with SSE, maybe close connection? Or send initial error event?
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeInvalidParams, message: 'Invalid request: Missing or invalid message parts.' } }));
+        return;
+    }
+
+    // --- Task Creation ---
+    const taskId = clientTaskId || uuidv4();
+    const nowISO = new Date().toISOString();
+    let task: Task = {
+        id: taskId,
+        status: { state: 'submitted', timestamp: nowISO },
+        metadata: skillId ? { skillId: skillId } : undefined,
+    };
+    taskStore.set(taskId, { ...task });
+
+    // --- Cancellation Setup ---
+    const cancellationEmitter = new EventEmitter();
+    taskCancellationEmitters.set(taskId, cancellationEmitter);
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+    cancellationEmitter.once('cancel', () => { cancelled = true; });
+
+    // --- SSE Setup ---
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+    });
+
+    // --- Prepare Context ---
+    const context: TaskContext = {
+        task: { ...task }, incomingMessage, cancellationEmitter, isCancelled
+    };
+
+    // --- Run Handler and Stream Updates ---
+    (async () => {
+        try {
+            const handler = elizaTaskHandler(context);
+            let finalEventSent = false; // Track if final event was sent
+
+            for await (const update of handler) {
+                //  if (res.writableEnded) break; // Stop if client disconnected
+                 const currentTask = taskStore.get(taskId); // Get latest task state
+                 if (!currentTask) break;
+
+                 let eventPayload: TaskStatusUpdateEvent | TaskArtifactUpdateEvent | null = null;
+                 let eventType = 'task_status_update'; // Default event type
+                 let isFinal = false;
+
+                 if (update.type === 'error') {
+                     currentTask.status = { state: 'failed', timestamp: new Date().toISOString(), message: { role: 'agent', parts: [{ type: 'text', text: `Error: ${update.error.message}` }] } };
+                     eventPayload = { id: taskId, status: currentTask.status, final: true };
+                     isFinal = true;
+                 } else if (update.type === 'artifact') {
+                    const { type, ...artifactData } = update;
+                     if (!currentTask.artifacts) currentTask.artifacts = [];
+                     const newArtifact = { ...artifactData, index: currentTask.artifacts.length };
+                     currentTask.artifacts.push(newArtifact);
+                     // Decide if artifact update is final (can be tricky, maybe based on state?)
+                     const artifactIsFinal = (currentTask.status.state === 'completed' || currentTask.status.state === 'failed');
+                     eventPayload = { id: taskId, artifact: newArtifact, final: artifactIsFinal };
+                     eventType = 'task_artifact_update';
+                     // isFinal = artifactIsFinal; // Don't mark the *stream* final on artifact alone usually
+                 } else {
+                     // Status update
+                     currentTask.status = { ...update, timestamp: new Date().toISOString() };
+                     isFinal = ['completed', 'failed', 'canceled'].includes(currentTask.status.state);
+                     eventPayload = { id: taskId, status: currentTask.status, final: isFinal };
                  }
-             });
-        });
-        // --- Background processing scheduled ---
 
-    } catch (error) {
-      // This catch block handles errors during the *synchronous* part:
-      // task creation, status update to 'working', scheduling the background task, or sending the response.
-      console.error(`[A2A tasks/send] Error during initial setup/response for task ${id}:`, error);
+                 taskStore.set(taskId, { ...currentTask }); // Update store
 
-      // If headers haven't been sent, we can send an error response.
-      if (!res.headersSent) {
-           // Update task state to failed if possible (it might not have been stored yet)
-           const failedTask = taskStore.get(id);
-           if (failedTask) {
-                failedTask.status = { state: 'failed', timestamp: new Date().toISOString() };
-                // Add error message if desired, e.g., in metadata or status.message
-                taskStore.set(id, failedTask);
-           }
-           res.status(500).json({
-                jsonrpc: "2.0",
-                id: req.body.id,
-                error: {
-                    code: ErrorCodeInternalError,
-                    message: error.message || 'An internal server error occurred during task initiation.',
-                    // data: task // Avoid sending potentially partial task data
-                }
-            });
-       } else {
-           // Response was already sent (likely 'working' status).
-           // Log the error. The background task might not have been scheduled.
-           // Mark the task as failed in the store because processing cannot proceed.
-            console.error(`[A2A tasks/send] Error occurred after sending 'working' response for task ${id}. Attempting to mark as failed.`);
-            const currentTask = taskStore.get(id);
-            if (currentTask && currentTask.status.state === 'working') {
-                 const errorMessage: Message = { role: 'agent', parts: [{ type: 'text', text: `Error during task setup: ${error.message}`}]};
-                 currentTask.status = { state: 'failed', timestamp: new Date().toISOString(), message: errorMessage };
-                 taskStore.set(id, currentTask);
+                 if (eventPayload) { // } && !res.writableEnded) {
+                     // Format as JSON-RPC Notification for the event data
+                     const notification = { jsonrpc: "2.0", method: eventType, params: eventPayload };
+                     res.write(`data: ${JSON.stringify(notification)}\n\n`);
+                 }
+
+                 if (isFinal) {
+                     finalEventSent = true;
+                     break; // Stop after final state
+                 }
             }
-       }
-    }
-}
 
-// --- Background Task Processing ---
+            // Ensure a final event is sent if the generator finishes without yielding a terminal state explicitly
+            if (!finalEventSent) { // } && !res.writableEnded) {
+                 const finalTask = taskStore.get(taskId);
+                 if (finalTask && !['completed', 'failed', 'canceled'].includes(finalTask.status.state)) {
+                     // If loop finished but task isn't terminal, mark it completed? Or maybe failed? Depends on desired behavior.
+                     console.warn(`[A2A tasks/sendSubscribe] Task handler for ${taskId} finished without explicit terminal state. Marking completed.`);
+                     finalTask.status.state = 'completed';
+                     finalTask.status.timestamp = new Date().toISOString();
+                     taskStore.set(taskId, finalTask);
+                     const finalPayload: TaskStatusUpdateEvent = { id: taskId, status: finalTask.status, final: true };
+                     const notification = { jsonrpc: "2.0", method: 'task_status_update', params: finalPayload };
+                     res.write(`data: ${JSON.stringify(notification)}\n\n`);
+                 }
+             }
 
-async function processTaskInBackground(
-    runtime: IAgentRuntime,
-    taskId: string,
-    userId: string,
-    roomId: string,
-    userName: string,
-    inputText: string,
-    incomingMessage: Message, // Original user message from request
-    taskHistory: Message[], // History array, starting with user message
-    elizaAction: any // Pre-calculated action
-) {
-    console.log(`[A2A Background] Starting processing for task ${taskId}`);
-    // Fetch the task state, expecting it to be 'working'
-    let task = taskStore.get(taskId);
-    if (!task || task.status.state !== 'working') {
-        console.warn(`[A2A Background] Task ${taskId} not found or not in 'working' state (current: ${task?.status?.state}). Aborting background process.`);
-        return; // Avoid processing if task is missing or already completed/failed/canceled
-    }
-
-    try {
-        // Ensure connection (idempotent)
-        await runtime.ensureConnection(userId, roomId, userName, runtime.character.name, "a2a-direct");
-
-        // Prepare user message for Eliza Core Memory
-        const elizaContent: Content = { text: inputText, source: "a2a-direct" };
-        const userMessage: Memory = {
-            id: stringToUuid(taskId + '-user-' + userId),
-            content: elizaContent,
-            userId,
-            roomId,
-            agentId: runtime.agentId,
-            createdAt: Date.now(),
-        };
-
-        // Add user message to memory. addEmbeddingToMemory might be redundant if createMemory handles it.
-        // await runtime.messageManager.addEmbeddingToMemory(userMessage);
-        await runtime.messageManager.createMemory(userMessage);
-
-        // Compose initial state
-        let state = await runtime.composeState(userMessage, { agentName: runtime.character.name });
-        let responseContent: Content | null = null;
-        let responseArtifacts: Artifact[] = []; // Initialize artifacts collector
-
-        // --- Execute Action or Generate Response ---
-        if (elizaAction?.handler) {
-            console.log(`[A2A Background] Executing action: ${elizaAction.name} for task ${taskId}`);
-            // Adapt callback if actions need to produce A2A Artifacts
-            const actionCallback: HandlerCallback = async (content: Content | null /*, artifacts?: Artifact[] */) => {
-                console.log(`[A2A Background] Action ${elizaAction.name} callback for task ${taskId}:`, content);
-                if (content) responseContent = content;
-                // if (artifacts) responseArtifacts.push(...artifacts); // Collect artifacts
-                return [userMessage]; // Return relevant messages for core processing
-            };
-            await elizaAction.handler(runtime, userMessage, state, {}, actionCallback);
-            if (!responseContent) {
-                // Provide a default response if action completes without explicit output via callback
-                responseContent = { text: `Action ${elizaAction.name} completed.` };
+        } catch (e) {
+            console.error(`[A2A tasks/sendSubscribe] Error streaming task ${taskId}:`, e);
+            try {
+                const errorPayload: TaskStatusUpdateEvent = {
+                    id: taskId,
+                    status: { state: 'failed', timestamp: new Date().toISOString(), message: { role: 'agent', parts: [{ type: 'text', text: `Streaming Error: ${e.message}` }] } },
+                    final: true
+                };
+                const notification = { jsonrpc: "2.0", method: 'task_status_update', params: errorPayload };
+                res.write(`data: ${JSON.stringify(notification)}\n\n`);
+            } catch (writeError) {
+                console.error(`[A2A tasks/sendSubscribe] Failed to write final error event for task ${taskId}:`, writeError);
             }
-        } else {
-            console.log(`[A2A Background] No specific action found for task ${taskId}. Generating generic response.`);
-            const context = composeContext({ state, template: messageHandlerTemplate }); // Use imported template
-            responseContent = await generateMessageResponse({ runtime, context, modelClass: ModelClass.LARGE });
-            // TODO: Extract artifacts from responseContent if applicable
+            // }
+        } finally {
+            // if (!res.writableEnded) {
+            //     console.log(`[A2A tasks/sendSubscribe] ENDING with res.end()`);
+            //     res.end(); // Close the SSE connection
+            // }
+            taskCancellationEmitters.delete(taskId); // Clean up emitter
+            console.log(`[A2A tasks/sendSubscribe] Stream ended for task ${taskId}.`);
         }
-
-        if (!responseContent) {
-            throw new Error("Agent did not produce response content after action/generation.");
-        }
-
-        // --- Process Agent Response ---
-        const responseMessageId = uuidv4();
-        const responseMemory: Memory = {
-            id: stringToUuid(responseMessageId + "-" + runtime.agentId),
-            userId: runtime.agentId, roomId, agentId: runtime.agentId, content: responseContent,
-            embedding: getEmbeddingZeroVector(), // Assuming zero vector is appropriate here
-            createdAt: Date.now(),
-        };
-        await runtime.messageManager.createMemory(responseMemory);
-
-        // --- Post-Response Processing (e.g., triggered function calls by LLM) ---
-        state = await runtime.updateRecentMessageState(state);
-        let finalContentFromActions: Content | null = null;
-        await runtime.processActions(userMessage, [responseMemory], state, async (newContent) => {
-            finalContentFromActions = newContent;
-            // TODO: Handle/collect artifacts generated during processActions
-            return [userMessage, responseMemory]; // Return messages for core processing
-        });
-        const finalContent = finalContentFromActions || responseContent; // Use action result or initial response
-
-        // --- Format Final Agent Message for A2A ---
-        const agentMessage: Message = {
-            role: 'agent',
-            parts: [],
-            // metadata: { timestamp: new Date().toISOString() } // Metadata isn't standard on Message, put timestamp in TaskStatus
-        };
-        if (finalContent.text) {
-            agentMessage.parts.push({ type: 'text', text: finalContent.text });
-        }
-        if ((finalContent as any).structuredData) {
-            // Ensure structuredData fits Record<string, unknown>
-            agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
-        }
-        // TODO: Convert any other finalContent parts (images, files) into A2A Parts (FilePart, etc.)
-        // TODO: Populate responseArtifacts based on finalContent or collected artifacts
-
-        // Add agent message to history (optional, as it's also in final status)
-        // taskHistory.push(agentMessage);
-
-        // --- Update Task to Completed ---
-        task = taskStore.get(taskId); // Re-fetch task before update
-        if (task && task.status.state === 'working') {
-             task.artifacts = responseArtifacts.length > 0 ? responseArtifacts : undefined; // Set collected artifacts
-             task.status = {
-                 state: 'completed',
-                 timestamp: new Date().toISOString(),
-                 message: agentMessage // Include the final agent message in the status
-             };
-             taskStore.set(taskId, task);
-             console.log(`[A2A Background] Task ${taskId} completed successfully.`);
-        } else {
-             // Log if the task was not 'working' anymore (e.g., canceled)
-             console.warn(`[A2A Background] Task ${taskId} was not in 'working' state (current: ${task?.status?.state}) when trying to mark as completed.`);
-        }
-
-    } catch (error) {
-      console.error(`[A2A Background] Error processing task ${taskId}:`, error);
-      // --- Update Task to Failed ---
-      task = taskStore.get(taskId); // Re-fetch task before update
-      if (task && task.status.state === 'working') { // Check state again before marking failed
-          const errorMessage: Message = {
-              role: 'agent',
-              parts: [{ type: 'text', text: `Error processing task: ${error.message || 'Internal error'}` }],
-              // metadata: { error: true, timestamp: new Date().toISOString() } // Metadata not standard on Message
-          };
-          task.status = {
-              state: 'failed',
-              timestamp: new Date().toISOString(),
-              message: errorMessage // Include error details in the status message
-          };
-          // task.artifacts = undefined; // Clear any potentially partial artifacts
-          taskStore.set(taskId, task);
-          console.log(`[A2A Background] Task ${taskId} status updated to 'failed'.`);
-       } else {
-           // Log if the task was not 'working' anymore
-           console.warn(`[A2A Background] Task ${taskId} was not in 'working' state (current: ${task?.status?.state}) when trying to mark as failed.`);
-       }
-    }
+    })(); // Immediately invoke the async function
 }
 
 
-function handleTasksGet(req: Request, res: Response, body: any) {
-    // Logic from the original GET /tasks/:id handler
-    const { id } = body as { id?: string };
+// --- tasks/get ---
+function handleTasksGet(req: Request, res: Response, params: any, reqId: string | number | null) {
+    const { id } = params as { id?: string };
 
     if (!id) {
-         return res.status(400).json({
-             jsonrpc: "2.0", id: req.body.id, error: { code: -32602, message: 'Missing required field: id for tasks/get' }
-         });
+         return res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeInvalidParams, message: 'Missing required field: id' } });
     }
-
-    console.log(`[A2A tasks/get] Received request for task ${id}`);
-
+    console.log(`[A2A tasks/get] Request for task ${id}`);
     const task = taskStore.get(id);
 
     if (!task) {
-      // Return JSON-RPC error format
-      return res.status(404).json({
-            jsonrpc: "2.0",
-            id: req.body.id,
-            error: { code: ErrorCodeTaskNotFound , message: 'Task not found' } // Use defined error code
-      });
+      return res.status(404).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeTaskNotFound , message: 'Task not found' } });
+    }
+    // Return task state according to schema
+    res.status(200).json({ jsonrpc: "2.0", id: reqId, result: task });
+}
+
+// --- tasks/cancel ---
+function handleTasksCancel(req: Request, res: Response, params: any, reqId: string | number | null) {
+    const { id } = params as { id?: string };
+
+    if (!id) {
+        return res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeInvalidParams, message: 'Missing required field: id' } });
+    }
+    console.log(`[A2A tasks/cancel] Request for task ${id}`);
+    const task = taskStore.get(id);
+    const emitter = taskCancellationEmitters.get(id);
+
+    if (!task) {
+        return res.status(404).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeTaskNotFound, message: 'Task not found' } });
     }
 
-    // No authorization check as authentication is removed
-    // Return JSON-RPC success format
-    res.status(200).json({ jsonrpc: "2.0", id: req.body.id, result: task });
+    // Check if task is cancelable (e.g., in submitted or working state)
+    if (['completed', 'failed', 'canceled'].includes(task.status.state)) {
+         return res.status(400).json({ jsonrpc: "2.0", id: reqId, error: { code: ErrorCodeTaskNotCancelable, message: `Task is already in terminal state: ${task.status.state}` } });
+    }
+
+    // Signal cancellation via emitter
+    if (emitter) {
+        emitter.emit('cancel');
+        console.log(`[A2A tasks/cancel] Cancellation signal sent for task ${id}`);
+    } else {
+        // Should not happen if task exists and is running, but handle defensively
+        console.warn(`[A2A tasks/cancel] No active cancellation emitter found for running task ${id}. Forcing status update.`);
+    }
+
+    // Update task state immediately to 'canceled' (or let the handler do it via yield?)
+    // Let's update it here for immediate feedback, the handler will also detect and yield/stop.
+    task.status = { state: 'canceled', timestamp: new Date().toISOString(), message: { role: 'agent', parts: [{type: 'text', text: 'Cancellation requested.'}] } };
+    taskStore.set(id, { ...task });
+    taskCancellationEmitters.delete(id); // Remove emitter once cancelled
+
+    // Return the updated task object
+    res.status(200).json({ jsonrpc: "2.0", id: reqId, result: task });
 }
