@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, getEmbeddingZeroVector,  HandlerCallback, Uuid } from '@elizaos/core'; // Adjust path as needed
+import { IAgentRuntime, Content, Memory, stringToUuid, composeContext, generateMessageResponse, ModelClass, HandlerCallback, Uuid } from '@elizaos/core'; // Adjust path as needed
 import agentJson from './agentJson';
 import { messageHandlerTemplate } from './index'; // Import messageHandlerTemplate
 // Import A2A schema types
@@ -29,10 +29,6 @@ const A2A_BASE_PATH = '/a2a';
 // Simple in-memory store for task status (Replace with persistent storage for production)
 // The Task type now comes from a2a-schema.ts
 const taskStore: Map<string, Task> = new Map();
-
-// --- A2A Schema Types ---
-// Removed local definitions from here down to --- End A2A Schema Types ---
-// --- End A2A Schema Types ---
 
 const uuidv4 = (): Uuid => {
   // Simple UUID generation for demonstration
@@ -167,10 +163,10 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
         }
 
         // --- Process Agent Response & Post-Processing ---
-        const responseMemory: Memory = {
+        const responseMemory: Memory = await runtime.messageManager.addEmbeddingToMemory({
             id: uuidv4(), userId: agentIdUuid, roomId, agentId: agentIdUuid, content: responseContent,
-            embedding: getEmbeddingZeroVector(), createdAt: Date.now(),
-        };
+            createdAt: Date.now(),
+        });
         await runtime.messageManager.createMemory(responseMemory);
 
         state = await runtime.updateRecentMessageState(state);
