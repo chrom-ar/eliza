@@ -52,6 +52,7 @@ interface TaskContext {
     incomingMessage: Message; // The user's message
     cancellationEmitter: EventEmitter; // Emitter to listen for cancellation
     isCancelled: () => boolean; // Function to check cancellation status
+    userId?: string; // Optional user ID
 }
 
 // Type for the async generator function that handles the task logic
@@ -91,9 +92,9 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
         return;
     }
     const inputText = textPart.text;
-    const userId = stringToUuid(`a2a-user-${taskId}`); // Generate unique ID per task for simplicity
+    const userId = stringToUuid(context.userId || 'a2a-user');
     const userName = 'A2A User';
-    const roomId = stringToUuid(`a2a-room-${agentIdUuid}`); // Room associated with the agent
+    const roomId = stringToUuid(`a2a-room-${userId}`); // Room associated with the agent
 
     try {
         yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Initializing..." }] } };
@@ -104,18 +105,19 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
             return;
         }
 
-        await runtime.ensureConnection(userId, roomId, userName, runtime.character.name, "a2a-direct");
+        await runtime.ensureConnection(userId, roomId, userName, userName, "a2a-direct");
 
         // --- Prepare Eliza Core Input ---
         const elizaAction = skillId
             ? runtime.actions.find(a => (a as any).skillId === skillId || a.name === skillId || a.similes?.includes(skillId))
-            : runtime.actions.find(a => a.name === inputText || a.similes?.includes(inputText));
+            : runtime.actions.find(a => a.name === inputText.toUpperCase() || a.similes?.includes(inputText.toUpperCase()));
 
         const elizaContent: Content = { text: inputText, source: "a2a-direct" };
         const userMemory: Memory = {
             id: stringToUuid(`${taskId}-user-${userId}`),
             content: elizaContent, userId, roomId, agentId: agentIdUuid, createdAt: Date.now(),
         };
+        await runtime.messageManager.addEmbeddingToMemory(userMemory);
         await runtime.messageManager.createMemory(userMemory);
 
         yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Processing request..." }] } };
@@ -129,27 +131,18 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
         // --- Execute Logic (Action or Generation) ---
         let state = await runtime.composeState(userMemory, { agentName: runtime.character.name });
         let responseContent: Content | null = null;
-        const responseArtifacts: Artifact[] = []; // Initialize artifacts collector
 
         if (elizaAction?.handler) {
             console.log(`[Task Handler ${taskId}] Executing action: ${elizaAction.name}`);
             yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: `Executing action: ${elizaAction.name}...` }] } };
-            const actionCallback: HandlerCallback = async (content: Content | null /*, artifacts?: Artifact[] */) => {
-                if (isCancelled()) return [userMemory]; // Stop if cancelled
-                if (content) responseContent = content;
-                // if (artifacts) responseArtifacts.push(...artifacts); // TODO: Adapt artifact handling
-                // yield { type: 'artifact', ... someArtifact }; // Yield artifacts if callback provides them
-                return [userMemory];
-            };
-            await elizaAction.handler(runtime, userMemory, state, {}, actionCallback);
-            if (!responseContent && !isCancelled()) {
-                responseContent = { text: `Action ${elizaAction.name} completed.` };
-            }
+
+            responseContent = { text: inputText, action: elizaAction.name, user: 'a2a-direct' };
         } else {
             console.log(`[Task Handler ${taskId}] No specific action found. Generating generic response.`);
             yield { state: 'working', message: { role: 'agent', parts: [{ type: 'text', text: "Generating response..." }] } };
             if (isCancelled()) { yield { state: 'canceled' }; return; } // Check again before LLM call
             const context = composeContext({ state, template: messageHandlerTemplate });
+
             responseContent = await generateMessageResponse({ runtime, context, modelClass: ModelClass.LARGE });
         }
 
@@ -172,12 +165,13 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
         state = await runtime.updateRecentMessageState(state);
         let finalContentFromActions: Content | null = null;
         await runtime.processActions(userMemory, [responseMemory], state, async (newContent) => {
-            if (isCancelled()) return [userMemory, responseMemory]; // Stop if cancelled
+            if (isCancelled()) return [userMemory]; // Stop if cancelled
             finalContentFromActions = newContent;
             // TODO: Handle/collect artifacts generated during processActions
             // yield { type: 'artifact', ... someArtifact };
-            return [userMemory, responseMemory];
+            return [userMemory];
         });
+        await runtime.evaluate(userMemory, state);
 
         const finalContent = finalContentFromActions || responseContent;
 
@@ -191,9 +185,6 @@ const elizaTaskHandler: TaskHandler = async function* (context: TaskContext): As
         const agentMessage: Message = { role: 'agent', parts: [] };
         if (finalContent.text) agentMessage.parts.push({ type: 'text', text: finalContent.text });
         if ((finalContent as any).structuredData) agentMessage.parts.push({ type: 'data', data: (finalContent as any).structuredData });
-        // TODO: Convert other content types to Parts
-        // TODO: Yield collected artifacts properly before final state
-        // responseArtifacts.forEach(artifact => yield { type: 'artifact', ...artifact });
 
         yield { state: 'completed', message: agentMessage };
 
@@ -355,7 +346,8 @@ async function handleTasksSend(req: Request, res: Response, params: any, reqId: 
         task: { ...task }, // Pass a copy
         incomingMessage,
         cancellationEmitter,
-        isCancelled
+        isCancelled,
+        userId: req['jwtUserId'] || 'a2a-user' // Pass user ID from request context
     };
 
     // Start handler in background (DO NOT AWAIT)
@@ -407,7 +399,8 @@ function handleTasksSendSubscribe(req: Request, res: Response, params: any, reqI
 
     // --- Prepare Context ---
     const context: TaskContext = {
-        task: { ...task }, incomingMessage, cancellationEmitter, isCancelled
+        task: { ...task }, incomingMessage, cancellationEmitter, isCancelled,
+        userId: req['jwtUserId'] || 'a2a-user' // Pass user ID from request context
     };
 
     // --- Run Handler and Stream Updates ---
@@ -450,7 +443,7 @@ function handleTasksSendSubscribe(req: Request, res: Response, params: any, reqI
 
                  if (eventPayload) { // } && !res.writableEnded) {
                      // Format as JSON-RPC Notification for the event data
-                     const notification = { jsonrpc: "2.0", method: eventType, params: eventPayload };
+                     const notification = { jsonrpc: "2.0", method: eventType, result: eventPayload };
                      res.write(`data: ${JSON.stringify(notification)}\n\n`);
                  }
 
@@ -470,7 +463,7 @@ function handleTasksSendSubscribe(req: Request, res: Response, params: any, reqI
                      finalTask.status.timestamp = new Date().toISOString();
                      taskStore.set(taskId, finalTask);
                      const finalPayload: TaskStatusUpdateEvent = { id: taskId, status: finalTask.status, final: true };
-                     const notification = { jsonrpc: "2.0", method: 'task_status_update', params: finalPayload };
+                     const notification = { jsonrpc: "2.0", method: 'task_status_update', result: finalPayload };
                      res.write(`data: ${JSON.stringify(notification)}\n\n`);
                  }
              }
@@ -483,7 +476,7 @@ function handleTasksSendSubscribe(req: Request, res: Response, params: any, reqI
                     status: { state: 'failed', timestamp: new Date().toISOString(), message: { role: 'agent', parts: [{ type: 'text', text: `Streaming Error: ${e.message}` }] } },
                     final: true
                 };
-                const notification = { jsonrpc: "2.0", method: 'task_status_update', params: errorPayload };
+                const notification = { jsonrpc: "2.0", method: 'task_status_update', result: errorPayload };
                 res.write(`data: ${JSON.stringify(notification)}\n\n`);
             } catch (writeError) {
                 console.error(`[A2A tasks/sendSubscribe] Failed to write final error event for task ${taskId}:`, writeError);
