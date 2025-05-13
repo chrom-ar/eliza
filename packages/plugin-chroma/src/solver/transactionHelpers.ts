@@ -1,5 +1,4 @@
 import { GeneralMessage } from './helpers';
-
 import { validateAndBuildTransfer } from './transfer';
 import { validateAndBuildYield } from './yield';
 import { validateAndBuildSwap } from './swap';
@@ -7,6 +6,8 @@ import { validateAndBuildBridge, validateAndBuildClaim } from './bridge';
 import { validateAndBuildWithdraw } from './withdraw';
 import { validateAndBuildConfidentialDeposit } from './confidentialDeposit';
 import { validateAndBuildConfidentialRelay } from './confidentialRelay';
+
+import { ProposalResponse } from '@chrom-ar/solver-sdk';
 
 // Just for example purposes
 const AVAILABLE_PROTOCOLS = [
@@ -35,7 +36,7 @@ export const AVAILABLE_TYPES = [
  * 1. Validate incoming data, ensuring all required fields are present.
  * 2. If valid, build a transaction object using 'viem'.
  */
-export async function validateAndBuildProposal(message: GeneralMessage): Promise<object> {
+export async function validateAndBuildProposal(message: GeneralMessage): Promise<ProposalResponse | null> {
   let result;
 
   const {
