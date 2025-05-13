@@ -70,7 +70,7 @@ export class WakuClient {
         return;
       }
 
-      elizaLogger.info(`[WakuClient-Chroma] Received ${opts.encrypted ? 'encrypted ' : ' '}message from ${body.signer}`, body);
+      elizaLogger.info(`[WakuClient-Chroma] Received ${opts.encrypted ? 'encrypted ' : ' '}message from ${body.signer}`);
       return await fn(message);
     }, opts);
   }
