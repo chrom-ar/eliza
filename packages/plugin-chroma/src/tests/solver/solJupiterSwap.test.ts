@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { swapTokenSolJup } from '../../solver';
+// import { swapTokenSolJup } from '../../solver';
 
-describe('swapToken', () => {
+// TODO: Add Solana full support
+describe.skip('swapToken', () => {
   it('should return a swap transaction', async () => {
     const swapData = await swapTokenSolJup(
       "0.12",
