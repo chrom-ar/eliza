@@ -1,5 +1,4 @@
 import { Service, ServiceType, IAgentRuntime, elizaLogger} from '@elizaos/core';
-// import WClient from "@chrom-ar/waku-client";
 
 import SolverSDK from "@chrom-ar/solver-sdk";
 

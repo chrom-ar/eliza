@@ -1,20 +1,15 @@
 import {
     composeContext,
     elizaLogger,
-    generateCaption,
-    generateImage,
     generateMessageResponse,
-    generateObject,
     getEmbeddingZeroVector,
     messageCompletionFooter,
     ModelClass,
     settings,
     stringToUuid,
-    type AgentRuntime,
     type Client,
     type Content,
     type IAgentRuntime,
-    type Media,
     type Memory,
     type Plugin,
 } from "@elizaos/core";
@@ -23,12 +18,11 @@ import cors from "cors";
 import express, { type Request as ExpressRequest } from "express";
 import * as fs from "fs";
 import multer from "multer";
-import OpenAI from "openai";
 import * as path from "path";
-import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 import { tryJWTWithoutError } from "./jwt.ts";
+import { createA2ARouter } from "./a2a.ts";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -78,38 +72,6 @@ Note that {{agentName}} is capable of reading/seeing/hearing various forms of me
 # Instructions: Write the next message for {{agentName}}.
 ` + messageCompletionFooter;
 
-export const hyperfiHandlerTemplate = `{{actionExamples}}
-(Action examples are for reference only. Do not use the information from them in your response.)
-
-# Knowledge
-{{knowledge}}
-
-# Task: Generate dialog and actions for the character {{agentName}}.
-About {{agentName}}:
-{{bio}}
-{{lore}}
-
-{{providers}}
-
-{{attachments}}
-
-# Capabilities
-Note that {{agentName}} is capable of reading/seeing/hearing various forms of media, including images, videos, audio, plaintext and PDFs. Recent attachments have been included above under the "Attachments" section.
-
-{{messageDirections}}
-
-{{recentMessages}}
-
-{{actions}}
-
-# Instructions: Write the next message for {{agentName}}.
-
-Response format should be formatted in a JSON block like this:
-\`\`\`json
-{ "lookAt": "{{nearby}}" or null, "emote": "{{emotes}}" or null, "say": "string" or null, "actions": (array of strings) or null }
-\`\`\`
-`;
-
 export class DirectClient {
     public app: express.Application;
     private agents: Map<string, IAgentRuntime>; // container management
@@ -142,6 +104,10 @@ export class DirectClient {
 
         const apiLogRouter = createVerifiableLogApiRouter(this.agents);
         this.app.use(apiLogRouter);
+
+        // Setup A2A Router
+        const a2aRouter = createA2ARouter(this.agents);
+        this.app.use(a2aRouter);
 
         // Define an interface that extends the Express Request interface
         interface CustomRequest extends ExpressRequest {
