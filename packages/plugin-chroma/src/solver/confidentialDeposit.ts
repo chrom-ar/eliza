@@ -46,6 +46,7 @@ export async function validateAndBuildConfidentialDeposit(
     console.log('missing confidential deposit fields', { fromChain });
     return null;
   }
+  console.log('DD confidentialDeposit.ts:48');
 
   return {
     description: `Confidential deposit via Privacy Pools on ${fromChain}`,
