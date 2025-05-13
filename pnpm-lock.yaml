@@ -630,8 +630,8 @@ importers:
         specifier: ^4.13.1
         version: 4.20.0
       '@chrom-ar/solver-sdk':
-        specifier: file:../../../solver-sdk
-        version: file:../solver-sdk(@multiformats/multiaddr@12.4.0)(@types/debug@4.1.12)(@types/node@20.17.46)(bufferutil@4.0.9)(encoding@0.1.13)(jiti@1.21.7)(libp2p@2.1.8)(terser@5.39.1)(typescript@4.9.5)(utf-8-validate@5.0.10)(yaml@2.7.1)
+        specifier: 1.0.0
+        version: 1.0.0(@multiformats/multiaddr@12.4.0)(@types/debug@4.1.12)(@types/node@20.17.46)(bufferutil@4.0.9)(encoding@0.1.13)(jiti@1.21.7)(libp2p@2.1.8)(terser@5.39.1)(typescript@4.9.5)(utf-8-validate@5.0.10)(yaml@2.7.1)
       '@chrom-ar/waku-client':
         specifier: 1.0.0
         version: 1.0.0(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(libp2p@2.1.8)(utf-8-validate@5.0.10)
@@ -1836,8 +1836,8 @@ packages:
   '@chevrotain/utils@11.0.3':
     resolution: {integrity: sha512-YslZMgtJUyuMbZ+aKvfF3x1f5liK4mWNxghFRv7jqRR9C3R3fAOGTTKvxXDa2Y1s9zSbcpuO0cAxDYsc9SrXoQ==}
 
-  '@chrom-ar/solver-sdk@file:../solver-sdk':
-    resolution: {directory: ../solver-sdk, type: directory}
+  '@chrom-ar/solver-sdk@1.0.0':
+    resolution: {integrity: sha512-64eaU7RIRq9Q+r11RjDcH89Sn8rmvZZHzLKCMDssrXjcLad4lNhB7f2jsRyIuoywHqe61JqV58blIXWEr52DkA==}
 
   '@chrom-ar/waku-client@1.0.0':
     resolution: {integrity: sha512-X7yXTKUAjT/fu/9hj6GPpwC6e7TJWo96iMH9Td7jGHVyTqsGDUfpUOVYHWuRigFnE7ON0Jo5idhCBM7raMcITw==}
@@ -15546,7 +15546,7 @@ snapshots:
 
   '@chevrotain/utils@11.0.3': {}
 
-  '@chrom-ar/solver-sdk@file:../solver-sdk(@multiformats/multiaddr@12.4.0)(@types/debug@4.1.12)(@types/node@20.17.46)(bufferutil@4.0.9)(encoding@0.1.13)(jiti@1.21.7)(libp2p@2.1.8)(terser@5.39.1)(typescript@4.9.5)(utf-8-validate@5.0.10)(yaml@2.7.1)':
+  '@chrom-ar/solver-sdk@1.0.0(@multiformats/multiaddr@12.4.0)(@types/debug@4.1.12)(@types/node@20.17.46)(bufferutil@4.0.9)(encoding@0.1.13)(jiti@1.21.7)(libp2p@2.1.8)(terser@5.39.1)(typescript@4.9.5)(utf-8-validate@5.0.10)(yaml@2.7.1)':
     dependencies:
       '@chrom-ar/waku-client': 1.0.0(@multiformats/multiaddr@12.4.0)(bufferutil@4.0.9)(libp2p@2.1.8)(utf-8-validate@5.0.10)
       '@solana/web3.js': 1.98.0(bufferutil@4.0.9)(encoding@0.1.13)(utf-8-validate@5.0.10)
