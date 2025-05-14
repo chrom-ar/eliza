@@ -8,6 +8,7 @@ const networkAliases: Record<string, string> = {
   'eth': 'mainnet',
   'ethereum': 'mainnet',
   'eth-mainnet': 'mainnet',
+  'ethereum mainnet': 'mainnet',
   'eth-sepolia': 'sepolia',
 
   // Base
