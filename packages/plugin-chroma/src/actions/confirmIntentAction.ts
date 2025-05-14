@@ -25,15 +25,11 @@ interface SubscriptionConfig {
 
 const setupSubscriptions = async (waku: any, configs: SubscriptionConfig[]) => {
   for (const config of configs) {
-    const topic = config.topic;
     await waku.subscribe(
       config.topic,
       config.handler,
       config.options
     );
-    setTimeout(() => {
-      waku.unsubscribe(topic);
-    }, TIMEOUT);
   }
 };
 
