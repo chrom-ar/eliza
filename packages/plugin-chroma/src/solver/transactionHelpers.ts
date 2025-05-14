@@ -57,8 +57,6 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
     }
   }
 
-  console.log('DD transactionHelpers.ts:59');
-
   switch (type?.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes
       result = await validateAndBuildTransfer(message);
