@@ -3,6 +3,7 @@ import {
     elizaLogger,
     generateMessageResponse,
     getEmbeddingZeroVector,
+    getEnvVariable,
     messageCompletionFooter,
     ModelClass,
     settings,
@@ -23,6 +24,7 @@ import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 import { tryJWTWithoutError } from "./jwt.ts";
 import { createA2ARouter } from "./a2a.ts";
+import { paymentMiddleware } from "x402-express";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -83,6 +85,26 @@ export class DirectClient {
     constructor() {
         elizaLogger.log("DirectClient constructor");
         this.app = express();
+
+        const payTo = getEnvVariable("CHROMA_PAY_TO");
+
+        if (payTo) {
+            this.app.use(
+                paymentMiddleware(
+                    payTo as `0x${string}`,
+                    {
+                        "POST /*/message": {
+                            price: "$0.001",
+                            network: "base-sepolia",
+                        },
+                    },
+                    {
+                        url: "https://x402.org/facilitator", // Facilitator URL for Base Sepolia testnet.
+                    }
+                )
+            );
+        }
+
         this.app.use(cors());
         this.agents = new Map();
 

@@ -6,13 +6,9 @@ import path from "path";
 import fs from "fs";
 
 import {
-    type AgentRuntime,
-    elizaLogger,
     getEnvVariable,
+    IAgentRuntime,
     type UUID,
-    validateCharacterConfig,
-    ServiceType,
-    type Character,
 } from "@elizaos/core";
 
 // import type { TeeLogQuery, TeeLogService } from "@elizaos/plugin-tee-log";
