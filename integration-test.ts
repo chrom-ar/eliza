@@ -33,8 +33,7 @@ async function postMessage(action: string, text: string) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const data = await response.json();
-        return data;
+        return await response.json();
     } catch (error) {
         if (error instanceof Error) {
             console.error(`Error testing ${action}:`, error.message);
