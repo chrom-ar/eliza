@@ -1,7 +1,5 @@
-import {
-  GeneralMessage,
-  isEvmChain,
-} from "./helpers";
+import { isEvmChain } from '@chrom-ar/utils';
+import { GeneralMessage } from "./helpers";
 
 // import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';

@@ -32,7 +32,8 @@ vi.mock('@lifi/sdk', async () => {
 });
 
 vi.mock('viem', () => ({
-  encodeFunctionData: vi.fn().mockReturnValue('0xmocked_data')
+  encodeFunctionData: vi.fn().mockReturnValue('0xmocked_data'),
+  zeroAddress: '0x0000000000000000000000000000000000000000'
 }));
 
 describe('buildSwapTransaction', () => {

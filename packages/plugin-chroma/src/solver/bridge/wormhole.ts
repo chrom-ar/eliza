@@ -5,7 +5,8 @@ import solana from '@wormhole-foundation/sdk/solana';
 import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { formatUnits, parseUnits } from 'viem';
 import * as chains from 'viem/chains';
-import { GeneralMessage, getEnvironment, getChainId } from '../helpers';
+import { getEnvironment, getChainId, type ChainId } from '@chrom-ar/utils';
+import { GeneralMessage } from '../helpers';
 
 type WormholeChain =
   | "Ethereum" | "Sepolia"
@@ -15,7 +16,7 @@ type WormholeChain =
   | "Polygon"
   | "Solana";
 
-export function convertToWormholeChain(chain: string): WormholeChain {
+export function convertToWormholeChain(chain: ChainId): WormholeChain {
   const chainMap: { [key: string]: WormholeChain } = {
     [chains.mainnet.id]: 'Ethereum',
     [chains.sepolia.id]: 'Sepolia',

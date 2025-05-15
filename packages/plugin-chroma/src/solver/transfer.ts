@@ -1,4 +1,4 @@
-import { encodeFunctionData, parseUnits } from 'viem';
+import { encodeFunctionData, parseUnits, zeroAddress } from 'viem';
 // import {
 //     getAssociatedTokenAddressSync,
 //     createAssociatedTokenAccountInstruction,
@@ -15,15 +15,9 @@ import { encodeFunctionData, parseUnits } from 'viem';
 //     VersionedTransaction,
 // } from "@solana/web3.js";
 
-import {
-  GeneralMessage,
-  ZERO_ADDRESS,
-  getChainId,
-  isEvmChain,
-  getTokenAddress,
-  getTokenAmount,
-  getTokenDecimals,
-} from "./helpers";
+import { getChainId, getTokenAddress, getTokenAmount, getTokenDecimals, isEvmChain } from '@chrom-ar/utils';
+
+import { GeneralMessage } from "./helpers";
 
 export async function validateAndBuildTransfer(message: GeneralMessage): Promise<object> {
   let {
@@ -93,7 +87,7 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   ];
 
   // Native
-  if (tokenAddr == ZERO_ADDRESS) {
+  if (tokenAddr === zeroAddress) {
     return {
       to: recipientAddress,
       value: tokenAmount,
