@@ -1,13 +1,11 @@
 import { encodeFunctionData } from 'viem';
+import { getChainId, getTokenAddress, getTokenAmount } from '@chrom-ar/utils';
 
 import { AAVE_V3_SUPPLY_ABI, APPROVE_ABI, CURVE_ADD_LIQUIDITY_ABI } from './utils/abis';
 import {
   AAVE_POOL,
   CURVE_POOLS,
   GeneralMessage,
-  getChainId,
-  getTokenAddress,
-  getTokenAmount
 } from './helpers';
 
 const PROTOCOLS = { aave: 'Aave V3', curve: 'Curve' };

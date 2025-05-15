@@ -1,6 +1,6 @@
 // import fetch from 'node-fetch'
 import { IAgentRuntime, elizaLogger } from '@elizaos/core';
-import { TOKENS, TOKEN_DECIMALS, ZERO_ADDRESS } from './addresses';
+import { getTokenInfo } from '@chrom-ar/utils';
 
 const request = async (runtime: IAgentRuntime, method: string, path: string, body?: string): Promise<any> => {
   const url = `https://api.tenderly.co/api/v1/account/${runtime.getSetting('TENDERLY_ACCOUNT')}/project/${runtime.getSetting('TENDERLY_PROJECT')}/${path}`;
@@ -135,25 +135,9 @@ const buildSummary = (simulations: any[]) => {
   })}
 };
 
-// Build KNOWN_TOKENS from centralized address data
-// Maps lowercase token addresses to their metadata (symbol and decimals)
-const KNOWN_TOKENS: Record<string, { symbol: string, decimals: number }> = {};
-
-// Populate from the network-specific token addresses
-Object.entries(TOKENS).forEach(([network, tokens]) => {
-  Object.entries(tokens).forEach(([symbol, address]) => {
-    if (address !== ZERO_ADDRESS) {
-      KNOWN_TOKENS[address.toLowerCase()] = {
-        symbol,
-        decimals: TOKEN_DECIMALS[network][symbol]
-      };
-    }
-  });
-});
-
 const humanizeAmount = (change: any) => {
   const contractAddress = change.token_info.contract_address?.toLowerCase();
-  const knownToken = KNOWN_TOKENS[contractAddress];
+  const knownToken = getTokenInfo(undefined, contractAddress);
   const symbol = change.token_info.symbol?.toUpperCase() ||
     (knownToken ? knownToken.symbol : "(unknown token)");
 

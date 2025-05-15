@@ -1,6 +1,6 @@
 import { elizaLogger } from '@elizaos/core';
-import { TOKENS, TOKEN_DECIMALS, ZERO_ADDRESS } from './addresses';
-import { getAlchemyChainName } from './chain';
+import { zeroAddress } from 'viem';
+import { getTokenInfo, getAlchemyChainName } from '@chrom-ar/utils';
 
 export interface TokenBalance {
   token: string;
@@ -9,13 +9,6 @@ export interface TokenBalance {
   rawBalance: bigint;
   decimals: number;
   network: string;
-}
-
-interface TokenAddressMap {
-  [address: string]: {
-    symbol: string;
-    decimals: number;
-  };
 }
 
 interface AlchemyBalanceResponse {
@@ -29,29 +22,6 @@ interface AlchemyBalanceResponse {
 }
 
 const humanDecimals = 6;
-
-function buildTokenAddressMap(networks: string[]): TokenAddressMap {
-  const addressMap: TokenAddressMap = {};
-
-  for (const network of networks) {
-    const networkUpper = network.toUpperCase();
-    const networkTokens = TOKENS[networkUpper];
-    const networkDecimals = TOKEN_DECIMALS[networkUpper];
-
-    if (!networkTokens || !networkDecimals) continue;
-
-    for (const [symbol, address] of Object.entries(networkTokens)) {
-      if (address && typeof address === 'string' && address !== ZERO_ADDRESS) {
-        addressMap[address.toLowerCase()] = {
-          symbol,
-          decimals: networkDecimals[symbol] || 18
-        };
-      }
-    }
-  }
-
-  return addressMap;
-}
 
 function formatBalance(rawBalance: bigint, decimals: number): string {
   if (rawBalance === BigInt(0)) {
@@ -132,6 +102,7 @@ export async function getBalances(
 ): Promise<TokenBalance[]> {
   const networkList = Array.isArray(networks) ? networks : [networks];
   const normalizedNetworks = networkList.map(network => getAlchemyChainName(network));
+  const normalizedTokenSymbols = tokenSymbols.map(symbol => symbol.toUpperCase());
 
   try {
     const data = await fetchBalancesFromAlchemy(address, normalizedNetworks);
@@ -141,16 +112,14 @@ export async function getBalances(
       return [];
     }
 
-    const tokenAddressMap = buildTokenAddressMap(normalizedNetworks);
     const balances: TokenBalance[] = [];
 
     if (data.data && data.data.tokens) {
       for (const tokenData of data.data.tokens) {
-        console.log(tokenData)
-        const tokenAddress = tokenData.tokenAddress as string;
-        const tokenDetails = tokenAddressMap[tokenAddress?.toLowerCase() || ZERO_ADDRESS]; // NATIVE TOKEN is null
+        const tokenAddress = tokenData.tokenAddress || zeroAddress;
+        const tokenDetails = getTokenInfo(tokenData.network, tokenAddress);
 
-        if (!tokenDetails || (tokenSymbols.length > 0 && !tokenSymbols.includes(tokenDetails.symbol))) {
+        if (!tokenDetails || !normalizedTokenSymbols.includes(tokenDetails.symbol.toUpperCase())) {
           continue;
         }
 
