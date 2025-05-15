@@ -30,6 +30,7 @@ vi.mock('../../lib/waku-client', () => ({
                             titles: ["Transfer"],
                             calls: ["Transfer"],
                             transaction: {
+                                value: '0',
                                 to: "0x123",
                                 data: "0x123"
                             }

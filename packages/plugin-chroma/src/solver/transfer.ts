@@ -1,19 +1,19 @@
 import { encodeFunctionData, parseUnits } from 'viem';
-import {
-    getAssociatedTokenAddressSync,
-    createAssociatedTokenAccountInstruction,
-    TOKEN_PROGRAM_ID,
-    createTransferCheckedInstruction,
-} from "@solana/spl-token";
+// import {
+//     getAssociatedTokenAddressSync,
+//     createAssociatedTokenAccountInstruction,
+//     TOKEN_PROGRAM_ID,
+//     createTransferCheckedInstruction,
+// } from "@solana/spl-token";
 
-import {
-    Connection,
-    PublicKey,
-    TransactionMessage,
-    SystemProgram,
-    clusterApiUrl,
-    VersionedTransaction,
-} from "@solana/web3.js";
+// import {
+//     Connection,
+//     PublicKey,
+//     TransactionMessage,
+//     SystemProgram,
+//     clusterApiUrl,
+//     VersionedTransaction,
+// } from "@solana/web3.js";
 
 import {
   GeneralMessage,
@@ -48,8 +48,9 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
 
   if (isEvmChain(fromChain)) {
     tx = _buildEvmTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
-  } else if (fromChain === "SOLANA") {
-    tx = await _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
+  // TODO: Add full Solana support
+  // } else if (fromChain === "SOLANA") {
+  //   tx = await _buildSolTransfer(fromChain, fromToken, amount, fromAddress, recipientAddress);
   } else {
     console.log("Unsupported chain");
     return null
@@ -61,7 +62,7 @@ export async function validateAndBuildTransfer(message: GeneralMessage): Promise
       'Transfer'
     ],
     calls: [
-      `Transfer`,
+      `Transfer ${amount}${fromToken} from ${fromAddress} to ${recipientAddress}`,
     ],
     transactions: [tx]
   };
@@ -108,7 +109,7 @@ function _buildEvmTransfer(fromChain: string, fromToken: string, amount: string,
   }
 }
 
-
+// TODO: Add full Solana support
 async function _buildSolTransfer(fromChain: string, fromToken: string, amount: string, fromAddress: string, recipientAddress: string): Promise<object> {
   const tokenAddr = getTokenAddress(fromChain, fromToken);
   const solToken = getTokenAddress("SOLANA", "SOL");

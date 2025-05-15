@@ -6,7 +6,7 @@ import {
   signProposal,
   signPayload,
 } from './sign';
-import { swapToken as swapTokenSolJup } from './solJupiterSwap';
+// import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
 import { buildBridgeTransaction } from './bridge/wormhole';
 import { validateAndBuildYield } from './yield';
@@ -16,7 +16,7 @@ export {
   validateAndBuildProposal,
   signProposal,
   signPayload,
-  swapTokenSolJup,
+  // swapTokenSolJup,
   buildSwapTransaction,
   buildBridgeTransaction,
   validateAndBuildYield,

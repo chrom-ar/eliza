@@ -71,6 +71,7 @@ export async function buildBurnTransactions(message: GeneralMessage) {
   return [
     {
       transaction: {
+        value: '0',
         to: usdcAddress as `0x${string}`,
         chainId: sourceChainId,
         data: encodeFunctionData({
@@ -83,6 +84,7 @@ export async function buildBurnTransactions(message: GeneralMessage) {
     },
     {
       transaction: {
+        value: '0',
         to: TOKEN_MESSENGERS[sourceChainId] as `0x${string}`,
         chainId: sourceChainId,
         data: encodeFunctionData({
@@ -117,6 +119,7 @@ export async function buildClaimTransaction(sourceChain: string, destinationChai
 
   return [{
     transaction: {
+      value: '0',
       to: MESSAGE_TRANSMITTERS[destinationChainId] as `0x${string}`,
       chainId: destinationChainId,
       data: encodeFunctionData({

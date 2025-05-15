@@ -77,7 +77,7 @@ describe('Transaction Helpers', () => {
       };
 
       const config = {
-        PRIVATE_KEY: JSON.stringify(Array.from(Keypair.generate().secretKey))
+        PRIVATE_KEY: "0x123abc456def7890abcdef1234567890abcdef1234567890abcdef1234567890"
       };
 
       const result = await signProposal(proposal, config);

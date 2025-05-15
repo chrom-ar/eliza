@@ -14,8 +14,8 @@ const AVAILABLE_PROTOCOLS = [
   'aave',
   'curve',
   'lifi',
-  'jupiter',
-  'jup',
+  // 'jupiter',
+  // 'jup',
   'cctp',
   'cctpv2',
   'wormhole',
@@ -56,7 +56,6 @@ export async function validateAndBuildProposal(message: GeneralMessage): Promise
       return null;
     }
   }
-
 
   switch (type?.toUpperCase()) {
     case "TRANSFER": // Not really necessary, but for demonstration purposes

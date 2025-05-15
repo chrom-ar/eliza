@@ -8,6 +8,7 @@ const networkAliases: Record<string, string> = {
   'eth': 'mainnet',
   'ethereum': 'mainnet',
   'eth-mainnet': 'mainnet',
+  'ethereum mainnet': 'mainnet',
   'eth-sepolia': 'sepolia',
 
   // Base
@@ -76,10 +77,11 @@ const CHAIN_NAMES = {
 }
 
 const TOKENS = {
-  "SOLANA": {
-    "SOL": "So11111111111111111111111111111111111111112",
-    "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  },
+  // TODO: Add full Solana support
+  // "SOLANA": {
+  //   "SOL": "So11111111111111111111111111111111111111112",
+  //   "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  // },
   [chains.mainnet.id]: {
     "ETH": ZERO_ADDRESS,
     "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -131,10 +133,11 @@ const TOKENS = {
 }
 
 const TOKEN_DECIMALS: Record<string, Record<Token & undefined, number>> = {
-  "SOLANA": {
-    "SOL": 9,
-    "USDC": 6,
-  },
+  // TODO: Add full Solana support
+  // "SOLANA": {
+  //   "SOL": 9,
+  //   "USDC": 6,
+  // },
   [chains.mainnet.id]: {
     "ETH": 18,
     "USDC": 6,

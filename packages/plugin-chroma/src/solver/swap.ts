@@ -3,7 +3,7 @@ import {
   isEvmChain,
 } from "./helpers";
 
-import { swapToken as swapTokenSolJup } from './solJupiterSwap';
+// import { swapToken as swapTokenSolJup } from './solJupiterSwap';
 import { buildSwapTransaction } from './lifiEvmSwap';
 
 
@@ -31,7 +31,7 @@ export async function validateAndBuildSwap(message: GeneralMessage): Promise<obj
       'Swap'
     ],
     calls: [
-      'Swap'
+      `Swap ${amount}${fromToken} to ${toToken}`
     ],
     ...swapResult
   };
@@ -46,17 +46,18 @@ async function _buildSwap(message: GeneralMessage): Promise<object> {
 
   if (isEvmChain(fromChain)) {
     return buildSwapTransaction(message);
-  } else if (fromChain.toUpperCase() === "SOLANA") {
-    const {
-      body: {
-        amount,
-        fromToken,
-        toToken,
-        fromAddress,
-      }
-    } = message;
+  // TODO: Add full Solana support
+  // } else if (fromChain.toUpperCase() === "SOLANA") {
+  //   const {
+  //     body: {
+  //       amount,
+  //       fromToken,
+  //       toToken,
+  //       fromAddress,
+  //     }
+  //   } = message;
 
-    return swapTokenSolJup(amount, fromToken, toToken, fromAddress);
+  //   return swapTokenSolJup(amount, fromToken, toToken, fromAddress);
   }
 
   throw new Error(`Unsupported chain: ${fromChain}`);
