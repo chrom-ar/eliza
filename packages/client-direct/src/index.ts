@@ -107,12 +107,8 @@ export class DirectClient {
 
         // Setup A2A Router
         const a2aRouter = createA2ARouter(this.agents);
-        this.app.use(a2aRouter);
 
-        // Define an interface that extends the Express Request interface
-        interface CustomRequest extends ExpressRequest {
-            file?: Express.Multer.File;
-        }
+        this.app.use(a2aRouter);
 
         this.app.post(
             "/:agentId/message",
@@ -259,6 +255,8 @@ export class DirectClient {
 
                 if (message) {
                     res.json([message]);
+                } else if (response) {
+                    res.json([response]);
                 } else {
                     res.json([]);
                 }
