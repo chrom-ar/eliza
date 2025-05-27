@@ -1,6 +1,7 @@
 import { Plugin } from '@elizaos/core';
 
 import { SolverService } from './services/solver';
+import { CustomActionsService } from './services/customActions';
 
 import { walletEvaluator } from './evaluators/wallet';
 import { walletProvider } from './providers/wallet';
@@ -34,6 +35,7 @@ const actions = [
   parseYieldAction,
 ]
 
+// let's import here all the actions in custom_action directory
 // NOTE: Maybe there's a better way to filter actions
 if (process.env.CHROMA_CDP_API_KEY_NAME) {
   actions.push(createWalletAction);
@@ -46,5 +48,5 @@ export const chromaPlugin: Plugin = {
   actions: actions,
   evaluators: [walletEvaluator],
   providers: [walletProvider],
-  services: [new SolverService()]
+  services: [new SolverService(), new CustomActionsService()]
 };
