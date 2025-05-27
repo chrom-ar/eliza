@@ -1,8 +1,9 @@
 import { encodeFunctionData } from 'viem';
-import { avalanche, base, mainnet } from 'viem/chains';
+import { avalanche, arbitrum, base, linea, mainnet } from 'viem/chains';
 import { elizaLogger } from '@elizaos/core';
+import { getChainId, getTokenAddress, getTokenAmount } from '@chrom-ar/utils';
 import { APPROVE_ABI, CCTP_DEPOSIT_FOR_BURN_ABI, CCTP_RECEIVE_MESSAGE_ABI } from '../utils/abis';
-import { GeneralMessage, getChainId, getTokenAddress, getTokenAmount } from '../helpers';
+import { GeneralMessage } from '../helpers';
 
 const API_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 

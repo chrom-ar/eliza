@@ -1,7 +1,7 @@
-import { encodeFunctionData } from 'viem';
+import { encodeFunctionData, zeroAddress } from 'viem';
 import { getQuote } from '@lifi/sdk';
-
-import { getChainId, getTokenAmount, GeneralMessage, getTokenAddress } from './helpers';
+import { getChainId, getTokenAmount, getTokenAddress } from '@chrom-ar/utils';
+import { GeneralMessage } from './helpers';
 import { APPROVE_ABI } from './utils/abis';
 
 export const buildSwapTransaction = async (message: GeneralMessage) => {
@@ -18,6 +18,7 @@ export const buildSwapTransaction = async (message: GeneralMessage) => {
 
     const fromChainId = getChainId(fromChain);
     const fromTokenAmount = getTokenAmount(amount, fromChain, fromToken);
+    const fromTokenAddress = getTokenAddress(fromChain, fromToken);
 
     const quote = await getQuote({
       fromChain: fromChainId,
