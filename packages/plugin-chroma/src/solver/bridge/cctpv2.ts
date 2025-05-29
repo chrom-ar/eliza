@@ -9,20 +9,26 @@ const API_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export const DOMAINS: Record<number, number> = {
   [mainnet.id]: 0,
-  [base.id]: 6,
+  [arbitrum.id]: 3,
   [avalanche.id]: 1,
+  [base.id]: 6,
+  [linea.id]: 11,
 };
 
 const TOKEN_MESSENGERS: Record<number, string> = {
   [mainnet.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
-  [base.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+  [arbitrum.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
   [avalanche.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+  [base.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+  [linea.id]: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
 };
 
 const MESSAGE_TRANSMITTERS: Record<number, string> = {
   [mainnet.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
-  [base.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+  [arbitrum.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
   [avalanche.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+  [base.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+  [linea.id]: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
 };
 
 interface Attestation {
