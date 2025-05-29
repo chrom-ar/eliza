@@ -1,8 +1,7 @@
 import { elizaLogger } from '@elizaos/core';
-import { wormhole } from '@wormhole-foundation/sdk';
+import { wormhole, Wormhole } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
 import solana from '@wormhole-foundation/sdk/solana';
-import { toUniversal } from '@wormhole-foundation/sdk-connect';
 import { formatUnits, parseUnits } from 'viem';
 import * as chains from 'viem/chains';
 import { getEnvironment, getChainId, type ChainId } from '@chrom-ar/utils';
@@ -56,9 +55,16 @@ export async function buildBridgeTransaction(message: GeneralMessage) {
   // We should add this to the response.
   elizaLogger.debug('Circle Relayer Fee:', formatUnits(relayerFee, 6), 'USDC');
 
+  // Create compatible addresses using static chainAddress method
+  const sender = Wormhole.chainAddress(sourceChain.chain, fromAddress);
+  const recipient = Wormhole.chainAddress(destinationChain.chain, recipientAddress);
+
   const unsignedTxs = automaticCircleBridge.transfer(
-    toUniversal(sourceChain.chain, fromAddress),
-    { chain: destinationChain.chain, address: toUniversal(destinationChain.chain, recipientAddress) },
+    sender.address,
+    {
+      chain: destinationChain.chain,
+      address: recipient.address
+    },
     parseUnits(amount, 6)
   );
 
