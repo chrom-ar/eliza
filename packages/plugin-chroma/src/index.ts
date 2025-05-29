@@ -1,6 +1,7 @@
 import { Plugin } from '@elizaos/core';
 
 import { SolverService } from './services/solver';
+import { CustomActionsService } from './services/customActions';
 
 import { walletEvaluator } from './evaluators/wallet';
 import { walletProvider } from './providers/wallet';
@@ -46,5 +47,5 @@ export const chromaPlugin: Plugin = {
   actions: actions,
   evaluators: [walletEvaluator],
   providers: [walletProvider],
-  services: [new SolverService()]
+  services: [new SolverService(), new CustomActionsService()]
 };

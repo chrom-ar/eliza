@@ -73,5 +73,3 @@ export const CURVE_POOLS = {
     },
   },
 }
-
-}
