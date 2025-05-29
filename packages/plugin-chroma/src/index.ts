@@ -35,7 +35,6 @@ const actions = [
   parseYieldAction,
 ]
 
-// let's import here all the actions in custom_action directory
 // NOTE: Maybe there's a better way to filter actions
 if (process.env.CHROMA_CDP_API_KEY_NAME) {
   actions.push(createWalletAction);
